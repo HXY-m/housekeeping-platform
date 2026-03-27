@@ -25,17 +25,18 @@
                 </el-form-item>
               </el-col>
             </el-row>
+
             <el-form-item label="擅长服务类型">
-              <el-input v-model="form.serviceTypes" placeholder="例如：日常保洁,深度清洁" />
+              <el-input v-model="form.serviceTypes" placeholder="例如：日常保洁, 深度清洁" />
             </el-form-item>
             <el-form-item label="从业年限">
               <el-input-number v-model="form.yearsOfExperience" :min="0" :max="30" />
             </el-form-item>
             <el-form-item label="资质证书">
-              <el-input v-model="form.certificates" placeholder="例如：家政服务培训证书,健康证" />
+              <el-input v-model="form.certificates" placeholder="例如：家政服务培训证书, 健康证" />
             </el-form-item>
             <el-form-item label="服务区域">
-              <el-input v-model="form.serviceAreas" placeholder="例如：浦东新区,闵行区" />
+              <el-input v-model="form.serviceAreas" placeholder="例如：浦东新区, 闵行区" />
             </el-form-item>
             <el-form-item label="服务时段">
               <el-input v-model="form.availableSchedule" placeholder="例如：工作日 09:00-18:00" />
@@ -58,7 +59,7 @@
               :type="item.status === 'APPROVED' ? 'success' : item.status === 'REJECTED' ? 'danger' : 'warning'"
               :timestamp="item.createdAt"
             >
-              <strong>{{ item.realName }}</strong>
+              <div class="timeline-title">{{ item.realName }}</div>
               <p>服务类型：{{ item.serviceTypes }}</p>
               <p>状态：{{ item.status }}</p>
               <p v-if="item.adminRemark">备注：{{ item.adminRemark }}</p>

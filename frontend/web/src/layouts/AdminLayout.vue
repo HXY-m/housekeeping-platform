@@ -5,15 +5,12 @@
         <strong>Housekeeping Admin</strong>
         <span>管理后台</span>
       </div>
-      <el-menu
-        :default-active="route.path"
-        class="admin-menu"
-        router
-      >
-        <el-menu-item index="/admin">运营看板</el-menu-item>
-        <el-menu-item index="/admin/worker-applications">入驻审核</el-menu-item>
+      <el-menu :default-active="route.path" class="admin-menu" router>
+        <el-menu-item index="/admin/dashboard">运营看板</el-menu-item>
+        <el-menu-item index="/admin/applications">入驻审核</el-menu-item>
       </el-menu>
     </el-aside>
+
     <el-container>
       <el-header class="admin-header">
         <div>
@@ -21,6 +18,7 @@
           <div class="admin-subtitle">只面向管理员角色开放</div>
         </div>
         <div class="admin-header-actions">
+          <el-button @click="router.push('/')">返回首页</el-button>
           <span class="admin-user">{{ authStore.state.user?.realName }}</span>
           <el-button type="danger" plain @click="logout">退出登录</el-button>
         </div>

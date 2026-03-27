@@ -1,13 +1,16 @@
 package com.housekeeping.order;
 
+import com.housekeeping.auth.annotation.RequireRole;
 import com.housekeeping.common.ApiResponse;
-import com.housekeeping.common.DemoDataService;
 import com.housekeeping.order.dto.OrderDto;
 import com.housekeeping.order.dto.OrderRequest;
+import com.housekeeping.order.dto.OrderReviewRequest;
+import com.housekeeping.order.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,24 +20,34 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/orders")
-@Tag(name = "订单模块", description = "预约下单与订单查询接口")
+@Tag(name = "订单模块", description = "用户侧下单、订单查询与评价接口")
 public class OrderController {
 
-    private final DemoDataService demoDataService;
+    private final OrderService orderService;
 
-    public OrderController(DemoDataService demoDataService) {
-        this.demoDataService = demoDataService;
+    public OrderController(OrderService orderService) {
+        this.orderService = orderService;
     }
 
+    @RequireRole("USER")
     @GetMapping
-    @Operation(summary = "获取订单列表")
+    @Operation(summary = "获取当前用户订单列表")
     public ApiResponse<List<OrderDto>> orders() {
-        return ApiResponse.ok(demoDataService.getOrders());
+        return ApiResponse.ok(orderService.listCurrentUserOrders());
     }
 
+    @RequireRole("USER")
     @PostMapping
-    @Operation(summary = "创建订单")
+    @Operation(summary = "创建预约订单")
     public ApiResponse<OrderDto> create(@Valid @RequestBody OrderRequest request) {
-        return ApiResponse.ok(demoDataService.createOrder(request));
+        return ApiResponse.ok(orderService.createOrder(request));
+    }
+
+    @RequireRole("USER")
+    @PostMapping("/{id}/review")
+    @Operation(summary = "提交订单评价")
+    public ApiResponse<OrderDto> review(@PathVariable Long id,
+                                        @Valid @RequestBody OrderReviewRequest request) {
+        return ApiResponse.ok(orderService.reviewOrder(id, request));
     }
 }

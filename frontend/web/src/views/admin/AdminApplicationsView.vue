@@ -2,10 +2,10 @@
   <div class="page-stack">
     <el-card shadow="never">
       <template #header>
-        <div class="card-header-between">
+        <div class="section-title">
           <div>
-            <strong>服务人员入驻审核</strong>
-            <p class="muted-line">管理员可以审批普通用户提交的服务人员入驻申请。</p>
+            <h2>服务人员入驻审核</h2>
+            <p>管理员可以审批普通用户提交的服务人员入驻申请。</p>
           </div>
           <el-button @click="loadApplications">刷新</el-button>
         </div>
@@ -22,7 +22,7 @@
             <el-tag :type="statusType(row.status)">{{ row.status }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="adminRemark" label="审核备注" min-width="160" />
+        <el-table-column prop="adminRemark" label="审核备注" min-width="180" />
         <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
             <el-space v-if="row.status === 'PENDING'">
@@ -43,7 +43,12 @@
           </el-tag>
         </el-form-item>
         <el-form-item label="审核备注">
-          <el-input v-model="reviewRemark" type="textarea" :rows="4" placeholder="请输入审核备注" />
+          <el-input
+            v-model="reviewRemark"
+            type="textarea"
+            :rows="4"
+            placeholder="请输入审核说明"
+          />
         </el-form-item>
       </el-form>
       <template #footer>

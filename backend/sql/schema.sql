@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS worker_profile (
   certificates VARCHAR(500) NOT NULL,
   service_areas VARCHAR(500) NOT NULL,
   service_cases VARCHAR(500) NOT NULL
-) COMMENT='服务人员表';
+) COMMENT='服务人员档案表';
 
 CREATE TABLE IF NOT EXISTS worker_application (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS worker_application (
 
 CREATE TABLE IF NOT EXISTS booking_order (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NULL,
   service_name VARCHAR(100) NOT NULL,
   worker_id BIGINT NOT NULL,
   customer_name VARCHAR(50) NOT NULL,
@@ -93,3 +94,17 @@ CREATE TABLE IF NOT EXISTS booking_order_progress (
   progress_note VARCHAR(255) NOT NULL,
   CONSTRAINT fk_order_progress_order FOREIGN KEY (order_id) REFERENCES booking_order(id)
 ) COMMENT='订单进度表';
+
+CREATE TABLE IF NOT EXISTS order_review (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  order_id BIGINT NOT NULL,
+  user_id BIGINT NOT NULL,
+  worker_id BIGINT NOT NULL,
+  rating INT NOT NULL,
+  content VARCHAR(500) NOT NULL,
+  created_at DATETIME NOT NULL,
+  UNIQUE KEY uk_order_review_order (order_id),
+  CONSTRAINT fk_order_review_order FOREIGN KEY (order_id) REFERENCES booking_order(id),
+  CONSTRAINT fk_order_review_user FOREIGN KEY (user_id) REFERENCES sys_user(id),
+  CONSTRAINT fk_order_review_worker FOREIGN KEY (worker_id) REFERENCES worker_profile(id)
+) COMMENT='订单评价表';

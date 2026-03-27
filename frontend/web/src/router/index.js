@@ -3,6 +3,7 @@ import { authStore } from '../stores/auth'
 import PublicLayout from '../layouts/PublicLayout.vue'
 import AuthLayout from '../layouts/AuthLayout.vue'
 import AdminLayout from '../layouts/AdminLayout.vue'
+import WorkerLayout from '../layouts/WorkerLayout.vue'
 import HomeView from '../views/consumer/HomeView.vue'
 import WorkersView from '../views/consumer/WorkersView.vue'
 import WorkerDetailView from '../views/consumer/WorkerDetailView.vue'
@@ -12,6 +13,7 @@ import LoginView from '../views/auth/LoginView.vue'
 import AdminDashboardView from '../views/admin/AdminDashboardView.vue'
 import AdminApplicationsView from '../views/admin/AdminApplicationsView.vue'
 import WorkerApplyView from '../views/worker/WorkerApplyView.vue'
+import WorkerOrdersView from '../views/worker/WorkerOrdersView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -23,12 +25,20 @@ const router = createRouter({
         { path: '', component: HomeView },
         { path: 'workers', component: WorkersView },
         { path: 'workers/:id', component: WorkerDetailView },
-        { path: 'booking/:workerId', component: BookingView },
-        { path: 'orders', component: OrdersView },
+        {
+          path: 'booking/:workerId',
+          component: BookingView,
+          meta: { requiresAuth: true, role: 'USER' }
+        },
+        {
+          path: 'orders',
+          component: OrdersView,
+          meta: { requiresAuth: true, role: 'USER' }
+        },
         {
           path: 'worker/apply',
           component: WorkerApplyView,
-          meta: { requiresAuth: true }
+          meta: { requiresAuth: true, role: 'USER' }
         }
       ]
     },
@@ -36,6 +46,13 @@ const router = createRouter({
       path: '/login',
       component: AuthLayout,
       children: [{ path: '', component: LoginView }]
+    },
+    {
+      path: '/worker',
+      component: WorkerLayout,
+      meta: { requiresAuth: true, role: 'WORKER' },
+      redirect: '/worker/orders',
+      children: [{ path: 'orders', component: WorkerOrdersView }]
     },
     {
       path: '/admin',
@@ -50,11 +67,17 @@ const router = createRouter({
   ]
 })
 
+function defaultHomePath() {
+  if (authStore.hasRole('ADMIN')) return '/admin/dashboard'
+  if (authStore.hasRole('WORKER')) return '/worker/orders'
+  return '/'
+}
+
 router.beforeEach(async (to) => {
   await authStore.ensureLoaded()
 
   if (to.path === '/login' && authStore.isLoggedIn()) {
-    return authStore.hasRole('ADMIN') ? '/admin/dashboard' : '/'
+    return defaultHomePath()
   }
 
   if (!to.meta.requiresAuth) {

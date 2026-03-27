@@ -9,6 +9,7 @@ public class OrderEntity {
 
     @TableId(type = IdType.AUTO)
     private Long id;
+    private Long userId;
     private String serviceName;
     private Long workerId;
     private String customerName;
@@ -23,9 +24,10 @@ public class OrderEntity {
     public OrderEntity() {
     }
 
-    public OrderEntity(String serviceName, Long workerId, String customerName, String contactPhone,
+    public OrderEntity(Long userId, String serviceName, Long workerId, String customerName, String contactPhone,
                        String serviceAddress, String bookingDate, String bookingSlot, String status,
                        String progressNote, String remark) {
+        this.userId = userId;
         this.serviceName = serviceName;
         this.workerId = workerId;
         this.customerName = customerName;
@@ -38,12 +40,27 @@ public class OrderEntity {
         this.remark = remark;
     }
 
+    public OrderEntity(String serviceName, Long workerId, String customerName, String contactPhone,
+                       String serviceAddress, String bookingDate, String bookingSlot, String status,
+                       String progressNote, String remark) {
+        this(null, serviceName, workerId, customerName, contactPhone, serviceAddress, bookingDate, bookingSlot,
+                status, progressNote, remark);
+    }
+
     public Long getId() {
         return id;
     }
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
     public String getServiceName() {

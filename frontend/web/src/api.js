@@ -78,6 +78,35 @@ export function createOrder(payload) {
   })
 }
 
+export function submitOrderReview(id, payload) {
+  return request(`/api/orders/${id}/review`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  })
+}
+
+export function fetchWorkerOrders() {
+  return request('/api/worker/orders')
+}
+
+export function acceptWorkerOrder(id) {
+  return request(`/api/worker/orders/${id}/accept`, {
+    method: 'POST'
+  })
+}
+
+export function startWorkerOrder(id) {
+  return request(`/api/worker/orders/${id}/start`, {
+    method: 'POST'
+  })
+}
+
+export function completeWorkerOrder(id) {
+  return request(`/api/worker/orders/${id}/complete`, {
+    method: 'POST'
+  })
+}
+
 export function fetchAdminDashboard() {
   return request('/api/admin/dashboard')
 }
@@ -111,8 +140,6 @@ export function fetchMyWorkerApplications() {
 export function fetchAdminWorkerApplications() {
   return request('/api/worker-applications/admin')
 }
-
-export const fetchAllWorkerApplications = fetchAdminWorkerApplications
 
 export function reviewWorkerApplication(id, payload) {
   return request(`/api/worker-applications/admin/${id}/review`, {
