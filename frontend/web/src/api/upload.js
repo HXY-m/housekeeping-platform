@@ -1,11 +1,19 @@
 import { request } from './http'
 
-export function uploadImage(file) {
+function uploadByEndpoint(endpoint, file) {
   const formData = new FormData()
   formData.append('file', file)
 
-  return request('/api/files/images', {
+  return request(endpoint, {
     method: 'POST',
     body: formData
   })
+}
+
+export function uploadImage(file) {
+  return uploadByEndpoint('/api/files/images', file)
+}
+
+export function uploadAttachment(file) {
+  return uploadByEndpoint('/api/files/attachments', file)
 }

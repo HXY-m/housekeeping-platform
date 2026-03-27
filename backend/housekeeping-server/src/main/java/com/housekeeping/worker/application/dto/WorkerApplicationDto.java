@@ -1,6 +1,7 @@
 package com.housekeeping.worker.application.dto;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record WorkerApplicationDto(
         Long id,
@@ -15,6 +16,7 @@ public record WorkerApplicationDto(
         String intro,
         String status,
         String adminRemark,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        List<WorkerApplicationAttachmentDto> attachments
 ) {
 }

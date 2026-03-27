@@ -5,11 +5,14 @@ export {
   fetchOrders,
   createOrder,
   fetchBookingAvailability,
+  confirmUserOrder,
+  confirmUserOrderCompletion,
   submitOrderReview,
   fetchWorkerOrders,
   acceptWorkerOrder,
   startWorkerOrder,
-  completeWorkerOrder
+  completeWorkerOrder,
+  uploadWorkerServiceRecord
 } from './api/orders'
 export {
   fetchAdminDashboard,
@@ -36,7 +39,7 @@ export {
   fetchAdminAfterSales,
   handleAdminAfterSale
 } from './api/afterSales'
-export { uploadImage } from './api/upload'
+export { uploadAttachment, uploadImage } from './api/upload'
 export {
   fetchUserProfile,
   updateUserProfile,

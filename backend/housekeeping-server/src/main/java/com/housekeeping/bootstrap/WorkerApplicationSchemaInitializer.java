@@ -39,6 +39,18 @@ public class WorkerApplicationSchemaInitializer implements CommandLineRunner {
                     CONSTRAINT fk_worker_application_user FOREIGN KEY (user_id) REFERENCES sys_user(id)
                 )
                 """);
+        jdbcTemplate.execute("""
+                CREATE TABLE IF NOT EXISTS worker_application_attachment (
+                    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                    application_id BIGINT NOT NULL,
+                    file_name VARCHAR(150) NOT NULL,
+                    file_url VARCHAR(500) NOT NULL,
+                    file_size BIGINT NOT NULL DEFAULT 0,
+                    created_at DATETIME NOT NULL,
+                    KEY idx_worker_application_attachment_app (application_id),
+                    CONSTRAINT fk_worker_application_attachment_app FOREIGN KEY (application_id) REFERENCES worker_application(id)
+                )
+                """);
     }
 
     private void ensureWorkerUserIdColumn() {

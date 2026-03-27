@@ -23,7 +23,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/orders")
 @PreAuthorize("hasRole('USER')")
-@Tag(name = "订单模块", description = "用户侧下单、订单查询、时段校验与评价接口")
+@Tag(name = "订单模块", description = "用户侧下单、订单查询、确认服务与评价接口")
 public class OrderController {
 
     private final OrderService orderService;
@@ -49,6 +49,18 @@ public class OrderController {
     @Operation(summary = "创建预约订单")
     public ApiResponse<OrderDto> create(@Valid @RequestBody OrderRequest request) {
         return ApiResponse.ok(orderService.createOrder(request));
+    }
+
+    @PostMapping("/{id}/confirm")
+    @Operation(summary = "用户确认预约安排")
+    public ApiResponse<OrderDto> confirm(@PathVariable Long id) {
+        return ApiResponse.ok(orderService.confirmOrderByUser(id));
+    }
+
+    @PostMapping("/{id}/confirm-completion")
+    @Operation(summary = "用户确认完工")
+    public ApiResponse<OrderDto> confirmCompletion(@PathVariable Long id) {
+        return ApiResponse.ok(orderService.confirmCompletionByUser(id));
     }
 
     @PostMapping("/{id}/review")

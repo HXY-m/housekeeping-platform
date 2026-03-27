@@ -8,11 +8,13 @@ import com.housekeeping.auth.support.SessionUser;
 import com.housekeeping.common.mapper.OrderDtoMapper;
 import com.housekeeping.common.mapper.WorkerDtoMapper;
 import com.housekeeping.exception.BusinessException;
+import com.housekeeping.order.OrderServiceRecordStage;
 import com.housekeeping.order.OrderStatus;
 import com.housekeeping.order.dto.BookingAvailabilityDto;
 import com.housekeeping.order.dto.OrderDto;
 import com.housekeeping.order.dto.OrderRequest;
 import com.housekeeping.order.dto.OrderReviewRequest;
+import com.housekeeping.order.dto.OrderServiceRecordDto;
 import com.housekeeping.order.entity.OrderEntity;
 import com.housekeeping.order.entity.OrderProgressEntity;
 import com.housekeeping.order.entity.OrderReviewEntity;
@@ -24,6 +26,7 @@ import com.housekeeping.worker.mapper.WorkerMapper;
 import com.housekeeping.worker.service.WorkerProfileService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -54,6 +57,7 @@ public class OrderService {
     private final WorkerProfileService workerProfileService;
     private final WorkerDtoMapper workerDtoMapper;
     private final OrderDtoMapper orderDtoMapper;
+    private final OrderServiceRecordService orderServiceRecordService;
     private final OperationLogService operationLogService;
 
     public OrderService(OrderMapper orderMapper,
@@ -63,6 +67,7 @@ public class OrderService {
                         WorkerProfileService workerProfileService,
                         WorkerDtoMapper workerDtoMapper,
                         OrderDtoMapper orderDtoMapper,
+                        OrderServiceRecordService orderServiceRecordService,
                         OperationLogService operationLogService) {
         this.orderMapper = orderMapper;
         this.orderProgressMapper = orderProgressMapper;
@@ -71,6 +76,7 @@ public class OrderService {
         this.workerProfileService = workerProfileService;
         this.workerDtoMapper = workerDtoMapper;
         this.orderDtoMapper = orderDtoMapper;
+        this.orderServiceRecordService = orderServiceRecordService;
         this.operationLogService = operationLogService;
     }
 
@@ -85,7 +91,7 @@ public class OrderService {
 
     public List<OrderDto> listCurrentWorkerOrders() {
         SessionUser currentUser = requireCurrentUser();
-        WorkerEntity worker = requireWorkerByUserId(currentUser.userId());
+        WorkerEntity worker = workerProfileService.requireWorkerByUserId(currentUser.userId());
         return buildOrderDtos(orderMapper.selectList(
                 new LambdaQueryWrapper<OrderEntity>()
                         .eq(OrderEntity::getWorkerId, worker.getId())
@@ -95,22 +101,21 @@ public class OrderService {
 
     public List<OrderDto> listAllOrders() {
         return buildOrderDtos(orderMapper.selectList(
-                new LambdaQueryWrapper<OrderEntity>()
-                        .orderByDesc(OrderEntity::getId)
+                new LambdaQueryWrapper<OrderEntity>().orderByDesc(OrderEntity::getId)
         ));
     }
 
     public BookingAvailabilityDto getBookingAvailability(Long workerId, String bookingDate) {
-        requireApprovedWorker(workerId);
+        workerProfileService.requireApprovedWorker(workerId);
         LocalDate parsedDate = parseBookingDate(bookingDate);
 
         List<String> occupiedSlots = orderMapper.selectList(
                         new LambdaQueryWrapper<OrderEntity>()
                                 .eq(OrderEntity::getWorkerId, workerId)
                                 .eq(OrderEntity::getBookingDate, parsedDate.toString())
-                                .ne(OrderEntity::getStatus, OrderStatus.COMPLETED.code())
-                                .orderByAsc(OrderEntity::getId)
-                ).stream()
+                                .notIn(OrderEntity::getStatus, List.of(OrderStatus.COMPLETED.code()))
+                                .orderByAsc(OrderEntity::getId))
+                .stream()
                 .map(OrderEntity::getBookingSlot)
                 .filter(Objects::nonNull)
                 .distinct()
@@ -126,7 +131,7 @@ public class OrderService {
     @Transactional
     public OrderDto createOrder(OrderRequest request) {
         SessionUser currentUser = requireCurrentUser();
-        WorkerEntity worker = requireApprovedWorker(request.workerId());
+        WorkerEntity worker = workerProfileService.requireApprovedWorker(request.workerId());
         if (!workerDtoMapper.split(worker.getTags()).contains(request.serviceName())) {
             throw new BusinessException("该服务人员暂不支持所选服务项目");
         }
@@ -149,7 +154,7 @@ public class OrderService {
                 request.remark().trim()
         );
         orderMapper.insert(order);
-        appendProgress(order.getId(), OrderStatus.PENDING.code(), "订单已创建，等待服务人员接单");
+        appendProgress(order.getId(), OrderStatus.PENDING, "订单已创建，等待服务人员接单");
         operationLogService.record(
                 OperationLogActions.ORDER_CREATE,
                 "ORDER",
@@ -161,49 +166,90 @@ public class OrderService {
 
     @Transactional
     public OrderDto acceptOrder(Long orderId) {
-        return updateOrderByWorker(orderId, OrderStatus.ACCEPTED, "服务人员已接单，请保持电话畅通");
+        SessionUser currentUser = requireCurrentUser();
+        WorkerEntity worker = workerProfileService.requireWorkerByUserId(currentUser.userId());
+        OrderEntity order = requireWorkerOwnedOrder(orderId, worker.getId());
+        requireStatus(order, OrderStatus.PENDING, "只有待接单订单才能接单");
+        updateOrderStatus(order, OrderStatus.ACCEPTED, "服务人员已接单，等待用户确认预约安排");
+        operationLogService.record(OperationLogActions.ORDER_ACCEPT, "ORDER", orderId, "服务人员已接单");
+        return buildSingleOrderDto(order);
+    }
+
+    @Transactional
+    public OrderDto confirmOrderByUser(Long orderId) {
+        SessionUser currentUser = requireCurrentUser();
+        OrderEntity order = requireUserOwnedOrder(orderId, currentUser.userId());
+        requireStatus(order, OrderStatus.ACCEPTED, "只有服务人员接单后，用户才能确认预约");
+        updateOrderStatus(order, OrderStatus.CONFIRMED, "用户已确认预约安排，等待服务人员上门");
+        appendProgress(order.getId(), OrderStatus.CONFIRMED, "用户已确认预约安排，等待服务人员上门");
+        return buildSingleOrderDto(order);
     }
 
     @Transactional
     public OrderDto startOrder(Long orderId) {
-        return updateOrderByWorker(orderId, OrderStatus.IN_SERVICE, "服务已开始，服务人员正在处理中");
+        SessionUser currentUser = requireCurrentUser();
+        WorkerEntity worker = workerProfileService.requireWorkerByUserId(currentUser.userId());
+        OrderEntity order = requireWorkerOwnedOrder(orderId, worker.getId());
+        requireStatus(order, OrderStatus.CONFIRMED, "用户确认预约后才能开始服务");
+        updateOrderStatus(order, OrderStatus.IN_SERVICE, "服务已开始，服务人员正在上门处理");
+        operationLogService.record(OperationLogActions.ORDER_START, "ORDER", orderId, "服务人员开始服务");
+        return buildSingleOrderDto(order);
     }
 
     @Transactional
-    public OrderDto completeOrder(Long orderId) {
+    public OrderDto submitCompletionByWorker(Long orderId) {
         SessionUser currentUser = requireCurrentUser();
-        WorkerEntity worker = requireWorkerByUserId(currentUser.userId());
+        WorkerEntity worker = workerProfileService.requireWorkerByUserId(currentUser.userId());
         OrderEntity order = requireWorkerOwnedOrder(orderId, worker.getId());
-
-        if (OrderStatus.COMPLETED.matches(order.getStatus())) {
-            throw new BusinessException("该订单已经完成");
+        requireStatus(order, OrderStatus.IN_SERVICE, "只有服务中的订单才能提交完工");
+        if (!orderServiceRecordService.hasStage(orderId, OrderServiceRecordStage.FINISH_PROOF)) {
+            throw new BusinessException("提交完工前，请先上传至少一条完工凭证");
         }
+        updateOrderStatus(order, OrderStatus.WAITING_USER_CONFIRMATION, "服务人员已提交完工，等待用户确认");
+        operationLogService.record(OperationLogActions.ORDER_COMPLETE, "ORDER", orderId, "服务人员提交完工");
+        return buildSingleOrderDto(order);
+    }
 
-        updateOrderStatus(order, OrderStatus.COMPLETED, "服务已完成，等待用户评价");
+    @Transactional
+    public OrderDto confirmCompletionByUser(Long orderId) {
+        SessionUser currentUser = requireCurrentUser();
+        OrderEntity order = requireUserOwnedOrder(orderId, currentUser.userId());
+        requireStatus(order, OrderStatus.WAITING_USER_CONFIRMATION, "只有待用户确认完工的订单才能完成");
+        updateOrderStatus(order, OrderStatus.COMPLETED, "用户已确认完工，订单完成");
+
+        WorkerEntity worker = requireWorker(order.getWorkerId());
         worker.setCompletedOrders((worker.getCompletedOrders() == null ? 0 : worker.getCompletedOrders()) + 1);
         workerMapper.updateById(worker);
-        operationLogService.record(
-                OperationLogActions.ORDER_COMPLETE,
-                "ORDER",
-                order.getId(),
-                "订单已完成，服务人员ID=" + worker.getId()
-        );
+        operationLogService.record(OperationLogActions.ORDER_COMPLETE, "ORDER", orderId, "用户确认完工");
         return buildSingleOrderDto(order);
+    }
+
+    @Transactional
+    public OrderServiceRecordDto uploadWorkerServiceRecord(Long orderId,
+                                                           String stage,
+                                                           String description,
+                                                           MultipartFile file) {
+        SessionUser currentUser = requireCurrentUser();
+        WorkerEntity worker = workerProfileService.requireWorkerByUserId(currentUser.userId());
+        OrderEntity order = requireWorkerOwnedOrder(orderId, worker.getId());
+
+        OrderServiceRecordStage recordStage = OrderServiceRecordStage.from(stage);
+        if (recordStage == OrderServiceRecordStage.CHECK_IN) {
+            if (!OrderStatus.CONFIRMED.matches(order.getStatus()) && !OrderStatus.IN_SERVICE.matches(order.getStatus())) {
+                throw new BusinessException("只有用户确认后的订单才能上传上门打卡");
+            }
+        } else if (!OrderStatus.IN_SERVICE.matches(order.getStatus()) && !OrderStatus.WAITING_USER_CONFIRMATION.matches(order.getStatus())) {
+            throw new BusinessException("当前订单阶段暂不支持上传过程记录");
+        }
+
+        return orderServiceRecordService.createRecord(orderId, worker.getId(), recordStage.code(), description, file);
     }
 
     @Transactional
     public OrderDto reviewOrder(Long orderId, OrderReviewRequest request) {
         SessionUser currentUser = requireCurrentUser();
-        OrderEntity order = orderMapper.selectById(orderId);
-        if (order == null) {
-            throw new BusinessException("未找到对应的订单");
-        }
-        if (!Objects.equals(order.getUserId(), currentUser.userId())) {
-            throw new BusinessException("只能评价自己的订单");
-        }
-        if (!OrderStatus.COMPLETED.matches(order.getStatus())) {
-            throw new BusinessException("只有已完成订单才可以评价");
-        }
+        OrderEntity order = requireUserOwnedOrder(orderId, currentUser.userId());
+        requireStatus(order, OrderStatus.COMPLETED, "只有已完成订单才可以评价");
 
         OrderReviewEntity existed = orderReviewMapper.selectOne(
                 new LambdaQueryWrapper<OrderReviewEntity>()
@@ -259,40 +305,32 @@ public class OrderService {
         }
     }
 
-    private OrderDto updateOrderByWorker(Long orderId, OrderStatus nextStatus, String note) {
-        SessionUser currentUser = requireCurrentUser();
-        WorkerEntity worker = requireWorkerByUserId(currentUser.userId());
-        OrderEntity order = requireWorkerOwnedOrder(orderId, worker.getId());
-
-        if (OrderStatus.COMPLETED.matches(order.getStatus())) {
-            throw new BusinessException("该订单已经完成，无法继续流转");
-        }
-        if (nextStatus == OrderStatus.ACCEPTED && OrderStatus.ACCEPTED.matches(order.getStatus())) {
-            throw new BusinessException("该订单已经接单");
-        }
-        if (nextStatus == OrderStatus.IN_SERVICE && OrderStatus.IN_SERVICE.matches(order.getStatus())) {
-            throw new BusinessException("该订单已经开始服务");
-        }
-
-        updateOrderStatus(order, nextStatus, note);
-        operationLogService.record(
-                nextStatus == OrderStatus.ACCEPTED ? OperationLogActions.ORDER_ACCEPT : OperationLogActions.ORDER_START,
-                "ORDER",
-                order.getId(),
-                note
-        );
-        return buildSingleOrderDto(order);
-    }
-
     private void updateOrderStatus(OrderEntity order, OrderStatus nextStatus, String note) {
         order.setStatus(nextStatus.code());
         order.setProgressNote(note);
         orderMapper.updateById(order);
-        appendProgress(order.getId(), nextStatus.code(), note);
+        appendProgress(order.getId(), nextStatus, note);
     }
 
-    private void appendProgress(Long orderId, String status, String note) {
-        orderProgressMapper.insert(new OrderProgressEntity(orderId, status, note));
+    private void appendProgress(Long orderId, OrderStatus status, String note) {
+        orderProgressMapper.insert(new OrderProgressEntity(orderId, status.code(), note));
+    }
+
+    private void requireStatus(OrderEntity order, OrderStatus status, String message) {
+        if (!status.matches(order.getStatus())) {
+            throw new BusinessException(message);
+        }
+    }
+
+    private OrderEntity requireUserOwnedOrder(Long orderId, Long userId) {
+        OrderEntity order = orderMapper.selectById(orderId);
+        if (order == null) {
+            throw new BusinessException("未找到对应的订单");
+        }
+        if (!Objects.equals(order.getUserId(), userId)) {
+            throw new BusinessException("只能操作自己的订单");
+        }
+        return order;
     }
 
     private OrderEntity requireWorkerOwnedOrder(Long orderId, Long workerId) {
@@ -310,22 +348,6 @@ public class OrderService {
         WorkerEntity worker = workerMapper.selectById(workerId);
         if (worker == null) {
             throw new BusinessException("未找到对应的服务人员");
-        }
-        return worker;
-    }
-
-    private WorkerEntity requireApprovedWorker(Long workerId) {
-        return workerProfileService.requireApprovedWorker(workerId);
-    }
-
-    private WorkerEntity requireWorkerByUserId(Long userId) {
-        WorkerEntity worker = workerMapper.selectOne(
-                new LambdaQueryWrapper<WorkerEntity>()
-                        .eq(WorkerEntity::getUserId, userId)
-                        .last("limit 1")
-        );
-        if (worker == null) {
-            throw new BusinessException("当前账号还没有绑定服务人员档案");
         }
         return worker;
     }
@@ -349,12 +371,10 @@ public class OrderService {
                 : workerMapper.selectBatchIds(workerIds).stream()
                 .collect(Collectors.toMap(WorkerEntity::getId, Function.identity()));
 
-        List<Long> orderIds = orders.stream()
-                .map(OrderEntity::getId)
-                .toList();
-
+        List<Long> orderIds = orders.stream().map(OrderEntity::getId).toList();
         Map<Long, String> progressMap = buildLatestProgressMap(orderIds);
         Map<Long, OrderReviewEntity> reviewMap = buildReviewMap(orderIds);
+        Map<Long, List<OrderServiceRecordDto>> serviceRecordMap = orderServiceRecordService.groupByOrderIds(orderIds);
 
         return orders.stream()
                 .map(order -> {
@@ -366,7 +386,8 @@ public class OrderService {
                             order,
                             worker.getName(),
                             progressMap.getOrDefault(order.getId(), order.getProgressNote()),
-                            reviewMap.get(order.getId())
+                            reviewMap.get(order.getId()),
+                            serviceRecordMap.getOrDefault(order.getId(), List.of())
                     );
                 })
                 .toList();
@@ -378,10 +399,10 @@ public class OrderService {
         }
         Map<Long, String> progressMap = new LinkedHashMap<>();
         orderProgressMapper.selectList(
-                        new LambdaQueryWrapper<OrderProgressEntity>()
-                                .in(OrderProgressEntity::getOrderId, orderIds)
-                                .orderByDesc(OrderProgressEntity::getId)
-                ).forEach(item -> progressMap.putIfAbsent(item.getOrderId(), item.getProgressNote()));
+                new LambdaQueryWrapper<OrderProgressEntity>()
+                        .in(OrderProgressEntity::getOrderId, orderIds)
+                        .orderByDesc(OrderProgressEntity::getId)
+        ).forEach(item -> progressMap.putIfAbsent(item.getOrderId(), item.getProgressNote()));
         return progressMap;
     }
 
@@ -390,15 +411,14 @@ public class OrderService {
             return Map.of();
         }
         return orderReviewMapper.selectList(
-                        new LambdaQueryWrapper<OrderReviewEntity>()
-                                .in(OrderReviewEntity::getOrderId, orderIds)
-                                .orderByDesc(OrderReviewEntity::getId)
-                ).stream()
-                .collect(Collectors.toMap(
-                        OrderReviewEntity::getOrderId,
-                        Function.identity(),
-                        (left, right) -> left
-                ));
+                new LambdaQueryWrapper<OrderReviewEntity>()
+                        .in(OrderReviewEntity::getOrderId, orderIds)
+                        .orderByDesc(OrderReviewEntity::getId)
+        ).stream().collect(Collectors.toMap(
+                OrderReviewEntity::getOrderId,
+                Function.identity(),
+                (left, right) -> left
+        ));
     }
 
     private void refreshWorkerRating(Long workerId) {

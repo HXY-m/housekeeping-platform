@@ -1,10 +1,12 @@
 package com.housekeeping.bootstrap;
 
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
+@Order(2)
 public class UserProfileSchemaInitializer implements CommandLineRunner {
 
     private final JdbcTemplate jdbcTemplate;

@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Objects;
 
 @Component
-@Order(20)
+@Order(30)
 public class DemoDataInitializer implements CommandLineRunner {
 
     private static final String DEMO_USER_PHONE = "13800000011";

@@ -5,9 +5,11 @@ import com.housekeeping.auth.service.AuthAccountService;
 import com.housekeeping.auth.support.RoleCodes;
 import com.housekeeping.user.service.UserProfileService;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 @Component
+@Order(20)
 public class AuthDataInitializer implements CommandLineRunner {
 
     private final AuthAccountService authAccountService;

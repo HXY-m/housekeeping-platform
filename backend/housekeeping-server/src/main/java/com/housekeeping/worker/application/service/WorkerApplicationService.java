@@ -9,10 +9,14 @@ import com.housekeeping.auth.support.CurrentUserContext;
 import com.housekeeping.auth.support.SessionUser;
 import com.housekeeping.exception.BusinessException;
 import com.housekeeping.worker.WorkerQualificationStatus;
+import com.housekeeping.worker.application.dto.WorkerApplicationAttachmentDto;
+import com.housekeeping.worker.application.dto.WorkerApplicationAttachmentRequest;
 import com.housekeeping.worker.application.dto.WorkerApplicationDto;
 import com.housekeeping.worker.application.dto.WorkerApplicationReviewRequest;
 import com.housekeeping.worker.application.dto.WorkerApplicationSubmitRequest;
+import com.housekeeping.worker.application.entity.WorkerApplicationAttachmentEntity;
 import com.housekeeping.worker.application.entity.WorkerApplicationEntity;
+import com.housekeeping.worker.application.mapper.WorkerApplicationAttachmentMapper;
 import com.housekeeping.worker.application.mapper.WorkerApplicationMapper;
 import com.housekeeping.worker.dto.WorkerProfileUpsertCommand;
 import com.housekeeping.worker.service.WorkerProfileService;
@@ -20,21 +24,27 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class WorkerApplicationService {
 
     private final WorkerApplicationMapper workerApplicationMapper;
+    private final WorkerApplicationAttachmentMapper workerApplicationAttachmentMapper;
     private final SysUserMapper sysUserMapper;
     private final WorkerProfileService workerProfileService;
     private final OperationLogService operationLogService;
 
     public WorkerApplicationService(WorkerApplicationMapper workerApplicationMapper,
+                                    WorkerApplicationAttachmentMapper workerApplicationAttachmentMapper,
                                     SysUserMapper sysUserMapper,
                                     WorkerProfileService workerProfileService,
                                     OperationLogService operationLogService) {
         this.workerApplicationMapper = workerApplicationMapper;
+        this.workerApplicationAttachmentMapper = workerApplicationAttachmentMapper;
         this.sysUserMapper = sysUserMapper;
         this.workerProfileService = workerProfileService;
         this.operationLogService = operationLogService;
@@ -55,21 +65,29 @@ public class WorkerApplicationService {
             throw new BusinessException("你已有待审核的资质申请，请勿重复提交");
         }
 
+        if (request.attachments() == null || request.attachments().isEmpty()) {
+            throw new BusinessException("请至少上传 1 份资质附件");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
         WorkerApplicationEntity entity = new WorkerApplicationEntity();
         entity.setUserId(currentUser.userId());
-        entity.setRealName(request.realName());
-        entity.setPhone(request.phone());
-        entity.setServiceTypes(request.serviceTypes());
+        entity.setRealName(request.realName().trim());
+        entity.setPhone(request.phone().trim());
+        entity.setServiceTypes(request.serviceTypes().trim());
         entity.setYearsOfExperience(request.yearsOfExperience());
-        entity.setCertificates(request.certificates());
-        entity.setServiceAreas(request.serviceAreas());
-        entity.setAvailableSchedule(request.availableSchedule());
-        entity.setIntro(request.intro());
+        entity.setCertificates(request.certificates().trim());
+        entity.setServiceAreas(request.serviceAreas().trim());
+        entity.setAvailableSchedule(request.availableSchedule().trim());
+        entity.setIntro(request.intro().trim());
         entity.setStatus("PENDING");
         entity.setAdminRemark("");
-        entity.setCreatedAt(LocalDateTime.now());
-        entity.setUpdatedAt(LocalDateTime.now());
+        entity.setCreatedAt(now);
+        entity.setUpdatedAt(now);
         workerApplicationMapper.insert(entity);
+
+        saveAttachments(entity.getId(), request.attachments(), now);
+
         workerProfileService.upsertProfile(new WorkerProfileUpsertCommand(
                 currentUser.userId(),
                 request.realName(),
@@ -91,35 +109,31 @@ public class WorkerApplicationService {
                 entity.getId(),
                 "提交服务人员资质申请，姓名=" + entity.getRealName()
         );
-        return toDto(entity);
+        return toDto(entity, toAttachmentDtos(request.attachments()));
     }
 
     public List<WorkerApplicationDto> myApplications() {
         SessionUser currentUser = requireCurrentUser();
-        return workerApplicationMapper.selectList(
-                        new LambdaQueryWrapper<WorkerApplicationEntity>()
-                                .eq(WorkerApplicationEntity::getUserId, currentUser.userId())
-                                .orderByDesc(WorkerApplicationEntity::getId))
-                .stream()
-                .map(this::toDto)
-                .toList();
+        return toDtos(workerApplicationMapper.selectList(
+                new LambdaQueryWrapper<WorkerApplicationEntity>()
+                        .eq(WorkerApplicationEntity::getUserId, currentUser.userId())
+                        .orderByDesc(WorkerApplicationEntity::getId)
+        ));
     }
 
     public List<WorkerApplicationDto> listAll() {
-        return workerApplicationMapper.selectList(
-                        new LambdaQueryWrapper<WorkerApplicationEntity>()
-                                .orderByAsc(WorkerApplicationEntity::getStatus)
-                                .orderByDesc(WorkerApplicationEntity::getId))
-                .stream()
-                .map(this::toDto)
-                .toList();
+        return toDtos(workerApplicationMapper.selectList(
+                new LambdaQueryWrapper<WorkerApplicationEntity>()
+                        .orderByAsc(WorkerApplicationEntity::getStatus)
+                        .orderByDesc(WorkerApplicationEntity::getId)
+        ));
     }
 
     @Transactional
     public WorkerApplicationDto review(Long id, WorkerApplicationReviewRequest request) {
         WorkerApplicationEntity entity = workerApplicationMapper.selectById(id);
         if (entity == null) {
-            throw new BusinessException("未找到对应的入驻申请");
+            throw new BusinessException("未找到对应的资质申请");
         }
         if (!"PENDING".equalsIgnoreCase(entity.getStatus())) {
             throw new BusinessException("该申请已经审核完成，不能重复处理");
@@ -163,10 +177,23 @@ public class WorkerApplicationService {
                 entity.getId(),
                 "审核服务人员资质申请，结果=" + entity.getStatus()
         );
-        return toDto(entity);
+        Map<Long, List<WorkerApplicationAttachmentDto>> attachmentMap = buildAttachmentMap(List.of(entity.getId()));
+        return toDto(entity, attachmentMap.getOrDefault(entity.getId(), List.of()));
     }
 
-    private WorkerApplicationDto toDto(WorkerApplicationEntity entity) {
+    private List<WorkerApplicationDto> toDtos(List<WorkerApplicationEntity> entities) {
+        if (entities == null || entities.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, List<WorkerApplicationAttachmentDto>> attachmentMap = buildAttachmentMap(
+                entities.stream().map(WorkerApplicationEntity::getId).toList()
+        );
+        return entities.stream()
+                .map(entity -> toDto(entity, attachmentMap.getOrDefault(entity.getId(), List.of())))
+                .toList();
+    }
+
+    private WorkerApplicationDto toDto(WorkerApplicationEntity entity, List<WorkerApplicationAttachmentDto> attachments) {
         return new WorkerApplicationDto(
                 entity.getId(),
                 entity.getUserId(),
@@ -180,8 +207,54 @@ public class WorkerApplicationService {
                 entity.getIntro(),
                 entity.getStatus(),
                 entity.getAdminRemark(),
-                entity.getCreatedAt()
+                entity.getCreatedAt(),
+                attachments
         );
+    }
+
+    private void saveAttachments(Long applicationId,
+                                 List<WorkerApplicationAttachmentRequest> attachments,
+                                 LocalDateTime createdAt) {
+        for (WorkerApplicationAttachmentRequest attachment : attachments) {
+            workerApplicationAttachmentMapper.insert(new WorkerApplicationAttachmentEntity(
+                    applicationId,
+                    attachment.name().trim(),
+                    attachment.url().trim(),
+                    attachment.size(),
+                    createdAt
+            ));
+        }
+    }
+
+    private Map<Long, List<WorkerApplicationAttachmentDto>> buildAttachmentMap(List<Long> applicationIds) {
+        if (applicationIds == null || applicationIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<Long, List<WorkerApplicationAttachmentDto>> grouped = new LinkedHashMap<>();
+        workerApplicationAttachmentMapper.selectList(
+                new LambdaQueryWrapper<WorkerApplicationAttachmentEntity>()
+                        .in(WorkerApplicationAttachmentEntity::getApplicationId, applicationIds)
+                        .orderByAsc(WorkerApplicationAttachmentEntity::getId)
+        ).forEach(item -> grouped.computeIfAbsent(item.getApplicationId(), key -> new ArrayList<>())
+                .add(new WorkerApplicationAttachmentDto(
+                        item.getId(),
+                        item.getFileName(),
+                        item.getFileUrl(),
+                        item.getFileSize() == null ? 0L : item.getFileSize()
+                )));
+        return grouped;
+    }
+
+    private List<WorkerApplicationAttachmentDto> toAttachmentDtos(List<WorkerApplicationAttachmentRequest> attachments) {
+        return attachments.stream()
+                .map(item -> new WorkerApplicationAttachmentDto(
+                        null,
+                        item.name().trim(),
+                        item.url().trim(),
+                        item.size()
+                ))
+                .toList();
     }
 
     private SessionUser requireCurrentUser() {

@@ -4,9 +4,11 @@ import java.util.List;
 
 public enum OrderStatus {
 
-    PENDING("待服务", "待接单"),
+    PENDING("待接单", "待服务"),
     ACCEPTED("已接单"),
+    CONFIRMED("用户已确认"),
     IN_SERVICE("服务中"),
+    WAITING_USER_CONFIRMATION("待用户确认完工"),
     COMPLETED("已完成");
 
     private final List<String> aliases;

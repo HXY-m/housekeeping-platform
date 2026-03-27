@@ -1,39 +1,46 @@
 <template>
   <div class="page-stack">
-    <div class="console-overview console-overview--admin">
-      <div>
-        <el-tag type="danger" round>管理员中台</el-tag>
-        <h1>平台运营态势总览</h1>
-        <p>从订单规模、服务供给和满意度三个维度快速掌握平台运行情况。</p>
+    <el-card shadow="never" class="page-panel">
+      <div class="page-panel__header">
+        <div>
+          <h1 class="page-panel__title">运营总览</h1>
+          <p class="page-panel__desc">
+            聚合订单规模、服务供给和满意度，便于管理员快速判断当前平台负载和待处理重点。
+          </p>
+        </div>
+        <div class="filter-actions">
+          <el-button type="primary" @click="router.push('/admin/applications')">去资质审核</el-button>
+          <el-button plain @click="router.push('/admin/after-sales')">去售后处理</el-button>
+        </div>
       </div>
-      <div class="hero-actions">
-        <el-button type="primary" @click="router.push('/admin/applications')">查看资质审核</el-button>
-        <el-button plain @click="router.push('/admin/after-sales')">进入售后处理中台</el-button>
-      </div>
-    </div>
 
-    <div class="summary-grid">
-      <el-card shadow="never" class="summary-card">
-        <el-statistic title="总订单量" :value="dashboard.totalOrders" />
-      </el-card>
-      <el-card shadow="never" class="summary-card">
-        <el-statistic title="已完成订单" :value="dashboard.completedOrders" />
-      </el-card>
-      <el-card shadow="never" class="summary-card">
-        <el-statistic title="活跃服务人员" :value="dashboard.activeWorkers" />
-      </el-card>
-      <el-card shadow="never" class="summary-card">
-        <el-statistic title="平均满意度" :value="dashboard.averageRating" :precision="2" />
-      </el-card>
-    </div>
+      <div class="metric-strip">
+        <div class="metric-chip">
+          <span class="metric-chip__label">总订单量</span>
+          <strong>{{ dashboard.totalOrders }}</strong>
+        </div>
+        <div class="metric-chip">
+          <span class="metric-chip__label">已完成订单</span>
+          <strong>{{ dashboard.completedOrders }}</strong>
+        </div>
+        <div class="metric-chip">
+          <span class="metric-chip__label">活跃服务人员</span>
+          <strong>{{ dashboard.activeWorkers }}</strong>
+        </div>
+        <div class="metric-chip">
+          <span class="metric-chip__label">平均满意度</span>
+          <strong>{{ dashboard.averageRating.toFixed(2) }}</strong>
+        </div>
+      </div>
+    </el-card>
 
     <el-row :gutter="16">
       <el-col :xs="24" :xl="16">
         <el-card shadow="never">
           <template #header>
             <div class="card-header-between">
-              <strong>服务类型销量</strong>
-              <span class="muted-line">识别平台主要成交品类</span>
+              <strong>服务销量分布</strong>
+              <span class="section-caption">识别当前主要成交服务类型</span>
             </div>
           </template>
           <AppChart :option="salesChartOption" height="360px" />
@@ -44,7 +51,7 @@
           <template #header>
             <div class="card-header-between">
               <strong>订单完成率</strong>
-              <span class="muted-line">观察履约效率</span>
+              <span class="section-caption">观察整体履约效率</span>
             </div>
           </template>
           <AppChart :option="completionChartOption" height="360px" />
@@ -52,19 +59,42 @@
       </el-col>
     </el-row>
 
-    <el-card shadow="never">
-      <template #header>
-        <div class="card-header-between">
-          <strong>服务销量排行</strong>
-          <span class="muted-line">用于运营排期与服务资源分配</span>
+    <div class="page-grid--sidebar">
+      <el-card shadow="never">
+        <template #header>
+          <div class="card-header-between">
+            <strong>服务销量排行</strong>
+            <span class="section-caption">用于运营排期和资源调度</span>
+          </div>
+        </template>
+        <el-table :data="salesRows" stripe>
+          <el-table-column type="index" label="#" width="60" />
+          <el-table-column prop="name" label="服务类型" min-width="180" />
+          <el-table-column prop="value" label="销量" width="120" />
+        </el-table>
+      </el-card>
+
+      <el-card shadow="never">
+        <template #header>
+          <strong>运营提示</strong>
+        </template>
+        <div class="info-stack">
+          <div class="info-panel">
+            <span class="info-panel__label">当前重点</span>
+            <strong>{{ topServiceLabel }}</strong>
+            <span class="muted-line">
+              {{ completionRate }}% 的订单已完成，{{ dashboard.activeWorkers }} 名服务人员处于活跃状态。
+            </span>
+          </div>
+          <div class="info-panel">
+            <span class="info-panel__label">建议跟进</span>
+            <span class="muted-line">
+              若待审核申请或售后工单偏多，优先进入对应后台页面处理，避免服务供给或用户体验积压。
+            </span>
+          </div>
         </div>
-      </template>
-      <el-table :data="salesRows" stripe>
-        <el-table-column type="index" label="#" width="60" />
-        <el-table-column prop="name" label="服务类型" min-width="180" />
-        <el-table-column prop="value" label="销量" width="120" />
-      </el-table>
-    </el-card>
+      </el-card>
+    </div>
   </div>
 </template>
 
@@ -90,6 +120,13 @@ const completionRate = computed(() => {
     return 0
   }
   return Number(((dashboard.value.completedOrders / dashboard.value.totalOrders) * 100).toFixed(1))
+})
+
+const topServiceLabel = computed(() => {
+  if (!salesRows.value.length) {
+    return '暂无成交数据'
+  }
+  return `${salesRows.value[0].name}（${salesRows.value[0].value} 单）`
 })
 
 const salesChartOption = computed(() => ({

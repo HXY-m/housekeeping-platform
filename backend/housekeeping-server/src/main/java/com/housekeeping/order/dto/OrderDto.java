@@ -1,5 +1,7 @@
 package com.housekeeping.order.dto;
 
+import java.util.List;
+
 public record OrderDto(
         Long id,
         String serviceName,
@@ -14,7 +16,8 @@ public record OrderDto(
         String remark,
         boolean reviewed,
         Integer reviewRating,
-        String reviewContent
+        String reviewContent,
+        List<OrderServiceRecordDto> serviceRecords
 ) {
     public OrderDto(Long id,
                     String serviceName,
@@ -28,6 +31,6 @@ public record OrderDto(
                     String progressNote,
                     String remark) {
         this(id, serviceName, workerName, customerName, contactPhone, serviceAddress, bookingDate, bookingSlot,
-                status, progressNote, remark, false, null, null);
+                status, progressNote, remark, false, null, null, List.of());
     }
 }

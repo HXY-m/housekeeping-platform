@@ -16,7 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/files")
 @PreAuthorize("isAuthenticated()")
-@Tag(name = "文件上传", description = "通用图片上传接口")
+@Tag(name = "文件上传", description = "通用图片与附件上传接口")
 public class UploadController {
 
     private final FileStorageService fileStorageService;
@@ -29,5 +29,11 @@ public class UploadController {
     @Operation(summary = "上传图片文件")
     public ApiResponse<UploadedFileDto> uploadImage(@RequestPart("file") MultipartFile file) {
         return ApiResponse.ok(fileStorageService.storeImage(file));
+    }
+
+    @PostMapping(value = "/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "上传通用附件")
+    public ApiResponse<UploadedFileDto> uploadAttachment(@RequestPart("file") MultipartFile file) {
+        return ApiResponse.ok(fileStorageService.storeAttachment(file));
     }
 }
