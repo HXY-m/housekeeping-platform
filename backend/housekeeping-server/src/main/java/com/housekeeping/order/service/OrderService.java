@@ -1,12 +1,15 @@
 package com.housekeeping.order.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.housekeeping.audit.OperationLogActions;
+import com.housekeeping.audit.service.OperationLogService;
 import com.housekeeping.auth.support.CurrentUserContext;
 import com.housekeeping.auth.support.SessionUser;
 import com.housekeeping.common.mapper.OrderDtoMapper;
 import com.housekeeping.common.mapper.WorkerDtoMapper;
 import com.housekeeping.exception.BusinessException;
 import com.housekeeping.order.OrderStatus;
+import com.housekeeping.order.dto.BookingAvailabilityDto;
 import com.housekeeping.order.dto.OrderDto;
 import com.housekeeping.order.dto.OrderRequest;
 import com.housekeeping.order.dto.OrderReviewRequest;
@@ -21,7 +24,9 @@ import com.housekeeping.worker.mapper.WorkerMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,25 +38,36 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class OrderService {
 
+    public static final List<String> BOOKING_SLOTS = List.of(
+            "08:00-10:00",
+            "10:00-12:00",
+            "13:00-15:00",
+            "15:00-17:00",
+            "18:00-20:00"
+    );
+
     private final OrderMapper orderMapper;
     private final OrderProgressMapper orderProgressMapper;
     private final OrderReviewMapper orderReviewMapper;
     private final WorkerMapper workerMapper;
     private final WorkerDtoMapper workerDtoMapper;
     private final OrderDtoMapper orderDtoMapper;
+    private final OperationLogService operationLogService;
 
     public OrderService(OrderMapper orderMapper,
                         OrderProgressMapper orderProgressMapper,
                         OrderReviewMapper orderReviewMapper,
                         WorkerMapper workerMapper,
                         WorkerDtoMapper workerDtoMapper,
-                        OrderDtoMapper orderDtoMapper) {
+                        OrderDtoMapper orderDtoMapper,
+                        OperationLogService operationLogService) {
         this.orderMapper = orderMapper;
         this.orderProgressMapper = orderProgressMapper;
         this.orderReviewMapper = orderReviewMapper;
         this.workerMapper = workerMapper;
         this.workerDtoMapper = workerDtoMapper;
         this.orderDtoMapper = orderDtoMapper;
+        this.operationLogService = operationLogService;
     }
 
     public List<OrderDto> listCurrentUserOrders() {
@@ -73,6 +89,36 @@ public class OrderService {
         ));
     }
 
+    public List<OrderDto> listAllOrders() {
+        return buildOrderDtos(orderMapper.selectList(
+                new LambdaQueryWrapper<OrderEntity>()
+                        .orderByDesc(OrderEntity::getId)
+        ));
+    }
+
+    public BookingAvailabilityDto getBookingAvailability(Long workerId, String bookingDate) {
+        requireWorker(workerId);
+        LocalDate parsedDate = parseBookingDate(bookingDate);
+
+        List<String> occupiedSlots = orderMapper.selectList(
+                        new LambdaQueryWrapper<OrderEntity>()
+                                .eq(OrderEntity::getWorkerId, workerId)
+                                .eq(OrderEntity::getBookingDate, parsedDate.toString())
+                                .ne(OrderEntity::getStatus, OrderStatus.COMPLETED.code())
+                                .orderByAsc(OrderEntity::getId)
+                ).stream()
+                .map(OrderEntity::getBookingSlot)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        List<String> availableSlots = BOOKING_SLOTS.stream()
+                .filter(slot -> !occupiedSlots.contains(slot))
+                .toList();
+
+        return new BookingAvailabilityDto(workerId, parsedDate.toString(), availableSlots, occupiedSlots);
+    }
+
     @Transactional
     public OrderDto createOrder(OrderRequest request) {
         SessionUser currentUser = requireCurrentUser();
@@ -81,21 +127,31 @@ public class OrderService {
             throw new BusinessException("该服务人员暂不支持所选服务项目");
         }
 
+        String normalizedDate = parseBookingDate(request.bookingDate()).toString();
+        String normalizedSlot = normalizeBookingSlot(request.bookingSlot());
+        ensureSlotAvailable(worker.getId(), normalizedDate, normalizedSlot);
+
         OrderEntity order = new OrderEntity(
                 currentUser.userId(),
                 request.serviceName(),
                 worker.getId(),
-                request.customerName(),
-                request.contactPhone(),
-                request.serviceAddress(),
-                request.bookingDate(),
-                request.bookingSlot(),
+                request.customerName().trim(),
+                request.contactPhone().trim(),
+                request.serviceAddress().trim(),
+                normalizedDate,
+                normalizedSlot,
                 OrderStatus.PENDING.code(),
                 "订单已创建，等待服务人员接单",
-                request.remark()
+                request.remark().trim()
         );
         orderMapper.insert(order);
         appendProgress(order.getId(), OrderStatus.PENDING.code(), "订单已创建，等待服务人员接单");
+        operationLogService.record(
+                OperationLogActions.ORDER_CREATE,
+                "ORDER",
+                order.getId(),
+                "创建订单，服务项目：" + order.getServiceName() + "，服务人员ID=" + order.getWorkerId()
+        );
         return buildSingleOrderDto(order);
     }
 
@@ -106,7 +162,7 @@ public class OrderService {
 
     @Transactional
     public OrderDto startOrder(Long orderId) {
-        return updateOrderByWorker(orderId, OrderStatus.IN_SERVICE, "服务已开始，服务人员正在处理");
+        return updateOrderByWorker(orderId, OrderStatus.IN_SERVICE, "服务已开始，服务人员正在处理中");
     }
 
     @Transactional
@@ -122,6 +178,12 @@ public class OrderService {
         updateOrderStatus(order, OrderStatus.COMPLETED, "服务已完成，等待用户评价");
         worker.setCompletedOrders((worker.getCompletedOrders() == null ? 0 : worker.getCompletedOrders()) + 1);
         workerMapper.updateById(worker);
+        operationLogService.record(
+                OperationLogActions.ORDER_COMPLETE,
+                "ORDER",
+                order.getId(),
+                "订单已完成，服务人员ID=" + worker.getId()
+        );
         return buildSingleOrderDto(order);
     }
 
@@ -157,7 +219,40 @@ public class OrderService {
                 LocalDateTime.now()
         ));
         refreshWorkerRating(order.getWorkerId());
+        operationLogService.record(
+                OperationLogActions.ORDER_REVIEW,
+                "ORDER",
+                orderId,
+                "订单评价，评分=" + request.rating()
+        );
         return buildSingleOrderDto(order);
+    }
+
+    private void ensureSlotAvailable(Long workerId, String bookingDate, String bookingSlot) {
+        BookingAvailabilityDto availability = getBookingAvailability(workerId, bookingDate);
+        if (!availability.availableSlots().contains(bookingSlot)) {
+            throw new BusinessException("所选时段已被预约，请更换其他时段");
+        }
+    }
+
+    private String normalizeBookingSlot(String bookingSlot) {
+        String normalized = bookingSlot == null ? "" : bookingSlot.trim();
+        if (!BOOKING_SLOTS.contains(normalized)) {
+            throw new BusinessException("请选择平台提供的预约时段");
+        }
+        return normalized;
+    }
+
+    private LocalDate parseBookingDate(String bookingDate) {
+        try {
+            LocalDate parsed = LocalDate.parse(bookingDate.trim());
+            if (parsed.isBefore(LocalDate.now())) {
+                throw new BusinessException("预约日期不能早于今天");
+            }
+            return parsed;
+        } catch (DateTimeParseException | NullPointerException exception) {
+            throw new BusinessException("预约日期格式不正确");
+        }
     }
 
     private OrderDto updateOrderByWorker(Long orderId, OrderStatus nextStatus, String note) {
@@ -176,6 +271,12 @@ public class OrderService {
         }
 
         updateOrderStatus(order, nextStatus, note);
+        operationLogService.record(
+                nextStatus == OrderStatus.ACCEPTED ? OperationLogActions.ORDER_ACCEPT : OperationLogActions.ORDER_START,
+                "ORDER",
+                order.getId(),
+                note
+        );
         return buildSingleOrderDto(order);
     }
 

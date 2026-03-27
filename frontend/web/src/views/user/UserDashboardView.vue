@@ -4,12 +4,13 @@
       <div>
         <el-tag type="success" round>用户中心</el-tag>
         <h1>我的家政服务全景</h1>
-        <p>从这里快速查看预约进度、售后状态，以及下一步要处理的事项。</p>
+        <p>从这里快速查看预约进度、售后状态和收藏的服务人员，下一步要处理的事情会更清楚。</p>
       </div>
       <div class="hero-actions">
         <el-button type="primary" @click="router.push('/workers')">继续找服务</el-button>
-        <el-button plain @click="router.push('/user/profile')">维护资料与地址</el-button>
-        <el-button plain @click="router.push('/user/orders')">查看全部订单</el-button>
+        <el-button plain @click="router.push('/user/profile')">资料与地址</el-button>
+        <el-button plain @click="router.push('/user/favorites')">我的收藏</el-button>
+        <el-button plain @click="router.push('/user/orders')">全部订单</el-button>
       </div>
     </div>
 
@@ -26,6 +27,9 @@
       <el-card shadow="never" class="summary-card">
         <el-statistic title="售后工单" :value="summary.afterSaleCount" />
       </el-card>
+      <el-card shadow="never" class="summary-card">
+        <el-statistic title="收藏服务人员" :value="summary.favoriteCount" />
+      </el-card>
     </div>
 
     <el-row :gutter="16" v-loading="loading">
@@ -40,12 +44,13 @@
           <AppChart :option="statusChartOption" height="340px" />
         </el-card>
       </el-col>
+
       <el-col :xs="24" :xl="10">
         <el-card shadow="never">
           <template #header>
             <div class="card-header-between">
               <strong>服务偏好</strong>
-              <span class="muted-line">最近订单的服务类型统计</span>
+              <span class="muted-line">最近订单中的服务类型统计</span>
             </div>
           </template>
           <AppChart :option="serviceChartOption" height="340px" />
@@ -60,6 +65,7 @@
           <AppChart :option="afterSaleChartOption" height="300px" />
         </el-card>
       </el-col>
+
       <el-col :xs="24" :xl="12">
         <el-card shadow="never">
           <template #header><strong>最近订单提醒</strong></template>
@@ -85,7 +91,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppChart from '../../components/charts/AppChart.vue'
-import { fetchMyAfterSales, fetchOrders } from '../../api'
+import { fetchFavoriteWorkers, fetchMyAfterSales, fetchOrders } from '../../api'
 import {
   buildAfterSaleStatusMap,
   buildOrderStatusMap,
@@ -100,6 +106,7 @@ const router = useRouter()
 const loading = ref(false)
 const orders = ref([])
 const afterSales = ref([])
+const favorites = ref([])
 
 const summary = computed(() => ({
   totalOrders: orders.value.length,
@@ -108,7 +115,8 @@ const summary = computed(() => ({
     return status === 'PENDING' || status === 'ACCEPTED' || status === 'IN_SERVICE'
   }).length,
   completedOrders: orders.value.filter((item) => normalizeOrderStatus(item.status) === 'COMPLETED').length,
-  afterSaleCount: afterSales.value.length
+  afterSaleCount: afterSales.value.length,
+  favoriteCount: favorites.value.length
 }))
 
 const recentOrders = computed(() => orders.value.slice(0, 5))
@@ -180,12 +188,14 @@ const afterSaleChartOption = computed(() => ({
 onMounted(async () => {
   loading.value = true
   try {
-    const [orderResult, afterSaleResult] = await Promise.all([
+    const [orderResult, afterSaleResult, favoriteResult] = await Promise.all([
       fetchOrders(),
-      fetchMyAfterSales()
+      fetchMyAfterSales(),
+      fetchFavoriteWorkers()
     ])
     orders.value = orderResult
     afterSales.value = afterSaleResult
+    favorites.value = favoriteResult
   } finally {
     loading.value = false
   }

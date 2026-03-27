@@ -44,6 +44,7 @@ const router = createRouter({
       children: [
         { path: 'dashboard', component: () => import('../views/user/UserDashboardView.vue') },
         { path: 'profile', component: () => import('../views/user/UserProfileView.vue') },
+        { path: 'favorites', component: () => import('../views/user/UserFavoritesView.vue') },
         { path: 'orders', component: () => import('../views/consumer/OrdersView.vue') },
         { path: 'worker-application', component: () => import('../views/worker/WorkerApplyView.vue') }
       ]
@@ -65,8 +66,12 @@ const router = createRouter({
       redirect: '/admin/dashboard',
       children: [
         { path: 'dashboard', component: () => import('../views/admin/AdminDashboardView.vue') },
+        { path: 'orders', component: () => import('../views/admin/AdminOrdersView.vue') },
+        { path: 'users', component: () => import('../views/admin/AdminUsersView.vue') },
+        { path: 'services', component: () => import('../views/admin/AdminServicesView.vue') },
         { path: 'applications', component: () => import('../views/admin/AdminApplicationsView.vue') },
-        { path: 'after-sales', component: () => import('../views/admin/AdminAfterSalesView.vue') }
+        { path: 'after-sales', component: () => import('../views/admin/AdminAfterSalesView.vue') },
+        { path: 'operation-logs', component: () => import('../views/admin/AdminOperationLogsView.vue') }
       ]
     }
   ]

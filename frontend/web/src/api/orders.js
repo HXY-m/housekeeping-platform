@@ -11,6 +11,14 @@ export function createOrder(payload) {
   })
 }
 
+export function fetchBookingAvailability(workerId, bookingDate) {
+  const query = new URLSearchParams({
+    workerId: String(workerId),
+    bookingDate
+  })
+  return request(`/api/orders/availability?${query.toString()}`)
+}
+
 export function submitOrderReview(id, payload) {
   return request(`/api/orders/${id}/review`, {
     method: 'POST',

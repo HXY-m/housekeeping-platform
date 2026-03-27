@@ -1,6 +1,8 @@
 package com.housekeeping.worker.application.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.housekeeping.audit.OperationLogActions;
+import com.housekeeping.audit.service.OperationLogService;
 import com.housekeeping.auth.entity.SysRoleEntity;
 import com.housekeeping.auth.entity.SysUserEntity;
 import com.housekeeping.auth.entity.SysUserRoleEntity;
@@ -31,17 +33,20 @@ public class WorkerApplicationService {
     private final SysUserMapper sysUserMapper;
     private final SysRoleMapper sysRoleMapper;
     private final SysUserRoleMapper sysUserRoleMapper;
+    private final OperationLogService operationLogService;
 
     public WorkerApplicationService(WorkerApplicationMapper workerApplicationMapper,
                                     WorkerMapper workerMapper,
                                     SysUserMapper sysUserMapper,
                                     SysRoleMapper sysRoleMapper,
-                                    SysUserRoleMapper sysUserRoleMapper) {
+                                    SysUserRoleMapper sysUserRoleMapper,
+                                    OperationLogService operationLogService) {
         this.workerApplicationMapper = workerApplicationMapper;
         this.workerMapper = workerMapper;
         this.sysUserMapper = sysUserMapper;
         this.sysRoleMapper = sysRoleMapper;
         this.sysUserRoleMapper = sysUserRoleMapper;
+        this.operationLogService = operationLogService;
     }
 
     @Transactional
@@ -74,6 +79,12 @@ public class WorkerApplicationService {
         entity.setCreatedAt(LocalDateTime.now());
         entity.setUpdatedAt(LocalDateTime.now());
         workerApplicationMapper.insert(entity);
+        operationLogService.record(
+                OperationLogActions.WORKER_APPLICATION_SUBMIT,
+                "WORKER_APPLICATION",
+                entity.getId(),
+                "提交服务人员入驻申请，姓名=" + entity.getRealName()
+        );
         return toDto(entity);
     }
 
@@ -125,6 +136,12 @@ public class WorkerApplicationService {
 
         entity.setUpdatedAt(LocalDateTime.now());
         workerApplicationMapper.updateById(entity);
+        operationLogService.record(
+                OperationLogActions.WORKER_APPLICATION_REVIEW,
+                "WORKER_APPLICATION",
+                entity.getId(),
+                "审核服务人员入驻申请，结果=" + entity.getStatus()
+        );
         return toDto(entity);
     }
 

@@ -8,6 +8,8 @@ import com.housekeeping.aftersale.dto.AfterSaleDto;
 import com.housekeeping.aftersale.dto.AfterSaleHandleRequest;
 import com.housekeeping.aftersale.entity.AfterSaleEntity;
 import com.housekeeping.aftersale.mapper.AfterSaleMapper;
+import com.housekeeping.audit.OperationLogActions;
+import com.housekeeping.audit.service.OperationLogService;
 import com.housekeeping.auth.support.CurrentUserContext;
 import com.housekeeping.auth.support.SessionUser;
 import com.housekeeping.exception.BusinessException;
@@ -34,15 +36,18 @@ public class AfterSaleService {
     private final OrderMapper orderMapper;
     private final WorkerMapper workerMapper;
     private final AfterSaleAttachmentService afterSaleAttachmentService;
+    private final OperationLogService operationLogService;
 
     public AfterSaleService(AfterSaleMapper afterSaleMapper,
                             OrderMapper orderMapper,
                             WorkerMapper workerMapper,
-                            AfterSaleAttachmentService afterSaleAttachmentService) {
+                            AfterSaleAttachmentService afterSaleAttachmentService,
+                            OperationLogService operationLogService) {
         this.afterSaleMapper = afterSaleMapper;
         this.orderMapper = orderMapper;
         this.workerMapper = workerMapper;
         this.afterSaleAttachmentService = afterSaleAttachmentService;
+        this.operationLogService = operationLogService;
     }
 
     public List<AfterSaleDto> listCurrentUserAfterSales() {
@@ -95,6 +100,12 @@ public class AfterSaleService {
                 null
         );
         afterSaleMapper.insert(entity);
+        operationLogService.record(
+                OperationLogActions.AFTER_SALE_CREATE,
+                "AFTER_SALE",
+                entity.getId(),
+                "创建售后工单，订单ID=" + entity.getOrderId() + "，问题类型=" + entity.getIssueType()
+        );
         return buildSingleDto(entity);
     }
 
@@ -115,6 +126,12 @@ public class AfterSaleService {
         entity.setAdminRemark(request.adminRemark() == null ? "" : request.adminRemark().trim());
         entity.setHandledAt(LocalDateTime.now());
         afterSaleMapper.updateById(entity);
+        operationLogService.record(
+                OperationLogActions.AFTER_SALE_HANDLE,
+                "AFTER_SALE",
+                entity.getId(),
+                "处理售后工单，状态变更为 " + entity.getStatus()
+        );
         return buildSingleDto(entity);
     }
 
@@ -144,6 +161,7 @@ public class AfterSaleService {
                 ? Map.of()
                 : workerMapper.selectBatchIds(workerIds).stream()
                 .collect(Collectors.toMap(WorkerEntity::getId, Function.identity()));
+
         List<Long> afterSaleIds = entities.stream()
                 .map(AfterSaleEntity::getId)
                 .filter(Objects::nonNull)
@@ -158,7 +176,7 @@ public class AfterSaleService {
                         throw new BusinessException("售后反馈关联的订单不存在");
                     }
                     WorkerEntity worker = workerMap.get(item.getWorkerId());
-                    String workerName = worker == null ? "服务人员待同步" : worker.getName();
+                    String workerName = worker == null ? "待分配服务人员" : worker.getName();
                     return new AfterSaleDto(
                             item.getId(),
                             item.getOrderId(),

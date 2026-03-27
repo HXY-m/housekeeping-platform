@@ -52,17 +52,22 @@ public class DemoDataService {
                 "围绕任务书要求，先打通服务浏览、预约下单、订单履约、评价反馈与后台统计的 MVP 闭环。",
                 getCategories(),
                 List.of(
-                        new Highlight("多角色协同", "覆盖用户、服务人员、管理员三类角色，支持平台基础运营流程。"),
+                        new Highlight("多角色协同", "覆盖用户、服务人员、管理员三类角色，支撑平台基础运营流程。"),
                         new Highlight("预约到履约", "支持下单、接单、开始服务、完成服务与评价的最小闭环。"),
-                        new Highlight("数据可观测", "管理员可以查看订单量、完成量、服务销量与平均评分。")
+                        new Highlight("数据可视化", "管理员可以查看订单量、完成量、服务销量与平均评分。")
                 ),
                 getWorkers(null)
         );
     }
 
     public List<ServiceCategoryDto> getCategories() {
-        return serviceCategoryMapper.selectList(new LambdaQueryWrapper<ServiceCategoryEntity>()
-                        .orderByAsc(ServiceCategoryEntity::getId))
+        return serviceCategoryMapper.selectList(
+                        new LambdaQueryWrapper<ServiceCategoryEntity>()
+                                .and(wrapper -> wrapper
+                                        .isNull(ServiceCategoryEntity::getEnabled)
+                                        .or()
+                                        .eq(ServiceCategoryEntity::getEnabled, 1))
+                                .orderByAsc(ServiceCategoryEntity::getId))
                 .stream()
                 .map(categoryMapper::toDto)
                 .toList();

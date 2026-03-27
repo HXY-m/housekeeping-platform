@@ -58,7 +58,12 @@ CREATE TABLE IF NOT EXISTS service_category (
   name VARCHAR(100) NOT NULL,
   description VARCHAR(300) NOT NULL,
   price_label VARCHAR(50) NOT NULL,
-  slug VARCHAR(100) NOT NULL UNIQUE
+  slug VARCHAR(100) NOT NULL UNIQUE,
+  service_duration VARCHAR(100) NOT NULL DEFAULT '',
+  service_area VARCHAR(255) NOT NULL DEFAULT '',
+  service_scene VARCHAR(255) NOT NULL DEFAULT '',
+  extra_services VARCHAR(255) NOT NULL DEFAULT '',
+  enabled TINYINT(1) NOT NULL DEFAULT 1
 ) COMMENT='服务分类表';
 
 CREATE TABLE IF NOT EXISTS worker_profile (
@@ -162,3 +167,29 @@ CREATE TABLE IF NOT EXISTS order_after_sale_attachment (
   KEY idx_after_sale_attachment_after_sale (after_sale_id),
   CONSTRAINT fk_after_sale_attachment_after_sale FOREIGN KEY (after_sale_id) REFERENCES order_after_sale(id)
 ) COMMENT='售后凭证图片表';
+
+CREATE TABLE IF NOT EXISTS favorite_worker (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
+  worker_id BIGINT NOT NULL,
+  created_at DATETIME NOT NULL,
+  UNIQUE KEY uk_favorite_worker (user_id, worker_id),
+  KEY idx_favorite_worker_user (user_id),
+  KEY idx_favorite_worker_worker (worker_id)
+) COMMENT='用户收藏服务人员表';
+
+CREATE TABLE IF NOT EXISTS operation_log (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  operator_user_id BIGINT NULL,
+  operator_name VARCHAR(50) NOT NULL DEFAULT '',
+  role_code VARCHAR(50) NOT NULL DEFAULT '',
+  action_type VARCHAR(80) NOT NULL,
+  target_type VARCHAR(80) NOT NULL DEFAULT '',
+  target_id BIGINT NULL,
+  content VARCHAR(500) NOT NULL DEFAULT '',
+  ip_address VARCHAR(64) NOT NULL DEFAULT '',
+  created_at DATETIME NOT NULL,
+  KEY idx_operation_log_created_at (created_at),
+  KEY idx_operation_log_action_type (action_type),
+  KEY idx_operation_log_role_code (role_code)
+) COMMENT='平台操作日志表';
