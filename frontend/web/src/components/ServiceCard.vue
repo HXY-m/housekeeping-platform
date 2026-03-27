@@ -1,22 +1,20 @@
 <template>
-  <article class="card service-card">
-    <p class="eyebrow">服务项目</p>
-    <h3>{{ category.name }}</h3>
-    <p>{{ category.description }}</p>
-    <div class="service-footer">
-      <span>{{ category.priceLabel }}</span>
-      <RouterLink class="text-link" :to="`/workers?serviceName=${encodeURIComponent(category.name)}`">
-        立即查看
-      </RouterLink>
-    </div>
-  </article>
+  <el-card shadow="hover" class="service-card">
+    <template #header>
+      <div class="service-card__header">
+        <span>{{ category.name }}</span>
+        <el-tag type="warning">{{ category.priceLabel }}</el-tag>
+      </div>
+    </template>
+    <p class="service-card__desc">{{ category.description }}</p>
+    <RouterLink :to="`/workers?serviceName=${encodeURIComponent(category.name)}`">
+      <el-button type="primary" link>查看服务人员</el-button>
+    </RouterLink>
+  </el-card>
 </template>
 
 <script setup>
 defineProps({
-  category: {
-    type: Object,
-    required: true
-  }
+  category: { type: Object, required: true }
 })
 </script>

@@ -43,17 +43,17 @@ public class DemoDataInitializer implements CommandLineRunner {
         }
 
         if (workerMapper.selectCount(null) == 0) {
-            workerMapper.insert(new WorkerEntity("李阿姨", "金牌保洁师", 4.9, 286, 68, "上海",
+            workerMapper.insert(new WorkerEntity(null, "李阿姨", "金牌保洁师", 4.9, 286, 68, "上海",
                     "擅长家庭深度保洁和收纳整理，服务稳定，细节到位。",
                     "日常保洁,深度清洁,收纳整理", "今天 18:30 后可约", 6,
                     "家政服务培训证书,消杀培训证明", "浦东新区,杨浦区,虹口区",
                     "厨房重油污治理,租房退租深度清洁,母婴家庭轻柔保洁"));
-            workerMapper.insert(new WorkerEntity("王师傅", "家电清洗师", 4.8, 193, 88, "上海",
+            workerMapper.insert(new WorkerEntity(null, "王师傅", "家电清洗师", 4.8, 193, 88, "上海",
                     "专注空调与洗衣机清洗，支持现场拍照反馈，适合换季预约。",
                     "家电清洗,空调拆洗,油烟机清洗", "明天 09:00 可约", 5,
                     "家电清洗专项证书", "静安区,徐汇区,长宁区",
                     "中央空调深洗,租客搬家前家电清洁"));
-            workerMapper.insert(new WorkerEntity("周阿姨", "母婴护理师", 4.95, 126, 128, "上海",
+            workerMapper.insert(new WorkerEntity(null, "周阿姨", "母婴护理师", 4.95, 126, 128, "上海",
                     "有育婴经验和护理证书，熟悉新生儿护理与月子期家庭支持。",
                     "母婴护理,育儿嫂,产后陪护", "后天 08:00 可约", 8,
                     "母婴护理证书,健康证", "闵行区,浦东新区",

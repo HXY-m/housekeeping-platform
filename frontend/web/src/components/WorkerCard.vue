@@ -1,29 +1,35 @@
 <template>
-  <article class="card worker-card">
-    <div class="worker-top">
+  <el-card shadow="hover" class="worker-card">
+    <div class="worker-card__top">
       <div>
-        <p class="eyebrow">{{ worker.roleLabel }}</p>
-        <h3>{{ worker.name }}</h3>
+        <div class="worker-card__name">{{ worker.name }}</div>
+        <div class="worker-card__meta">{{ worker.roleLabel }} · {{ worker.city }}</div>
       </div>
-      <strong class="price">¥{{ worker.hourlyPrice }}/小时</strong>
+      <el-tag type="success">¥{{ worker.hourlyPrice }}/小时</el-tag>
     </div>
-    <p class="worker-meta">评分 {{ worker.rating }} · 已完成 {{ worker.completedOrders }} 单 · {{ worker.city }}</p>
-    <p>{{ worker.intro }}</p>
-    <div class="tag-row">
-      <span v-for="tag in worker.tags" :key="tag" class="tag">{{ tag }}</span>
+
+    <div class="worker-card__stats">
+      <span>评分 {{ worker.rating }}</span>
+      <span>已完成 {{ worker.completedOrders }} 单</span>
     </div>
-    <div class="service-footer">
+
+    <p class="worker-card__intro">{{ worker.intro }}</p>
+
+    <div class="worker-card__tags">
+      <el-tag v-for="tag in worker.tags" :key="tag" size="small" effect="plain">{{ tag }}</el-tag>
+    </div>
+
+    <div class="worker-card__footer">
       <span>{{ worker.nextAvailable }}</span>
-      <RouterLink class="button button-ghost" :to="`/workers/${worker.id}`">查看详情</RouterLink>
+      <RouterLink :to="`/workers/${worker.id}`">
+        <el-button type="primary">查看详情</el-button>
+      </RouterLink>
     </div>
-  </article>
+  </el-card>
 </template>
 
 <script setup>
 defineProps({
-  worker: {
-    type: Object,
-    required: true
-  }
+  worker: { type: Object, required: true }
 })
 </script>

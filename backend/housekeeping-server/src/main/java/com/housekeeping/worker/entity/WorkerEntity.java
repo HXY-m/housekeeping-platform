@@ -9,6 +9,7 @@ public class WorkerEntity {
 
     @TableId(type = IdType.AUTO)
     private Long id;
+    private Long userId;
     private String name;
     private String roleLabel;
     private Double rating;
@@ -26,9 +27,10 @@ public class WorkerEntity {
     public WorkerEntity() {
     }
 
-    public WorkerEntity(String name, String roleLabel, Double rating, Integer completedOrders, Integer hourlyPrice,
+    public WorkerEntity(Long userId, String name, String roleLabel, Double rating, Integer completedOrders, Integer hourlyPrice,
                         String city, String intro, String tags, String nextAvailable, Integer yearsOfExperience,
                         String certificates, String serviceAreas, String serviceCases) {
+        this.userId = userId;
         this.name = name;
         this.roleLabel = roleLabel;
         this.rating = rating;
@@ -50,6 +52,14 @@ public class WorkerEntity {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
     public String getName() {

@@ -1,22 +1,32 @@
 <template>
-  <header class="app-header">
-    <div class="brand">
-      <div class="brand-mark">H</div>
-      <div>
-        <strong>Housekeeping Hub</strong>
-        <p>以 Taskrabbit 思路落地的家政服务预约平台</p>
+  <header class="public-header">
+    <div class="public-header__inner">
+      <RouterLink to="/" class="brand-link">
+        <div class="brand-mark">H</div>
+        <div class="brand-copy">
+          <strong>Housekeeping Hub</strong>
+          <span>家政服务预约平台</span>
+        </div>
+      </RouterLink>
+
+      <el-menu mode="horizontal" :ellipsis="false" router class="public-menu">
+        <el-menu-item index="/">首页</el-menu-item>
+        <el-menu-item index="/workers">服务人员</el-menu-item>
+        <el-menu-item index="/orders">订单进度</el-menu-item>
+        <el-menu-item index="/worker-application">申请入驻</el-menu-item>
+      </el-menu>
+
+      <div class="public-header__actions">
+        <template v-if="authStore.isLoggedIn()">
+          <el-tag type="success">{{ authStore.state.user?.realName }} / {{ authStore.state.user?.roleCode }}</el-tag>
+          <el-button v-if="authStore.hasRole('ADMIN')" type="primary" plain @click="router.push('/admin')">进入后台</el-button>
+          <el-button @click="handleLogout">退出</el-button>
+        </template>
+        <template v-else>
+          <el-button type="primary" @click="router.push('/login')">登录</el-button>
+        </template>
       </div>
     </div>
-    <nav class="nav-links">
-      <RouterLink to="/">首页</RouterLink>
-      <RouterLink to="/workers">找服务人员</RouterLink>
-      <RouterLink to="/orders">我的订单</RouterLink>
-      <RouterLink to="/admin">运营看板</RouterLink>
-      <RouterLink v-if="!authStore.isLoggedIn()" to="/login">登录</RouterLink>
-      <button v-else class="nav-user" type="button" @click="handleLogout">
-        {{ authStore.state.user?.realName }} / 退出
-      </button>
-    </nav>
   </header>
 </template>
 

@@ -9,6 +9,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
         "com.housekeeping.auth.mapper",
         "com.housekeeping.category.mapper",
         "com.housekeeping.worker.mapper",
+        "com.housekeeping.worker.application.mapper",
         "com.housekeeping.order.mapper"
 })
 public class HousekeepingApplication {
