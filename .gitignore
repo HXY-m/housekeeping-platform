@@ -63,7 +63,7 @@ pid
 # 4. 数据库与系统产生的垃圾 (Safety & Cleanliness)
 # ==========================================
 # MySQL / Redis 产生的临时文件或导出
-*.sql
+#*.sql
 *.hprof
 *.pyc
 dump.rdb
