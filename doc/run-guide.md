@@ -92,6 +92,12 @@ npm run dev
 - `GET /api/orders`
 - `POST /api/orders`
 - `POST /api/orders/{id}/review`
+- `GET /api/user/profile`
+- `PUT /api/user/profile`
+- `GET /api/user/addresses`
+- `POST /api/user/addresses`
+- `PUT /api/user/addresses/{id}`
+- `DELETE /api/user/addresses/{id}`
 - `GET /api/worker/orders`
 - `POST /api/worker/orders/{id}/accept`
 - `POST /api/worker/orders/{id}/start`
@@ -129,6 +135,7 @@ Authorization: Bearer <token>
 当前已经对以下接口做了角色保护：
 
 - `/api/admin/**`
+- `/api/user/**`
 - `/api/worker/orders/**`
 - `/api/orders/**`
 - `/api/after-sales/**`
@@ -154,6 +161,7 @@ Bearer 你的token
 - `/workers/1` 服务人员详情
 - `/booking/1` 在线预约
 - `/user/dashboard` 普通用户中心看板
+- `/user/profile` 个人资料与地址簿
 - `/user/orders` 用户订单中心
 - `/user/worker-application` 普通用户申请入驻
 - `/worker/dashboard` 服务人员履约看板

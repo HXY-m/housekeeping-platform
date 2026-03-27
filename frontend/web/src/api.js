@@ -20,6 +20,14 @@ export {
 } from './api/afterSales'
 export { uploadImage } from './api/upload'
 export {
+  fetchUserProfile,
+  updateUserProfile,
+  fetchUserAddresses,
+  createUserAddress,
+  updateUserAddress,
+  deleteUserAddress
+} from './api/user'
+export {
   login,
   register,
   fetchCurrentUser,

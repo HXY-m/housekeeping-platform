@@ -11,6 +11,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
         "com.housekeeping.auth.mapper",
         "com.housekeeping.aftersale.mapper",
         "com.housekeeping.category.mapper",
+        "com.housekeeping.user.mapper",
         "com.housekeeping.worker.mapper",
         "com.housekeeping.worker.application.mapper",
         "com.housekeeping.order.mapper"

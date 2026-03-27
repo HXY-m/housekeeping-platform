@@ -602,6 +602,24 @@ a {
   white-space: nowrap;
 }
 
+.profile-avatar-panel {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.profile-form {
+  margin-top: 6px;
+}
+
+.booking-address-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .visually-hidden-input {
   position: absolute;
   width: 1px;
@@ -667,5 +685,10 @@ a {
   .attachment-editor-item {
     grid-template-columns: 1fr;
     justify-items: start;
+  }
+
+  .profile-avatar-panel {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }

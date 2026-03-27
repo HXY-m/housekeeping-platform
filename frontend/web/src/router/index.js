@@ -43,6 +43,7 @@ const router = createRouter({
       redirect: '/user/dashboard',
       children: [
         { path: 'dashboard', component: () => import('../views/user/UserDashboardView.vue') },
+        { path: 'profile', component: () => import('../views/user/UserProfileView.vue') },
         { path: 'orders', component: () => import('../views/consumer/OrdersView.vue') },
         { path: 'worker-application', component: () => import('../views/worker/WorkerApplyView.vue') }
       ]

@@ -8,6 +8,7 @@
       </div>
       <div class="hero-actions">
         <el-button type="primary" @click="router.push('/workers')">继续找服务</el-button>
+        <el-button plain @click="router.push('/user/profile')">维护资料与地址</el-button>
         <el-button plain @click="router.push('/user/orders')">查看全部订单</el-button>
       </div>
     </div>

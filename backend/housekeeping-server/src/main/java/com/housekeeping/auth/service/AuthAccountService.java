@@ -52,6 +52,17 @@ public class AuthAccountService {
         return user;
     }
 
+    public SysUserEntity requireActiveUserById(Long userId) {
+        SysUserEntity user = sysUserMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException("账号不存在");
+        }
+        if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
+            throw new BusinessException("账号已被禁用");
+        }
+        return user;
+    }
+
     public void ensurePhoneAvailable(String phone) {
         if (findUserByPhone(phone) != null) {
             throw new BusinessException("该手机号已经注册");

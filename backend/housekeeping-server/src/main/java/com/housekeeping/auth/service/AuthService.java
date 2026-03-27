@@ -55,11 +55,12 @@ public class AuthService {
     }
 
     public CurrentUserDto currentUser() {
-        SessionUser user = CurrentUserContext.get();
-        if (user == null) {
+        SessionUser sessionUser = CurrentUserContext.get();
+        if (sessionUser == null) {
             throw new BusinessException("未登录");
         }
-        return new CurrentUserDto(user.userId(), user.phone(), user.realName(), user.roleCode());
+        SysUserEntity user = authAccountService.requireActiveUserById(sessionUser.userId());
+        return new CurrentUserDto(user.getId(), user.getPhone(), user.getRealName(), sessionUser.roleCode());
     }
 
     public List<DemoAccountDto> demoAccounts() {
