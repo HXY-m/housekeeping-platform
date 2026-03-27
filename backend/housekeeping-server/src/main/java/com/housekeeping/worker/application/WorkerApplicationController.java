@@ -20,7 +20,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/worker-applications")
-@Tag(name = "服务人员入驻", description = "普通用户申请成为服务人员，管理员审核")
+@Tag(name = "服务人员资质", description = "服务人员提交资质审核资料，管理员审核")
 public class WorkerApplicationController {
 
     private final WorkerApplicationService workerApplicationService;
@@ -29,30 +29,30 @@ public class WorkerApplicationController {
         this.workerApplicationService = workerApplicationService;
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('WORKER')")
     @PostMapping
-    @Operation(summary = "提交服务人员入驻申请")
+    @Operation(summary = "提交服务人员资质申请")
     public ApiResponse<WorkerApplicationDto> submit(@Valid @RequestBody WorkerApplicationSubmitRequest request) {
         return ApiResponse.ok(workerApplicationService.submit(request));
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('WORKER')")
     @GetMapping("/my")
-    @Operation(summary = "查看我提交的入驻申请")
+    @Operation(summary = "查看我提交的资质申请")
     public ApiResponse<List<WorkerApplicationDto>> myApplications() {
         return ApiResponse.ok(workerApplicationService.myApplications());
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/admin")
-    @Operation(summary = "管理员查看所有入驻申请")
+    @Operation(summary = "管理员查看所有资质申请")
     public ApiResponse<List<WorkerApplicationDto>> listAll() {
         return ApiResponse.ok(workerApplicationService.listAll());
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/admin/{id}/review")
-    @Operation(summary = "管理员审核入驻申请")
+    @Operation(summary = "管理员审核资质申请")
     public ApiResponse<WorkerApplicationDto> review(@PathVariable Long id,
                                                     @Valid @RequestBody WorkerApplicationReviewRequest request) {
         return ApiResponse.ok(workerApplicationService.review(id, request));

@@ -81,7 +81,8 @@ CREATE TABLE IF NOT EXISTS worker_profile (
   years_of_experience INT NOT NULL DEFAULT 0,
   certificates VARCHAR(500) NOT NULL,
   service_areas VARCHAR(500) NOT NULL,
-  service_cases VARCHAR(500) NOT NULL
+  service_cases VARCHAR(500) NOT NULL,
+  qualification_status VARCHAR(20) NOT NULL DEFAULT 'APPROVED'
 ) COMMENT='服务人员档案表';
 
 CREATE TABLE IF NOT EXISTS worker_application (

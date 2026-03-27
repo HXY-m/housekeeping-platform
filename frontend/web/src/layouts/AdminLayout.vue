@@ -11,9 +11,10 @@
         <el-menu-item index="/admin/orders">订单监管</el-menu-item>
         <el-menu-item index="/admin/users">用户管理</el-menu-item>
         <el-menu-item index="/admin/services">服务项目</el-menu-item>
-        <el-menu-item index="/admin/applications">入驻审核</el-menu-item>
+        <el-menu-item index="/admin/applications">资质审核</el-menu-item>
         <el-menu-item index="/admin/after-sales">售后处理</el-menu-item>
         <el-menu-item index="/admin/operation-logs">操作日志</el-menu-item>
+        <el-menu-item index="/admin/reports">鎶ヨ〃瀵煎嚭</el-menu-item>
       </el-menu>
     </el-aside>
 

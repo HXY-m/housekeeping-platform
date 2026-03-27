@@ -17,6 +17,7 @@ public final class OperationLogActions {
     public static final String CATEGORY_CREATE = "CATEGORY_CREATE";
     public static final String CATEGORY_UPDATE = "CATEGORY_UPDATE";
     public static final String CATEGORY_DELETE = "CATEGORY_DELETE";
+    public static final String REPORT_EXPORT = "REPORT_EXPORT";
 
     private OperationLogActions() {
     }

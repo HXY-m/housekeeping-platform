@@ -18,8 +18,11 @@ import com.housekeeping.auth.util.PasswordUtil;
 import com.housekeeping.exception.BusinessException;
 import com.housekeeping.user.entity.UserProfileEntity;
 import com.housekeeping.user.mapper.UserProfileMapper;
+import com.housekeeping.worker.WorkerQualificationStatus;
+import com.housekeeping.worker.dto.WorkerProfileUpsertCommand;
 import com.housekeeping.worker.entity.WorkerEntity;
 import com.housekeeping.worker.mapper.WorkerMapper;
+import com.housekeeping.worker.service.WorkerProfileService;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,6 +47,7 @@ public class AdminUserService {
     private final SysUserRoleMapper sysUserRoleMapper;
     private final UserProfileMapper userProfileMapper;
     private final WorkerMapper workerMapper;
+    private final WorkerProfileService workerProfileService;
     private final OperationLogService operationLogService;
 
     public AdminUserService(SysUserMapper sysUserMapper,
@@ -51,12 +55,14 @@ public class AdminUserService {
                             SysUserRoleMapper sysUserRoleMapper,
                             UserProfileMapper userProfileMapper,
                             WorkerMapper workerMapper,
+                            WorkerProfileService workerProfileService,
                             OperationLogService operationLogService) {
         this.sysUserMapper = sysUserMapper;
         this.sysRoleMapper = sysRoleMapper;
         this.sysUserRoleMapper = sysUserRoleMapper;
         this.userProfileMapper = userProfileMapper;
         this.workerMapper = workerMapper;
+        this.workerProfileService = workerProfileService;
         this.operationLogService = operationLogService;
     }
 
@@ -175,7 +181,7 @@ public class AdminUserService {
 
         saveRoleBindings(entity.getId(), normalizedRoles);
         ensureUserDependentProfiles(entity);
-        syncWorkerProfile(entity);
+        workerProfileService.syncRealName(entity.getId(), entity.getRealName());
         operationLogService.record(
                 OperationLogActions.USER_UPDATE,
                 "USER",
@@ -265,45 +271,21 @@ public class AdminUserService {
 
         List<String> roleCodes = buildRoleCodeMap(List.of(user.getId())).getOrDefault(user.getId(), List.of());
         if (roleCodes.contains(RoleCodes.WORKER)) {
-            ensureWorkerProfile(user, profile);
-        }
-    }
-
-    private void ensureWorkerProfile(SysUserEntity user, UserProfileEntity profile) {
-        WorkerEntity worker = workerMapper.selectOne(
-                new LambdaQueryWrapper<WorkerEntity>()
-                        .eq(WorkerEntity::getUserId, user.getId())
-                        .last("limit 1")
-        );
-        if (worker == null) {
-            workerMapper.insert(new WorkerEntity(
+            workerProfileService.upsertProfile(new WorkerProfileUpsertCommand(
                     user.getId(),
                     user.getRealName(),
-                    "平台创建服务人员",
-                    5.0,
-                    0,
-                    99,
                     profile == null ? "" : safeValue(profile.getCity()),
-                    "管理员创建的服务人员档案，待完善详细资料。",
+                    99,
                     "待配置服务项目",
                     "待配置服务时段",
                     0,
                     "待补充资质信息",
                     "待补充服务区域",
+                    "管理员创建的服务人员档案，待完善详细资料。",
+                    WorkerQualificationStatus.APPROVED,
+                    "平台创建服务人员",
                     "待补充服务案例"
             ));
-        }
-    }
-
-    private void syncWorkerProfile(SysUserEntity user) {
-        WorkerEntity worker = workerMapper.selectOne(
-                new LambdaQueryWrapper<WorkerEntity>()
-                        .eq(WorkerEntity::getUserId, user.getId())
-                        .last("limit 1")
-        );
-        if (worker != null) {
-            worker.setName(user.getRealName());
-            workerMapper.updateById(worker);
         }
     }
 

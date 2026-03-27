@@ -37,7 +37,7 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    @Operation(summary = "普通用户注册", description = "注册成功后自动返回登录态")
+    @Operation(summary = "账号注册", description = "支持直接注册为普通用户或服务人员，注册成功后自动返回登录态")
     public ApiResponse<LoginResponse> register(@Valid @RequestBody RegisterRequest request) {
         return ApiResponse.ok(authService.register(request));
     }

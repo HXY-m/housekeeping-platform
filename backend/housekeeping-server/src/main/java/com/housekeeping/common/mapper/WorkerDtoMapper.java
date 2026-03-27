@@ -50,7 +50,7 @@ public class WorkerDtoMapper {
         if (raw == null || raw.isBlank()) {
             return Collections.emptyList();
         }
-        return Stream.of(raw.split("\\s*,\\s*"))
+        return Stream.of(raw.split("\\s*[,，、;；]\\s*"))
                 .filter(value -> !value.isBlank())
                 .toList();
     }

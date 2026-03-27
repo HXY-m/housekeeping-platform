@@ -14,6 +14,7 @@ import com.housekeeping.home.dto.WorkerCardDto;
 import com.housekeeping.order.OrderStatus;
 import com.housekeeping.order.entity.OrderEntity;
 import com.housekeeping.order.mapper.OrderMapper;
+import com.housekeeping.worker.WorkerQualificationStatus;
 import com.housekeeping.worker.dto.WorkerDetailDto;
 import com.housekeeping.worker.entity.WorkerEntity;
 import com.housekeeping.worker.mapper.WorkerMapper;
@@ -74,7 +75,8 @@ public class DemoDataService {
     }
 
     public List<WorkerCardDto> getWorkers(String serviceName) {
-        LambdaQueryWrapper<WorkerEntity> wrapper = new LambdaQueryWrapper<>();
+        LambdaQueryWrapper<WorkerEntity> wrapper = new LambdaQueryWrapper<WorkerEntity>()
+                .eq(WorkerEntity::getQualificationStatus, WorkerQualificationStatus.APPROVED);
         if (serviceName != null && !serviceName.isBlank()) {
             wrapper.like(WorkerEntity::getTags, serviceName);
         }
@@ -87,7 +89,7 @@ public class DemoDataService {
 
     public WorkerDetailDto getWorker(Long id) {
         WorkerEntity worker = workerMapper.selectById(id);
-        if (worker == null) {
+        if (worker == null || !WorkerQualificationStatus.isPublicVisible(worker.getQualificationStatus())) {
             throw new BusinessException("未找到对应的服务人员");
         }
         return workerDtoMapper.toDetailDto(worker);
@@ -101,7 +103,9 @@ public class DemoDataService {
         int completedOrders = (int) orders.stream()
                 .filter(order -> OrderStatus.COMPLETED.matches(order.getStatus()))
                 .count();
-        int activeWorkers = workers.size();
+        int activeWorkers = (int) workers.stream()
+                .filter(item -> WorkerQualificationStatus.isPublicVisible(item.getQualificationStatus()))
+                .count();
         double averageRating = workers.stream()
                 .map(WorkerEntity::getRating)
                 .filter(value -> value != null)

@@ -1,4 +1,4 @@
-export { clearToken, getToken, hasToken, request, setToken } from './api/http'
+export { clearToken, downloadFile, getToken, hasToken, request, setToken } from './api/http'
 export { fetchHome } from './api/home'
 export { fetchWorkers, fetchWorker } from './api/workers'
 export {
@@ -22,7 +22,12 @@ export {
   createAdminCategory,
   updateAdminCategory,
   deleteAdminCategory,
-  fetchAdminOperationLogs
+  fetchAdminOperationLogs,
+  exportAdminDashboardReport,
+  exportAdminOrdersReport,
+  exportAdminUsersReport,
+  exportAdminAfterSalesReport,
+  exportAdminOperationLogsReport
 } from './api/admin'
 export {
   fetchMyAfterSales,

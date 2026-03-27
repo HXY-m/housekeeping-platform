@@ -23,13 +23,14 @@ public class WorkerEntity {
     private String certificates;
     private String serviceAreas;
     private String serviceCases;
+    private String qualificationStatus;
 
     public WorkerEntity() {
     }
 
     public WorkerEntity(Long userId, String name, String roleLabel, Double rating, Integer completedOrders, Integer hourlyPrice,
                         String city, String intro, String tags, String nextAvailable, Integer yearsOfExperience,
-                        String certificates, String serviceAreas, String serviceCases) {
+                        String certificates, String serviceAreas, String serviceCases, String qualificationStatus) {
         this.userId = userId;
         this.name = name;
         this.roleLabel = roleLabel;
@@ -44,6 +45,7 @@ public class WorkerEntity {
         this.certificates = certificates;
         this.serviceAreas = serviceAreas;
         this.serviceCases = serviceCases;
+        this.qualificationStatus = qualificationStatus;
     }
 
     public Long getId() {
@@ -164,5 +166,13 @@ public class WorkerEntity {
 
     public void setServiceCases(String serviceCases) {
         this.serviceCases = serviceCases;
+    }
+
+    public String getQualificationStatus() {
+        return qualificationStatus;
+    }
+
+    public void setQualificationStatus(String qualificationStatus) {
+        this.qualificationStatus = qualificationStatus;
     }
 }

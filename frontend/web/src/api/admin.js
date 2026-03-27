@@ -1,4 +1,15 @@
-import { request } from './http'
+import { downloadFile, request } from './http'
+
+function buildQuery(params = {}) {
+  const search = new URLSearchParams()
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== '' && value !== null && value !== undefined) {
+      search.set(key, value)
+    }
+  })
+  const query = search.toString()
+  return query ? `?${query}` : ''
+}
 
 export function fetchAdminDashboard() {
   return request('/api/admin/dashboard')
@@ -9,14 +20,7 @@ export function fetchAdminOrders() {
 }
 
 export function fetchAdminUsers(params = {}) {
-  const search = new URLSearchParams()
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== '' && value !== null && value !== undefined) {
-      search.set(key, value)
-    }
-  })
-  const query = search.toString()
-  return request(`/api/admin/users${query ? `?${query}` : ''}`)
+  return request(`/api/admin/users${buildQuery(params)}`)
 }
 
 export function createAdminUser(payload) {
@@ -40,14 +44,7 @@ export function deleteAdminUser(id) {
 }
 
 export function fetchAdminCategories(params = {}) {
-  const search = new URLSearchParams()
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== '' && value !== null && value !== undefined) {
-      search.set(key, value)
-    }
-  })
-  const query = search.toString()
-  return request(`/api/admin/categories${query ? `?${query}` : ''}`)
+  return request(`/api/admin/categories${buildQuery(params)}`)
 }
 
 export function createAdminCategory(payload) {
@@ -71,12 +68,25 @@ export function deleteAdminCategory(id) {
 }
 
 export function fetchAdminOperationLogs(params = {}) {
-  const search = new URLSearchParams()
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== '' && value !== null && value !== undefined) {
-      search.set(key, value)
-    }
-  })
-  const query = search.toString()
-  return request(`/api/admin/operation-logs${query ? `?${query}` : ''}`)
+  return request(`/api/admin/operation-logs${buildQuery(params)}`)
+}
+
+export function exportAdminDashboardReport() {
+  return downloadFile('/api/admin/reports/dashboard/export')
+}
+
+export function exportAdminOrdersReport(params = {}) {
+  return downloadFile(`/api/admin/reports/orders/export${buildQuery(params)}`)
+}
+
+export function exportAdminUsersReport(params = {}) {
+  return downloadFile(`/api/admin/reports/users/export${buildQuery(params)}`)
+}
+
+export function exportAdminAfterSalesReport(params = {}) {
+  return downloadFile(`/api/admin/reports/after-sales/export${buildQuery(params)}`)
+}
+
+export function exportAdminOperationLogsReport(params = {}) {
+  return downloadFile(`/api/admin/reports/operation-logs/export${buildQuery(params)}`)
 }

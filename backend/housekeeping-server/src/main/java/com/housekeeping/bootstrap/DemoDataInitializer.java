@@ -10,15 +10,18 @@ import com.housekeeping.order.entity.OrderEntity;
 import com.housekeeping.order.entity.OrderProgressEntity;
 import com.housekeeping.order.mapper.OrderMapper;
 import com.housekeeping.order.mapper.OrderProgressMapper;
+import com.housekeeping.worker.WorkerQualificationStatus;
 import com.housekeeping.worker.entity.WorkerEntity;
 import com.housekeeping.worker.mapper.WorkerMapper;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Objects;
 
 @Component
+@Order(20)
 public class DemoDataInitializer implements CommandLineRunner {
 
     private static final String DEMO_USER_PHONE = "13800000011";
@@ -59,11 +62,11 @@ public class DemoDataInitializer implements CommandLineRunner {
             return;
         }
 
-        categoryMapper.insert(new ServiceCategoryEntity("日常保洁", "适合两居室与三居室的定期清洁维护", "￥129 起", "daily-cleaning"));
-        categoryMapper.insert(new ServiceCategoryEntity("深度清洁", "针对厨房与卫生间等重点区域的深度处理", "￥229 起", "deep-cleaning"));
-        categoryMapper.insert(new ServiceCategoryEntity("母婴护理", "月嫂、育儿嫂与产后基础照护服务", "￥368 起", "maternal-care"));
-        categoryMapper.insert(new ServiceCategoryEntity("老人陪护", "上门陪诊、日常陪护与康复辅助", "￥199 起", "elderly-care"));
-        categoryMapper.insert(new ServiceCategoryEntity("家电清洗", "空调、洗衣机、油烟机等家电拆洗", "￥149 起", "appliance-cleaning"));
+        categoryMapper.insert(new ServiceCategoryEntity("日常保洁", "适合两居室与三居室的定期清洁维护", "¥129 起", "daily-cleaning"));
+        categoryMapper.insert(new ServiceCategoryEntity("深度清洁", "针对厨房与卫生间等重点区域的深度处理", "¥229 起", "deep-cleaning"));
+        categoryMapper.insert(new ServiceCategoryEntity("母婴护理", "月嫂、育儿嫂与产后基础照护服务", "¥368 起", "maternal-care"));
+        categoryMapper.insert(new ServiceCategoryEntity("老人陪护", "上门陪诊、日常陪护与康复辅助", "¥299 起", "elderly-care"));
+        categoryMapper.insert(new ServiceCategoryEntity("家电清洗", "空调、洗衣机、油烟机等家电拆洗", "¥149 起", "appliance-cleaning"));
     }
 
     private void ensureWorkers(Long demoWorkerUserId) {
@@ -82,7 +85,8 @@ public class DemoDataInitializer implements CommandLineRunner {
                     6,
                     "家政服务培训证书,消杀培训证明",
                     "浦东新区,杨浦区,虹口区",
-                    "厨房重油污治理,租房退租深度清洁,母婴家庭轻柔保洁"
+                    "厨房重油污治理,租房退租深度清洁,母婴家庭轻柔保洁",
+                    WorkerQualificationStatus.APPROVED
             ));
             workerMapper.insert(new WorkerEntity(
                     null,
@@ -93,12 +97,13 @@ public class DemoDataInitializer implements CommandLineRunner {
                     88,
                     "上海",
                     "专注空调与洗衣机清洗，支持现场拍照反馈，适合换季预约。",
-                    "家电清洗,空调拆洗,油烟机清洗",
+                    "家电清洗,空调拆洗,油烟机清洁",
                     "明天 09:00 可约",
                     5,
                     "家电清洗专项证书",
                     "静安区,徐汇区,长宁区",
-                    "中央空调深洗,租客搬家前家电清洁"
+                    "中央空调深洗,租客搬家前家电清洁",
+                    WorkerQualificationStatus.APPROVED
             ));
             workerMapper.insert(new WorkerEntity(
                     null,
@@ -114,7 +119,8 @@ public class DemoDataInitializer implements CommandLineRunner {
                     8,
                     "母婴护理证书,健康证",
                     "闵行区,浦东新区",
-                    "新生儿夜间护理,产后恢复支持"
+                    "新生儿夜间护理,产后恢复支持",
+                    WorkerQualificationStatus.APPROVED
             ));
             return;
         }
@@ -129,6 +135,10 @@ public class DemoDataInitializer implements CommandLineRunner {
                         .last("limit 1")
         );
         if (existed != null) {
+            if (!WorkerQualificationStatus.isPublicVisible(existed.getQualificationStatus())) {
+                existed.setQualificationStatus(WorkerQualificationStatus.APPROVED);
+                workerMapper.updateById(existed);
+            }
             return;
         }
 
@@ -140,6 +150,7 @@ public class DemoDataInitializer implements CommandLineRunner {
         );
         if (candidate != null) {
             candidate.setUserId(demoWorkerUserId);
+            candidate.setQualificationStatus(WorkerQualificationStatus.APPROVED);
             workerMapper.updateById(candidate);
             return;
         }
@@ -158,7 +169,8 @@ public class DemoDataInitializer implements CommandLineRunner {
                 4,
                 "家政服务培训证书",
                 "浦东新区,黄浦区",
-                "演示订单履约测试"
+                "演示订单履约测试",
+                WorkerQualificationStatus.APPROVED
         ));
     }
 
@@ -196,7 +208,7 @@ public class DemoDataInitializer implements CommandLineRunner {
                     "13800000001",
                     "上海市浦东新区锦绣路 88 号",
                     "2026-03-27",
-                    "09:00-12:00",
+                    "08:00-10:00",
                     OrderStatus.PENDING.code(),
                     "服务人员已接收预约，等待上门",
                     "重点清洁厨房和卫生间"
@@ -214,7 +226,7 @@ public class DemoDataInitializer implements CommandLineRunner {
                     "13800000002",
                     "上海市徐汇区漕溪北路 128 号",
                     "2026-03-28",
-                    "14:00-16:00",
+                    "13:00-15:00",
                     OrderStatus.IN_SERVICE.code(),
                     "服务人员已到达，正在进行空调拆洗",
                     "清洗 2 台挂机空调"

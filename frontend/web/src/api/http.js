@@ -19,6 +19,10 @@ function buildHeaders(body, extraHeaders = {}) {
   return headers
 }
 
+function buildErrorMessage(status, result) {
+  return result?.message || `Request failed: ${status}`
+}
+
 export async function request(url, options = {}) {
   const response = await fetch(url, {
     headers: buildHeaders(options.body, options.headers),
@@ -33,7 +37,7 @@ export async function request(url, options = {}) {
   }
 
   if (!response.ok) {
-    throw new Error(result?.message || `Request failed: ${response.status}`)
+    throw new Error(buildErrorMessage(response.status, result))
   }
 
   if (result && result.success === false) {
@@ -53,4 +57,37 @@ export function clearToken() {
 
 export function hasToken() {
   return Boolean(getToken())
+}
+
+export async function downloadFile(url, options = {}) {
+  const response = await fetch(url, {
+    headers: buildHeaders(options.body, options.headers),
+    ...options
+  })
+
+  if (!response.ok) {
+    let result = null
+    try {
+      result = await response.json()
+    } catch {
+      result = null
+    }
+    throw new Error(buildErrorMessage(response.status, result))
+  }
+
+  const blob = await response.blob()
+  const disposition = response.headers.get('content-disposition') || ''
+  const matchedName = disposition.match(/filename\*=UTF-8''([^;]+)|filename=\"?([^\";]+)\"?/)
+  const fileName = decodeURIComponent(matchedName?.[1] || matchedName?.[2] || options.fileName || 'report.csv')
+
+  const objectUrl = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = objectUrl
+  link.download = fileName
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(objectUrl)
+
+  return fileName
 }

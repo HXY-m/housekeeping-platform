@@ -3,22 +3,19 @@ package com.housekeeping.worker.application.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.housekeeping.audit.OperationLogActions;
 import com.housekeeping.audit.service.OperationLogService;
-import com.housekeeping.auth.entity.SysRoleEntity;
 import com.housekeeping.auth.entity.SysUserEntity;
-import com.housekeeping.auth.entity.SysUserRoleEntity;
-import com.housekeeping.auth.mapper.SysRoleMapper;
 import com.housekeeping.auth.mapper.SysUserMapper;
-import com.housekeeping.auth.mapper.SysUserRoleMapper;
 import com.housekeeping.auth.support.CurrentUserContext;
 import com.housekeeping.auth.support.SessionUser;
 import com.housekeeping.exception.BusinessException;
+import com.housekeeping.worker.WorkerQualificationStatus;
 import com.housekeeping.worker.application.dto.WorkerApplicationDto;
 import com.housekeeping.worker.application.dto.WorkerApplicationReviewRequest;
 import com.housekeeping.worker.application.dto.WorkerApplicationSubmitRequest;
 import com.housekeeping.worker.application.entity.WorkerApplicationEntity;
 import com.housekeeping.worker.application.mapper.WorkerApplicationMapper;
-import com.housekeeping.worker.entity.WorkerEntity;
-import com.housekeeping.worker.mapper.WorkerMapper;
+import com.housekeeping.worker.dto.WorkerProfileUpsertCommand;
+import com.housekeeping.worker.service.WorkerProfileService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,23 +26,17 @@ import java.util.List;
 public class WorkerApplicationService {
 
     private final WorkerApplicationMapper workerApplicationMapper;
-    private final WorkerMapper workerMapper;
     private final SysUserMapper sysUserMapper;
-    private final SysRoleMapper sysRoleMapper;
-    private final SysUserRoleMapper sysUserRoleMapper;
+    private final WorkerProfileService workerProfileService;
     private final OperationLogService operationLogService;
 
     public WorkerApplicationService(WorkerApplicationMapper workerApplicationMapper,
-                                    WorkerMapper workerMapper,
                                     SysUserMapper sysUserMapper,
-                                    SysRoleMapper sysRoleMapper,
-                                    SysUserRoleMapper sysUserRoleMapper,
+                                    WorkerProfileService workerProfileService,
                                     OperationLogService operationLogService) {
         this.workerApplicationMapper = workerApplicationMapper;
-        this.workerMapper = workerMapper;
         this.sysUserMapper = sysUserMapper;
-        this.sysRoleMapper = sysRoleMapper;
-        this.sysUserRoleMapper = sysUserRoleMapper;
+        this.workerProfileService = workerProfileService;
         this.operationLogService = operationLogService;
     }
 
@@ -61,7 +52,7 @@ public class WorkerApplicationService {
         );
 
         if (latest != null && "PENDING".equalsIgnoreCase(latest.getStatus())) {
-            throw new BusinessException("你已有待审核的服务人员入驻申请");
+            throw new BusinessException("你已有待审核的资质申请，请勿重复提交");
         }
 
         WorkerApplicationEntity entity = new WorkerApplicationEntity();
@@ -79,11 +70,26 @@ public class WorkerApplicationService {
         entity.setCreatedAt(LocalDateTime.now());
         entity.setUpdatedAt(LocalDateTime.now());
         workerApplicationMapper.insert(entity);
+        workerProfileService.upsertProfile(new WorkerProfileUpsertCommand(
+                currentUser.userId(),
+                request.realName(),
+                null,
+                null,
+                request.serviceTypes(),
+                request.availableSchedule(),
+                request.yearsOfExperience(),
+                request.certificates(),
+                request.serviceAreas(),
+                request.intro(),
+                WorkerQualificationStatus.PENDING,
+                "待资质审核服务人员",
+                null
+        ));
         operationLogService.record(
                 OperationLogActions.WORKER_APPLICATION_SUBMIT,
                 "WORKER_APPLICATION",
                 entity.getId(),
-                "提交服务人员入驻申请，姓名=" + entity.getRealName()
+                "提交服务人员资质申请，姓名=" + entity.getRealName()
         );
         return toDto(entity);
     }
@@ -126,12 +132,27 @@ public class WorkerApplicationService {
 
         if ("APPROVE".equals(action)) {
             entity.setStatus("APPROVED");
-            entity.setAdminRemark(blankToDefault(request.adminRemark(), "审核通过"));
-            grantWorkerRole(entity);
-            createWorkerProfileIfAbsent(entity);
+            entity.setAdminRemark(blankToDefault(request.adminRemark(), "资质审核通过"));
+            workerProfileService.upsertProfile(new WorkerProfileUpsertCommand(
+                    entity.getUserId(),
+                    entity.getRealName(),
+                    null,
+                    null,
+                    entity.getServiceTypes(),
+                    entity.getAvailableSchedule(),
+                    entity.getYearsOfExperience(),
+                    entity.getCertificates(),
+                    entity.getServiceAreas(),
+                    entity.getIntro(),
+                    WorkerQualificationStatus.APPROVED,
+                    "平台认证服务人员",
+                    null
+            ));
+            workerProfileService.updateQualificationStatus(entity.getUserId(), WorkerQualificationStatus.APPROVED);
         } else {
             entity.setStatus("REJECTED");
-            entity.setAdminRemark(blankToDefault(request.adminRemark(), "审核未通过"));
+            entity.setAdminRemark(blankToDefault(request.adminRemark(), "资质审核未通过"));
+            workerProfileService.updateQualificationStatus(entity.getUserId(), WorkerQualificationStatus.REJECTED);
         }
 
         entity.setUpdatedAt(LocalDateTime.now());
@@ -140,56 +161,9 @@ public class WorkerApplicationService {
                 OperationLogActions.WORKER_APPLICATION_REVIEW,
                 "WORKER_APPLICATION",
                 entity.getId(),
-                "审核服务人员入驻申请，结果=" + entity.getStatus()
+                "审核服务人员资质申请，结果=" + entity.getStatus()
         );
         return toDto(entity);
-    }
-
-    private void grantWorkerRole(WorkerApplicationEntity application) {
-        SysRoleEntity workerRole = sysRoleMapper.selectOne(
-                new LambdaQueryWrapper<SysRoleEntity>()
-                        .eq(SysRoleEntity::getRoleCode, "WORKER")
-                        .last("limit 1")
-        );
-        if (workerRole == null) {
-            throw new BusinessException("系统缺少 WORKER 角色配置");
-        }
-
-        Long relationCount = sysUserRoleMapper.selectCount(
-                new LambdaQueryWrapper<SysUserRoleEntity>()
-                        .eq(SysUserRoleEntity::getUserId, application.getUserId())
-                        .eq(SysUserRoleEntity::getRoleId, workerRole.getId())
-        );
-        if (relationCount == 0) {
-            sysUserRoleMapper.insert(new SysUserRoleEntity(application.getUserId(), workerRole.getId()));
-        }
-    }
-
-    private void createWorkerProfileIfAbsent(WorkerApplicationEntity application) {
-        Long count = workerMapper.selectCount(
-                new LambdaQueryWrapper<WorkerEntity>().eq(WorkerEntity::getUserId, application.getUserId())
-        );
-        if (count > 0) {
-            return;
-        }
-
-        WorkerEntity worker = new WorkerEntity(
-                application.getUserId(),
-                application.getRealName(),
-                "待上架服务人员",
-                5.0,
-                0,
-                88,
-                "上海",
-                application.getIntro(),
-                application.getServiceTypes(),
-                application.getAvailableSchedule(),
-                application.getYearsOfExperience(),
-                application.getCertificates(),
-                application.getServiceAreas(),
-                "审核通过后创建的服务人员档案"
-        );
-        workerMapper.insert(worker);
     }
 
     private WorkerApplicationDto toDto(WorkerApplicationEntity entity) {

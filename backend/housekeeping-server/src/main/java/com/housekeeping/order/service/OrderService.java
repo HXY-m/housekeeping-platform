@@ -21,6 +21,7 @@ import com.housekeeping.order.mapper.OrderProgressMapper;
 import com.housekeeping.order.mapper.OrderReviewMapper;
 import com.housekeeping.worker.entity.WorkerEntity;
 import com.housekeeping.worker.mapper.WorkerMapper;
+import com.housekeeping.worker.service.WorkerProfileService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,6 +51,7 @@ public class OrderService {
     private final OrderProgressMapper orderProgressMapper;
     private final OrderReviewMapper orderReviewMapper;
     private final WorkerMapper workerMapper;
+    private final WorkerProfileService workerProfileService;
     private final WorkerDtoMapper workerDtoMapper;
     private final OrderDtoMapper orderDtoMapper;
     private final OperationLogService operationLogService;
@@ -58,6 +60,7 @@ public class OrderService {
                         OrderProgressMapper orderProgressMapper,
                         OrderReviewMapper orderReviewMapper,
                         WorkerMapper workerMapper,
+                        WorkerProfileService workerProfileService,
                         WorkerDtoMapper workerDtoMapper,
                         OrderDtoMapper orderDtoMapper,
                         OperationLogService operationLogService) {
@@ -65,6 +68,7 @@ public class OrderService {
         this.orderProgressMapper = orderProgressMapper;
         this.orderReviewMapper = orderReviewMapper;
         this.workerMapper = workerMapper;
+        this.workerProfileService = workerProfileService;
         this.workerDtoMapper = workerDtoMapper;
         this.orderDtoMapper = orderDtoMapper;
         this.operationLogService = operationLogService;
@@ -97,7 +101,7 @@ public class OrderService {
     }
 
     public BookingAvailabilityDto getBookingAvailability(Long workerId, String bookingDate) {
-        requireWorker(workerId);
+        requireApprovedWorker(workerId);
         LocalDate parsedDate = parseBookingDate(bookingDate);
 
         List<String> occupiedSlots = orderMapper.selectList(
@@ -122,7 +126,7 @@ public class OrderService {
     @Transactional
     public OrderDto createOrder(OrderRequest request) {
         SessionUser currentUser = requireCurrentUser();
-        WorkerEntity worker = requireWorker(request.workerId());
+        WorkerEntity worker = requireApprovedWorker(request.workerId());
         if (!workerDtoMapper.split(worker.getTags()).contains(request.serviceName())) {
             throw new BusinessException("该服务人员暂不支持所选服务项目");
         }
@@ -308,6 +312,10 @@ public class OrderService {
             throw new BusinessException("未找到对应的服务人员");
         }
         return worker;
+    }
+
+    private WorkerEntity requireApprovedWorker(Long workerId) {
+        return workerProfileService.requireApprovedWorker(workerId);
     }
 
     private WorkerEntity requireWorkerByUserId(Long userId) {

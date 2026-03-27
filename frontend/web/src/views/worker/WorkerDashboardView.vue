@@ -8,6 +8,7 @@
       </div>
       <div class="hero-actions">
         <el-button type="primary" @click="router.push('/worker/orders')">进入订单列表</el-button>
+        <el-button plain @click="router.push('/worker/qualification')">维护资质资料</el-button>
       </div>
     </div>
 

@@ -8,7 +8,7 @@
           <p>{{ home?.subHeadline || '围绕家政服务预约、履约、评价和管理后台的完整平台。' }}</p>
           <el-space wrap>
             <el-button type="primary" size="large" @click="router.push('/workers')">立即预约</el-button>
-            <el-button size="large" @click="router.push('/user/worker-application')">申请成为服务人员</el-button>
+            <el-button size="large" @click="router.push('/register?roleCode=WORKER')">注册服务人员账号</el-button>
           </el-space>
         </div>
         <el-card shadow="hover" class="hero-side">

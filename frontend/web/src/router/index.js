@@ -24,7 +24,7 @@ const router = createRouter({
           meta: { requiresAuth: true, role: 'USER', surface: 'public' }
         },
         { path: 'orders', redirect: '/user/orders' },
-        { path: 'worker/apply', redirect: '/user/worker-application' }
+        { path: 'worker/apply', redirect: '/register?roleCode=WORKER' }
       ]
     },
     {
@@ -45,8 +45,7 @@ const router = createRouter({
         { path: 'dashboard', component: () => import('../views/user/UserDashboardView.vue') },
         { path: 'profile', component: () => import('../views/user/UserProfileView.vue') },
         { path: 'favorites', component: () => import('../views/user/UserFavoritesView.vue') },
-        { path: 'orders', component: () => import('../views/consumer/OrdersView.vue') },
-        { path: 'worker-application', component: () => import('../views/worker/WorkerApplyView.vue') }
+        { path: 'orders', component: () => import('../views/consumer/OrdersView.vue') }
       ]
     },
     {
@@ -56,7 +55,8 @@ const router = createRouter({
       redirect: '/worker/dashboard',
       children: [
         { path: 'dashboard', component: () => import('../views/worker/WorkerDashboardView.vue') },
-        { path: 'orders', component: () => import('../views/worker/WorkerOrdersView.vue') }
+        { path: 'orders', component: () => import('../views/worker/WorkerOrdersView.vue') },
+        { path: 'qualification', component: () => import('../views/worker/WorkerApplyView.vue') }
       ]
     },
     {
@@ -71,7 +71,8 @@ const router = createRouter({
         { path: 'services', component: () => import('../views/admin/AdminServicesView.vue') },
         { path: 'applications', component: () => import('../views/admin/AdminApplicationsView.vue') },
         { path: 'after-sales', component: () => import('../views/admin/AdminAfterSalesView.vue') },
-        { path: 'operation-logs', component: () => import('../views/admin/AdminOperationLogsView.vue') }
+        { path: 'operation-logs', component: () => import('../views/admin/AdminOperationLogsView.vue') },
+        { path: 'reports', component: () => import('../views/admin/AdminReportsView.vue') }
       ]
     }
   ]

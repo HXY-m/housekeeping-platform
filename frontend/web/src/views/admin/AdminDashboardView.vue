@@ -7,7 +7,7 @@
         <p>从订单规模、服务供给和满意度三个维度快速掌握平台运行情况。</p>
       </div>
       <div class="hero-actions">
-        <el-button type="primary" @click="router.push('/admin/applications')">查看入驻审核</el-button>
+        <el-button type="primary" @click="router.push('/admin/applications')">查看资质审核</el-button>
         <el-button plain @click="router.push('/admin/after-sales')">进入售后处理中台</el-button>
       </div>
     </div>

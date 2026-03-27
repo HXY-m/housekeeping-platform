@@ -14,8 +14,8 @@
             <span>三类角色共用认证入口，但保持各自业务工作台独立。</span>
           </div>
           <div class="auth-feature-item">
-            <strong>注册即接入主链路</strong>
-            <span>注册完成后可直接进入用户端继续浏览、下单与申请入驻。</span>
+            <strong>普通用户与服务人员都可直接注册</strong>
+            <span>选择注册身份后即可进入对应控制台，服务人员后续在工作台维护资质资料与审核记录。</span>
           </div>
           <div class="auth-feature-item">
             <strong>后续功能更好扩展</strong>

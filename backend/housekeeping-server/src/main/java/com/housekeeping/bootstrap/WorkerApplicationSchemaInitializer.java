@@ -1,10 +1,12 @@
 package com.housekeeping.bootstrap;
 
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
+@Order(10)
 public class WorkerApplicationSchemaInitializer implements CommandLineRunner {
 
     private final JdbcTemplate jdbcTemplate;
@@ -16,6 +18,7 @@ public class WorkerApplicationSchemaInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         ensureWorkerUserIdColumn();
+        ensureWorkerQualificationStatusColumn();
 
         jdbcTemplate.execute("""
                 CREATE TABLE IF NOT EXISTS worker_application (
@@ -56,5 +59,31 @@ public class WorkerApplicationSchemaInitializer implements CommandLineRunner {
                     ADD COLUMN user_id BIGINT NULL
                     """);
         }
+    }
+
+    private void ensureWorkerQualificationStatusColumn() {
+        Integer count = jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*)
+                FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = 'worker_profile'
+                  AND COLUMN_NAME = 'qualification_status'
+                """,
+                Integer.class
+        );
+
+        if (count != null && count == 0) {
+            jdbcTemplate.execute("""
+                    ALTER TABLE worker_profile
+                    ADD COLUMN qualification_status VARCHAR(20) NOT NULL DEFAULT 'APPROVED'
+                    """);
+        }
+
+        jdbcTemplate.update("""
+                UPDATE worker_profile
+                SET qualification_status = 'APPROVED'
+                WHERE qualification_status IS NULL OR qualification_status = ''
+                """);
     }
 }

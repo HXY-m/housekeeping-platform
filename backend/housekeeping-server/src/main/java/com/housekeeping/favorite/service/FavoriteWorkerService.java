@@ -8,6 +8,7 @@ import com.housekeeping.exception.BusinessException;
 import com.housekeeping.favorite.entity.FavoriteWorkerEntity;
 import com.housekeeping.favorite.mapper.FavoriteWorkerMapper;
 import com.housekeeping.home.dto.WorkerCardDto;
+import com.housekeeping.worker.WorkerQualificationStatus;
 import com.housekeeping.worker.entity.WorkerEntity;
 import com.housekeeping.worker.mapper.WorkerMapper;
 import org.springframework.dao.DuplicateKeyException;
@@ -61,6 +62,7 @@ public class FavoriteWorkerService {
         }
 
         return workerMapper.selectBatchIds(workerIds).stream()
+                .filter(worker -> WorkerQualificationStatus.isPublicVisible(worker.getQualificationStatus()))
                 .sorted((left, right) -> Integer.compare(
                         orderMap.getOrDefault(left.getId(), Integer.MAX_VALUE),
                         orderMap.getOrDefault(right.getId(), Integer.MAX_VALUE)
@@ -103,7 +105,7 @@ public class FavoriteWorkerService {
 
     private WorkerEntity requireWorker(Long workerId) {
         WorkerEntity worker = workerMapper.selectById(workerId);
-        if (worker == null) {
+        if (worker == null || !WorkerQualificationStatus.isPublicVisible(worker.getQualificationStatus())) {
             throw new BusinessException("未找到对应的服务人员");
         }
         return worker;
