@@ -6,8 +6,11 @@ import com.housekeeping.audit.service.OperationLogService;
 import com.housekeeping.auth.entity.SysUserEntity;
 import com.housekeeping.auth.mapper.SysUserMapper;
 import com.housekeeping.auth.support.CurrentUserContext;
+import com.housekeeping.auth.support.RoleCodes;
 import com.housekeeping.auth.support.SessionUser;
 import com.housekeeping.exception.BusinessException;
+import com.housekeeping.notification.NotificationType;
+import com.housekeeping.notification.service.NotificationService;
 import com.housekeeping.worker.WorkerQualificationStatus;
 import com.housekeeping.worker.application.dto.WorkerApplicationAttachmentDto;
 import com.housekeeping.worker.application.dto.WorkerApplicationAttachmentRequest;
@@ -37,17 +40,20 @@ public class WorkerApplicationService {
     private final SysUserMapper sysUserMapper;
     private final WorkerProfileService workerProfileService;
     private final OperationLogService operationLogService;
+    private final NotificationService notificationService;
 
     public WorkerApplicationService(WorkerApplicationMapper workerApplicationMapper,
                                     WorkerApplicationAttachmentMapper workerApplicationAttachmentMapper,
                                     SysUserMapper sysUserMapper,
                                     WorkerProfileService workerProfileService,
-                                    OperationLogService operationLogService) {
+                                    OperationLogService operationLogService,
+                                    NotificationService notificationService) {
         this.workerApplicationMapper = workerApplicationMapper;
         this.workerApplicationAttachmentMapper = workerApplicationAttachmentMapper;
         this.sysUserMapper = sysUserMapper;
         this.workerProfileService = workerProfileService;
         this.operationLogService = operationLogService;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -108,6 +114,14 @@ public class WorkerApplicationService {
                 "WORKER_APPLICATION",
                 entity.getId(),
                 "提交服务人员资质申请，姓名=" + entity.getRealName()
+        );
+        notificationService.notifyAdmins(
+                NotificationType.WORKER_APPLICATION,
+                "有新的服务人员资质申请待审核",
+                entity.getRealName() + " 提交了新的资质申请，请及时审核。",
+                "WORKER_APPLICATION",
+                entity.getId(),
+                "/admin/applications"
         );
         return toDto(entity, toAttachmentDtos(request.attachments()));
     }
@@ -176,6 +190,16 @@ public class WorkerApplicationService {
                 "WORKER_APPLICATION",
                 entity.getId(),
                 "审核服务人员资质申请，结果=" + entity.getStatus()
+        );
+        notificationService.notifyUser(
+                entity.getUserId(),
+                RoleCodes.WORKER,
+                NotificationType.WORKER_APPLICATION,
+                "你的资质申请已有审核结果",
+                "资质申请 #" + entity.getId() + " 已更新为 " + entity.getStatus() + "。",
+                "WORKER_APPLICATION",
+                entity.getId(),
+                "/worker/qualification"
         );
         Map<Long, List<WorkerApplicationAttachmentDto>> attachmentMap = buildAttachmentMap(List.of(entity.getId()));
         return toDto(entity, attachmentMap.getOrDefault(entity.getId(), List.of()));

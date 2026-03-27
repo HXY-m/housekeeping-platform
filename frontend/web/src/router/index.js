@@ -45,6 +45,7 @@ const router = createRouter({
         { path: 'dashboard', component: () => import('../views/user/UserDashboardView.vue') },
         { path: 'profile', component: () => import('../views/user/UserProfileView.vue') },
         { path: 'favorites', component: () => import('../views/user/UserFavoritesView.vue') },
+        { path: 'messages', component: () => import('../views/user/UserMessagesView.vue') },
         { path: 'orders', component: () => import('../views/consumer/OrdersView.vue') }
       ]
     },
@@ -56,6 +57,7 @@ const router = createRouter({
       children: [
         { path: 'dashboard', component: () => import('../views/worker/WorkerDashboardView.vue') },
         { path: 'orders', component: () => import('../views/worker/WorkerOrdersView.vue') },
+        { path: 'messages', component: () => import('../views/worker/WorkerMessagesView.vue') },
         { path: 'qualification', component: () => import('../views/worker/WorkerApplyView.vue') }
       ]
     },
@@ -66,6 +68,7 @@ const router = createRouter({
       redirect: '/admin/dashboard',
       children: [
         { path: 'dashboard', component: () => import('../views/admin/AdminDashboardView.vue') },
+        { path: 'messages', component: () => import('../views/admin/AdminMessagesView.vue') },
         { path: 'orders', component: () => import('../views/admin/AdminOrdersView.vue') },
         { path: 'users', component: () => import('../views/admin/AdminUsersView.vue') },
         { path: 'services', component: () => import('../views/admin/AdminServicesView.vue') },

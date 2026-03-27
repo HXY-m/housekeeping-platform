@@ -127,6 +127,9 @@
         </div>
 
         <div class="order-card__actions">
+          <el-button plain @click="goToMessageCenter(row.id)">
+            订单沟通
+          </el-button>
           <el-button
             v-if="normalizeOrderStatus(row.status) === 'ACCEPTED'"
             type="primary"
@@ -258,6 +261,7 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import AttachmentGallery from '../../components/common/AttachmentGallery.vue'
 import OrderServiceRecordTimeline from '../../components/common/OrderServiceRecordTimeline.vue'
@@ -274,6 +278,7 @@ import { getAfterSaleStatusLabel, getAfterSaleStatusTagType } from '../../utils/
 import { getUserOrderFlowMeta, getOrderStepProgress, getOrderSteps } from '../../utils/orderFlow'
 import { getOrderStatusLabel, getOrderStatusTagType, normalizeOrderStatus } from '../../utils/order'
 
+const router = useRouter()
 const maxAttachmentCount = 3
 const maxAttachmentSize = 5 * 1024 * 1024
 
@@ -346,6 +351,13 @@ function hasPrimaryAction(order) {
     || normalizeOrderStatus(order.status) === 'WAITING_USER_CONFIRMATION'
     || canReview(order)
     || canCreateAfterSale(order)
+}
+
+function goToMessageCenter(orderId) {
+  router.push({
+    path: '/user/messages',
+    query: { orderId: String(orderId) }
+  })
 }
 
 function openReview(order) {

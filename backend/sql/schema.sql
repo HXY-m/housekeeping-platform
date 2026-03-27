@@ -10,13 +10,13 @@ CREATE TABLE IF NOT EXISTS sys_user (
   password VARCHAR(255) NOT NULL,
   real_name VARCHAR(50) NOT NULL,
   status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE'
-) COMMENT='系统用户表';
+) COMMENT='system users';
 
 CREATE TABLE IF NOT EXISTS sys_role (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   role_code VARCHAR(50) NOT NULL UNIQUE,
   role_name VARCHAR(50) NOT NULL
-) COMMENT='系统角色表';
+) COMMENT='system roles';
 
 CREATE TABLE IF NOT EXISTS sys_user_role (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS sys_user_role (
   UNIQUE KEY uk_user_role (user_id, role_id),
   CONSTRAINT fk_sys_user_role_user FOREIGN KEY (user_id) REFERENCES sys_user(id),
   CONSTRAINT fk_sys_user_role_role FOREIGN KEY (role_id) REFERENCES sys_role(id)
-) COMMENT='用户角色关系表';
+) COMMENT='user role relations';
 
 CREATE TABLE IF NOT EXISTS user_profile (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS user_profile (
   avatar_url VARCHAR(255) NOT NULL DEFAULT '',
   UNIQUE KEY uk_user_profile_user (user_id),
   CONSTRAINT fk_user_profile_user FOREIGN KEY (user_id) REFERENCES sys_user(id)
-) COMMENT='用户资料表';
+) COMMENT='user profiles';
 
 CREATE TABLE IF NOT EXISTS user_address (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS user_address (
   updated_at DATETIME NOT NULL,
   KEY idx_user_address_user (user_id),
   CONSTRAINT fk_user_address_user FOREIGN KEY (user_id) REFERENCES sys_user(id)
-) COMMENT='用户地址簿表';
+) COMMENT='user addresses';
 
 CREATE TABLE IF NOT EXISTS service_category (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS service_category (
   service_scene VARCHAR(255) NOT NULL DEFAULT '',
   extra_services VARCHAR(255) NOT NULL DEFAULT '',
   enabled TINYINT(1) NOT NULL DEFAULT 1
-) COMMENT='服务分类表';
+) COMMENT='service categories';
 
 CREATE TABLE IF NOT EXISTS worker_profile (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS worker_profile (
   service_areas VARCHAR(500) NOT NULL,
   service_cases VARCHAR(500) NOT NULL,
   qualification_status VARCHAR(20) NOT NULL DEFAULT 'APPROVED'
-) COMMENT='服务人员档案表';
+) COMMENT='worker profiles';
 
 CREATE TABLE IF NOT EXISTS worker_application (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -101,7 +101,18 @@ CREATE TABLE IF NOT EXISTS worker_application (
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   CONSTRAINT fk_worker_application_user FOREIGN KEY (user_id) REFERENCES sys_user(id)
-) COMMENT='服务人员入驻申请表';
+) COMMENT='worker applications';
+
+CREATE TABLE IF NOT EXISTS worker_application_attachment (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  application_id BIGINT NOT NULL,
+  file_name VARCHAR(150) NOT NULL,
+  file_url VARCHAR(500) NOT NULL,
+  file_size BIGINT NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL,
+  KEY idx_worker_application_attachment_app (application_id),
+  CONSTRAINT fk_worker_application_attachment_app FOREIGN KEY (application_id) REFERENCES worker_application(id)
+) COMMENT='worker application attachments';
 
 CREATE TABLE IF NOT EXISTS booking_order (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -117,7 +128,7 @@ CREATE TABLE IF NOT EXISTS booking_order (
   progress_note VARCHAR(255) NOT NULL,
   remark VARCHAR(500) NOT NULL,
   CONSTRAINT fk_booking_order_worker FOREIGN KEY (worker_id) REFERENCES worker_profile(id)
-) COMMENT='预约订单表';
+) COMMENT='booking orders';
 
 CREATE TABLE IF NOT EXISTS booking_order_progress (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -125,7 +136,7 @@ CREATE TABLE IF NOT EXISTS booking_order_progress (
   progress_status VARCHAR(30) NOT NULL,
   progress_note VARCHAR(255) NOT NULL,
   CONSTRAINT fk_order_progress_order FOREIGN KEY (order_id) REFERENCES booking_order(id)
-) COMMENT='订单进度表';
+) COMMENT='order progress';
 
 CREATE TABLE IF NOT EXISTS order_review (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -139,7 +150,30 @@ CREATE TABLE IF NOT EXISTS order_review (
   CONSTRAINT fk_order_review_order FOREIGN KEY (order_id) REFERENCES booking_order(id),
   CONSTRAINT fk_order_review_user FOREIGN KEY (user_id) REFERENCES sys_user(id),
   CONSTRAINT fk_order_review_worker FOREIGN KEY (worker_id) REFERENCES worker_profile(id)
-) COMMENT='订单评价表';
+) COMMENT='order reviews';
+
+CREATE TABLE IF NOT EXISTS booking_order_service_record (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  order_id BIGINT NOT NULL,
+  worker_id BIGINT NOT NULL,
+  stage VARCHAR(30) NOT NULL,
+  description VARCHAR(255) NOT NULL,
+  created_at DATETIME NOT NULL,
+  KEY idx_service_record_order (order_id),
+  KEY idx_service_record_worker (worker_id),
+  CONSTRAINT fk_service_record_order FOREIGN KEY (order_id) REFERENCES booking_order(id),
+  CONSTRAINT fk_service_record_worker FOREIGN KEY (worker_id) REFERENCES worker_profile(id)
+) COMMENT='order service records';
+
+CREATE TABLE IF NOT EXISTS booking_order_service_record_attachment (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  service_record_id BIGINT NOT NULL,
+  file_name VARCHAR(120) NOT NULL,
+  file_url VARCHAR(500) NOT NULL,
+  created_at DATETIME NOT NULL,
+  KEY idx_service_record_attachment_record (service_record_id),
+  CONSTRAINT fk_service_record_attachment_record FOREIGN KEY (service_record_id) REFERENCES booking_order_service_record(id)
+) COMMENT='service record attachments';
 
 CREATE TABLE IF NOT EXISTS order_after_sale (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -157,17 +191,17 @@ CREATE TABLE IF NOT EXISTS order_after_sale (
   CONSTRAINT fk_after_sale_order FOREIGN KEY (order_id) REFERENCES booking_order(id),
   CONSTRAINT fk_after_sale_user FOREIGN KEY (user_id) REFERENCES sys_user(id),
   CONSTRAINT fk_after_sale_worker FOREIGN KEY (worker_id) REFERENCES worker_profile(id)
-) COMMENT='售后反馈表';
+) COMMENT='after sale tickets';
 
 CREATE TABLE IF NOT EXISTS order_after_sale_attachment (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   after_sale_id BIGINT NOT NULL,
   file_name VARCHAR(120) NOT NULL,
-  file_url VARCHAR(255) NOT NULL,
+  file_url VARCHAR(500) NOT NULL,
   created_at DATETIME NOT NULL,
   KEY idx_after_sale_attachment_after_sale (after_sale_id),
   CONSTRAINT fk_after_sale_attachment_after_sale FOREIGN KEY (after_sale_id) REFERENCES order_after_sale(id)
-) COMMENT='售后凭证图片表';
+) COMMENT='after sale attachments';
 
 CREATE TABLE IF NOT EXISTS favorite_worker (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -177,7 +211,38 @@ CREATE TABLE IF NOT EXISTS favorite_worker (
   UNIQUE KEY uk_favorite_worker (user_id, worker_id),
   KEY idx_favorite_worker_user (user_id),
   KEY idx_favorite_worker_worker (worker_id)
-) COMMENT='用户收藏服务人员表';
+) COMMENT='favorite workers';
+
+CREATE TABLE IF NOT EXISTS user_notification (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  recipient_user_id BIGINT NOT NULL,
+  recipient_role_code VARCHAR(50) NOT NULL DEFAULT '',
+  type VARCHAR(50) NOT NULL DEFAULT '',
+  title VARCHAR(120) NOT NULL DEFAULT '',
+  content VARCHAR(500) NOT NULL DEFAULT '',
+  related_type VARCHAR(50) NOT NULL DEFAULT '',
+  related_id BIGINT NULL,
+  action_path VARCHAR(255) NOT NULL DEFAULT '',
+  read_flag TINYINT(1) NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL,
+  read_at DATETIME NULL,
+  KEY idx_user_notification_recipient (recipient_user_id, recipient_role_code),
+  KEY idx_user_notification_read_flag (read_flag),
+  KEY idx_user_notification_created_at (created_at)
+) COMMENT='site notifications';
+
+CREATE TABLE IF NOT EXISTS order_message (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  order_id BIGINT NOT NULL,
+  sender_user_id BIGINT NOT NULL,
+  sender_role_code VARCHAR(50) NOT NULL DEFAULT '',
+  sender_name VARCHAR(50) NOT NULL DEFAULT '',
+  content VARCHAR(500) NOT NULL DEFAULT '',
+  created_at DATETIME NOT NULL,
+  KEY idx_order_message_order (order_id),
+  KEY idx_order_message_created_at (created_at),
+  CONSTRAINT fk_order_message_order FOREIGN KEY (order_id) REFERENCES booking_order(id)
+) COMMENT='order messages';
 
 CREATE TABLE IF NOT EXISTS operation_log (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -193,4 +258,4 @@ CREATE TABLE IF NOT EXISTS operation_log (
   KEY idx_operation_log_created_at (created_at),
   KEY idx_operation_log_action_type (action_type),
   KEY idx_operation_log_role_code (role_code)
-) COMMENT='平台操作日志表';
+) COMMENT='operation logs';

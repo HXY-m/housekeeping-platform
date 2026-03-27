@@ -8,6 +8,11 @@ import com.housekeeping.aftersale.mapper.AfterSaleMapper;
 import com.housekeeping.auth.entity.SysUserEntity;
 import com.housekeeping.auth.service.AuthAccountService;
 import com.housekeeping.auth.support.RoleCodes;
+import com.housekeeping.message.entity.OrderMessageEntity;
+import com.housekeeping.message.mapper.OrderMessageMapper;
+import com.housekeeping.notification.NotificationType;
+import com.housekeeping.notification.entity.UserNotificationEntity;
+import com.housekeeping.notification.mapper.UserNotificationMapper;
 import com.housekeeping.order.OrderServiceRecordStage;
 import com.housekeeping.order.OrderStatus;
 import com.housekeeping.order.entity.OrderEntity;
@@ -69,6 +74,8 @@ public class DemoScenarioInitializer implements CommandLineRunner {
     private final OrderServiceRecordAttachmentMapper orderServiceRecordAttachmentMapper;
     private final AfterSaleMapper afterSaleMapper;
     private final AfterSaleAttachmentMapper afterSaleAttachmentMapper;
+    private final OrderMessageMapper orderMessageMapper;
+    private final UserNotificationMapper userNotificationMapper;
 
     public DemoScenarioInitializer(AuthAccountService authAccountService,
                                    UserProfileService userProfileService,
@@ -82,7 +89,9 @@ public class DemoScenarioInitializer implements CommandLineRunner {
                                    OrderServiceRecordMapper orderServiceRecordMapper,
                                    OrderServiceRecordAttachmentMapper orderServiceRecordAttachmentMapper,
                                    AfterSaleMapper afterSaleMapper,
-                                   AfterSaleAttachmentMapper afterSaleAttachmentMapper) {
+                                   AfterSaleAttachmentMapper afterSaleAttachmentMapper,
+                                   OrderMessageMapper orderMessageMapper,
+                                   UserNotificationMapper userNotificationMapper) {
         this.authAccountService = authAccountService;
         this.userProfileService = userProfileService;
         this.workerProfileService = workerProfileService;
@@ -96,6 +105,8 @@ public class DemoScenarioInitializer implements CommandLineRunner {
         this.orderServiceRecordAttachmentMapper = orderServiceRecordAttachmentMapper;
         this.afterSaleMapper = afterSaleMapper;
         this.afterSaleAttachmentMapper = afterSaleAttachmentMapper;
+        this.orderMessageMapper = orderMessageMapper;
+        this.userNotificationMapper = userNotificationMapper;
     }
 
     @Override
@@ -364,6 +375,86 @@ public class DemoScenarioInitializer implements CommandLineRunner {
                 "客服已联系双方，等待补充收费依据。",
                 AFTER_SALE_URL
         );
+
+        ensureOrderMessage(
+                acceptedOrder.getId(),
+                userA.getId(),
+                RoleCodes.USER,
+                "林若溪",
+                "我这边上午 10 点前都在家，如果需要提前联系可以直接留言。"
+        );
+        ensureOrderMessage(
+                acceptedOrder.getId(),
+                mainWorkerUser.getId(),
+                RoleCodes.WORKER,
+                "演示服务人员",
+                "好的，我已经接单，等你确认后会按时上门。"
+        );
+        ensureOrderMessage(
+                inServiceOrder.getId(),
+                mainWorkerUser.getId(),
+                RoleCodes.WORKER,
+                "演示服务人员",
+                "空调第一轮清洗已经完成，正在做滤网和外壳除尘。"
+        );
+        ensureOrderMessage(
+                waitingConfirmOrder.getId(),
+                userB.getId(),
+                RoleCodes.USER,
+                "周明哲",
+                "我看到了完工凭证，等会回家后会尽快确认。"
+        );
+
+        ensureNotification(
+                userA.getId(),
+                RoleCodes.USER,
+                NotificationType.ORDER_STATUS,
+                "服务人员已接单",
+                "订单 #" + acceptedOrder.getId() + " 已由服务人员接单，请确认预约安排。",
+                "ORDER",
+                acceptedOrder.getId(),
+                "/user/orders"
+        );
+        ensureNotification(
+                userB.getId(),
+                RoleCodes.USER,
+                NotificationType.ORDER_STATUS,
+                "服务人员已提交完工",
+                "订单 #" + waitingConfirmOrder.getId() + " 已提交完工，请及时确认服务结果。",
+                "ORDER",
+                waitingConfirmOrder.getId(),
+                "/user/orders"
+        );
+        ensureNotification(
+                mainWorkerUser.getId(),
+                RoleCodes.WORKER,
+                NotificationType.ORDER_MESSAGE,
+                "订单有新的沟通消息",
+                "用户就订单 #" + acceptedOrder.getId() + " 留下了新的备注消息。",
+                "ORDER",
+                acceptedOrder.getId(),
+                "/worker/messages?orderId=" + acceptedOrder.getId()
+        );
+        ensureNotification(
+                pendingWorkerUser.getId(),
+                RoleCodes.WORKER,
+                NotificationType.WORKER_APPLICATION,
+                "你的资质申请正在审核中",
+                "平台已收到你的资质申请材料，审核结果会通过站内通知同步给你。",
+                "WORKER_APPLICATION",
+                0L,
+                "/worker/qualification"
+        );
+        ensureNotification(
+                authAccountService.findUserByPhone("13800000033").getId(),
+                RoleCodes.ADMIN,
+                NotificationType.AFTER_SALE,
+                "有新的售后工单待处理",
+                "订单 #" + completedAfterSaleOrder.getId() + " 存在一条处理中售后，请及时跟进。",
+                "AFTER_SALE",
+                completedAfterSaleOrder.getId(),
+                "/admin/after-sales"
+        );
     }
 
     private SysUserEntity ensureUser(String phone, String realName, String roleCode) {
@@ -625,6 +716,66 @@ public class DemoScenarioInitializer implements CommandLineRunner {
                 "after-sale-proof.svg",
                 attachmentUrl,
                 createdAt
+        ));
+    }
+
+    private void ensureOrderMessage(Long orderId,
+                                    Long senderUserId,
+                                    String senderRoleCode,
+                                    String senderName,
+                                    String content) {
+        OrderMessageEntity existed = orderMessageMapper.selectOne(
+                new LambdaQueryWrapper<OrderMessageEntity>()
+                        .eq(OrderMessageEntity::getOrderId, orderId)
+                        .eq(OrderMessageEntity::getSenderUserId, senderUserId)
+                        .eq(OrderMessageEntity::getContent, content)
+                        .last("limit 1")
+        );
+        if (existed != null) {
+            return;
+        }
+        orderMessageMapper.insert(new OrderMessageEntity(
+                orderId,
+                senderUserId,
+                senderRoleCode,
+                senderName,
+                content,
+                LocalDateTime.now().minusHours(3)
+        ));
+    }
+
+    private void ensureNotification(Long recipientUserId,
+                                    String recipientRoleCode,
+                                    String type,
+                                    String title,
+                                    String content,
+                                    String relatedType,
+                                    Long relatedId,
+                                    String actionPath) {
+        UserNotificationEntity existed = userNotificationMapper.selectOne(
+                new LambdaQueryWrapper<UserNotificationEntity>()
+                        .eq(UserNotificationEntity::getRecipientUserId, recipientUserId)
+                        .eq(UserNotificationEntity::getRecipientRoleCode, recipientRoleCode)
+                        .eq(UserNotificationEntity::getTitle, title)
+                        .eq(UserNotificationEntity::getRelatedType, relatedType)
+                        .eq(UserNotificationEntity::getRelatedId, relatedId)
+                        .last("limit 1")
+        );
+        if (existed != null) {
+            return;
+        }
+        userNotificationMapper.insert(new UserNotificationEntity(
+                recipientUserId,
+                recipientRoleCode,
+                type,
+                title,
+                content,
+                relatedType,
+                relatedId,
+                actionPath,
+                false,
+                LocalDateTime.now().minusHours(2),
+                null
         ));
     }
 

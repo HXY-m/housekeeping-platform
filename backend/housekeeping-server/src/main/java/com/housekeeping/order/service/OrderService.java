@@ -4,10 +4,13 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.housekeeping.audit.OperationLogActions;
 import com.housekeeping.audit.service.OperationLogService;
 import com.housekeeping.auth.support.CurrentUserContext;
+import com.housekeeping.auth.support.RoleCodes;
 import com.housekeeping.auth.support.SessionUser;
 import com.housekeeping.common.mapper.OrderDtoMapper;
 import com.housekeeping.common.mapper.WorkerDtoMapper;
 import com.housekeeping.exception.BusinessException;
+import com.housekeeping.notification.NotificationType;
+import com.housekeeping.notification.service.NotificationService;
 import com.housekeeping.order.OrderServiceRecordStage;
 import com.housekeeping.order.OrderStatus;
 import com.housekeeping.order.dto.BookingAvailabilityDto;
@@ -59,6 +62,8 @@ public class OrderService {
     private final OrderDtoMapper orderDtoMapper;
     private final OrderServiceRecordService orderServiceRecordService;
     private final OperationLogService operationLogService;
+    private final OrderAccessService orderAccessService;
+    private final NotificationService notificationService;
 
     public OrderService(OrderMapper orderMapper,
                         OrderProgressMapper orderProgressMapper,
@@ -68,7 +73,9 @@ public class OrderService {
                         WorkerDtoMapper workerDtoMapper,
                         OrderDtoMapper orderDtoMapper,
                         OrderServiceRecordService orderServiceRecordService,
-                        OperationLogService operationLogService) {
+                        OperationLogService operationLogService,
+                        OrderAccessService orderAccessService,
+                        NotificationService notificationService) {
         this.orderMapper = orderMapper;
         this.orderProgressMapper = orderProgressMapper;
         this.orderReviewMapper = orderReviewMapper;
@@ -78,25 +85,16 @@ public class OrderService {
         this.orderDtoMapper = orderDtoMapper;
         this.orderServiceRecordService = orderServiceRecordService;
         this.operationLogService = operationLogService;
+        this.orderAccessService = orderAccessService;
+        this.notificationService = notificationService;
     }
 
     public List<OrderDto> listCurrentUserOrders() {
-        SessionUser currentUser = requireCurrentUser();
-        return buildOrderDtos(orderMapper.selectList(
-                new LambdaQueryWrapper<OrderEntity>()
-                        .eq(OrderEntity::getUserId, currentUser.userId())
-                        .orderByDesc(OrderEntity::getId)
-        ));
+        return buildOrderDtos(orderAccessService.listCurrentUserOrders());
     }
 
     public List<OrderDto> listCurrentWorkerOrders() {
-        SessionUser currentUser = requireCurrentUser();
-        WorkerEntity worker = workerProfileService.requireWorkerByUserId(currentUser.userId());
-        return buildOrderDtos(orderMapper.selectList(
-                new LambdaQueryWrapper<OrderEntity>()
-                        .eq(OrderEntity::getWorkerId, worker.getId())
-                        .orderByDesc(OrderEntity::getId)
-        ));
+        return buildOrderDtos(orderAccessService.listCurrentWorkerOrders());
     }
 
     public List<OrderDto> listAllOrders() {
@@ -161,59 +159,86 @@ public class OrderService {
                 order.getId(),
                 "创建订单，服务项目：" + order.getServiceName() + "，服务人员ID=" + order.getWorkerId()
         );
+        notifyWorkerStatus(
+                worker,
+                "你有新的预约待处理",
+                currentUser.realName() + " 提交了 " + order.getServiceName() + " 预约，等待你接单。",
+                order.getId(),
+                "/worker/orders"
+        );
         return buildSingleOrderDto(order);
     }
 
     @Transactional
     public OrderDto acceptOrder(Long orderId) {
-        SessionUser currentUser = requireCurrentUser();
-        WorkerEntity worker = workerProfileService.requireWorkerByUserId(currentUser.userId());
-        OrderEntity order = requireWorkerOwnedOrder(orderId, worker.getId());
+        OrderEntity order = orderAccessService.requireCurrentWorkerOrder(orderId);
         requireStatus(order, OrderStatus.PENDING, "只有待接单订单才能接单");
         updateOrderStatus(order, OrderStatus.ACCEPTED, "服务人员已接单，等待用户确认预约安排");
         operationLogService.record(OperationLogActions.ORDER_ACCEPT, "ORDER", orderId, "服务人员已接单");
+        notifyUserStatus(
+                order.getUserId(),
+                "服务人员已接单",
+                "订单 #" + order.getId() + " 已由服务人员接单，请确认预约安排。",
+                order.getId(),
+                "/user/orders"
+        );
         return buildSingleOrderDto(order);
     }
 
     @Transactional
     public OrderDto confirmOrderByUser(Long orderId) {
-        SessionUser currentUser = requireCurrentUser();
-        OrderEntity order = requireUserOwnedOrder(orderId, currentUser.userId());
+        OrderEntity order = orderAccessService.requireCurrentUserOrder(orderId);
         requireStatus(order, OrderStatus.ACCEPTED, "只有服务人员接单后，用户才能确认预约");
         updateOrderStatus(order, OrderStatus.CONFIRMED, "用户已确认预约安排，等待服务人员上门");
         appendProgress(order.getId(), OrderStatus.CONFIRMED, "用户已确认预约安排，等待服务人员上门");
+        notifyWorkerStatus(
+                requireWorker(order.getWorkerId()),
+                "用户已确认预约安排",
+                "订单 #" + order.getId() + " 已由用户确认，你可以按约上门服务。",
+                order.getId(),
+                "/worker/orders"
+        );
         return buildSingleOrderDto(order);
     }
 
     @Transactional
     public OrderDto startOrder(Long orderId) {
-        SessionUser currentUser = requireCurrentUser();
-        WorkerEntity worker = workerProfileService.requireWorkerByUserId(currentUser.userId());
-        OrderEntity order = requireWorkerOwnedOrder(orderId, worker.getId());
+        OrderEntity order = orderAccessService.requireCurrentWorkerOrder(orderId);
         requireStatus(order, OrderStatus.CONFIRMED, "用户确认预约后才能开始服务");
         updateOrderStatus(order, OrderStatus.IN_SERVICE, "服务已开始，服务人员正在上门处理");
         operationLogService.record(OperationLogActions.ORDER_START, "ORDER", orderId, "服务人员开始服务");
+        notifyUserStatus(
+                order.getUserId(),
+                "服务已开始",
+                "订单 #" + order.getId() + " 已开始服务，服务人员正在处理你的预约。",
+                order.getId(),
+                "/user/orders"
+        );
         return buildSingleOrderDto(order);
     }
 
     @Transactional
     public OrderDto submitCompletionByWorker(Long orderId) {
-        SessionUser currentUser = requireCurrentUser();
-        WorkerEntity worker = workerProfileService.requireWorkerByUserId(currentUser.userId());
-        OrderEntity order = requireWorkerOwnedOrder(orderId, worker.getId());
+        OrderEntity order = orderAccessService.requireCurrentWorkerOrder(orderId);
         requireStatus(order, OrderStatus.IN_SERVICE, "只有服务中的订单才能提交完工");
         if (!orderServiceRecordService.hasStage(orderId, OrderServiceRecordStage.FINISH_PROOF)) {
             throw new BusinessException("提交完工前，请先上传至少一条完工凭证");
         }
         updateOrderStatus(order, OrderStatus.WAITING_USER_CONFIRMATION, "服务人员已提交完工，等待用户确认");
         operationLogService.record(OperationLogActions.ORDER_COMPLETE, "ORDER", orderId, "服务人员提交完工");
+        notifyUserStatus(
+                order.getUserId(),
+                "服务人员已提交完工",
+                "订单 #" + order.getId() + " 已提交完工，请及时确认服务结果。",
+                order.getId(),
+                "/user/orders"
+        );
         return buildSingleOrderDto(order);
     }
 
     @Transactional
     public OrderDto confirmCompletionByUser(Long orderId) {
-        SessionUser currentUser = requireCurrentUser();
-        OrderEntity order = requireUserOwnedOrder(orderId, currentUser.userId());
+        OrderEntity order = orderAccessService.requireCurrentUserOrder(orderId);
         requireStatus(order, OrderStatus.WAITING_USER_CONFIRMATION, "只有待用户确认完工的订单才能完成");
         updateOrderStatus(order, OrderStatus.COMPLETED, "用户已确认完工，订单完成");
 
@@ -221,6 +246,13 @@ public class OrderService {
         worker.setCompletedOrders((worker.getCompletedOrders() == null ? 0 : worker.getCompletedOrders()) + 1);
         workerMapper.updateById(worker);
         operationLogService.record(OperationLogActions.ORDER_COMPLETE, "ORDER", orderId, "用户确认完工");
+        notifyWorkerStatus(
+                worker,
+                "用户已确认完工",
+                "订单 #" + order.getId() + " 已由用户确认完工，可以等待评价或处理新的预约。",
+                order.getId(),
+                "/worker/orders"
+        );
         return buildSingleOrderDto(order);
     }
 
@@ -229,9 +261,7 @@ public class OrderService {
                                                            String stage,
                                                            String description,
                                                            MultipartFile file) {
-        SessionUser currentUser = requireCurrentUser();
-        WorkerEntity worker = workerProfileService.requireWorkerByUserId(currentUser.userId());
-        OrderEntity order = requireWorkerOwnedOrder(orderId, worker.getId());
+        OrderEntity order = orderAccessService.requireCurrentWorkerOrder(orderId);
 
         OrderServiceRecordStage recordStage = OrderServiceRecordStage.from(stage);
         if (recordStage == OrderServiceRecordStage.CHECK_IN) {
@@ -242,13 +272,13 @@ public class OrderService {
             throw new BusinessException("当前订单阶段暂不支持上传过程记录");
         }
 
-        return orderServiceRecordService.createRecord(orderId, worker.getId(), recordStage.code(), description, file);
+        return orderServiceRecordService.createRecord(orderId, order.getWorkerId(), recordStage.code(), description, file);
     }
 
     @Transactional
     public OrderDto reviewOrder(Long orderId, OrderReviewRequest request) {
         SessionUser currentUser = requireCurrentUser();
-        OrderEntity order = requireUserOwnedOrder(orderId, currentUser.userId());
+        OrderEntity order = orderAccessService.requireCurrentUserOrder(orderId);
         requireStatus(order, OrderStatus.COMPLETED, "只有已完成订单才可以评价");
 
         OrderReviewEntity existed = orderReviewMapper.selectOne(
@@ -274,6 +304,13 @@ public class OrderService {
                 "ORDER",
                 orderId,
                 "订单评价，评分=" + request.rating()
+        );
+        notifyWorkerStatus(
+                requireWorker(order.getWorkerId()),
+                "你收到了新的订单评价",
+                "订单 #" + order.getId() + " 收到了 " + request.rating() + " 星评价。",
+                order.getId(),
+                "/worker/orders"
         );
         return buildSingleOrderDto(order);
     }
@@ -322,34 +359,41 @@ public class OrderService {
         }
     }
 
-    private OrderEntity requireUserOwnedOrder(Long orderId, Long userId) {
-        OrderEntity order = orderMapper.selectById(orderId);
-        if (order == null) {
-            throw new BusinessException("未找到对应的订单");
-        }
-        if (!Objects.equals(order.getUserId(), userId)) {
-            throw new BusinessException("只能操作自己的订单");
-        }
-        return order;
-    }
-
-    private OrderEntity requireWorkerOwnedOrder(Long orderId, Long workerId) {
-        OrderEntity order = orderMapper.selectById(orderId);
-        if (order == null) {
-            throw new BusinessException("未找到对应的订单");
-        }
-        if (!Objects.equals(order.getWorkerId(), workerId)) {
-            throw new BusinessException("只能处理分配给自己的订单");
-        }
-        return order;
-    }
-
     private WorkerEntity requireWorker(Long workerId) {
         WorkerEntity worker = workerMapper.selectById(workerId);
         if (worker == null) {
             throw new BusinessException("未找到对应的服务人员");
         }
         return worker;
+    }
+
+    private void notifyUserStatus(Long userId, String title, String content, Long orderId, String actionPath) {
+        notificationService.notifyUser(
+                userId,
+                RoleCodes.USER,
+                NotificationType.ORDER_STATUS,
+                title,
+                content,
+                "ORDER",
+                orderId,
+                actionPath
+        );
+    }
+
+    private void notifyWorkerStatus(WorkerEntity worker, String title, String content, Long orderId, String actionPath) {
+        if (worker == null || worker.getUserId() == null) {
+            return;
+        }
+        notificationService.notifyUser(
+                worker.getUserId(),
+                RoleCodes.WORKER,
+                NotificationType.ORDER_STATUS,
+                title,
+                content,
+                "ORDER",
+                orderId,
+                actionPath
+        );
     }
 
     private OrderDto buildSingleOrderDto(OrderEntity order) {

@@ -1,0 +1,446 @@
+<template>
+  <div class="message-center-layout">
+    <el-card shadow="never">
+      <template #header>
+        <div class="card-header-between">
+          <div>
+            <strong>会话列表</strong>
+            <div class="section-caption">按订单查看用户与服务人员之间的沟通记录</div>
+          </div>
+          <div class="filter-actions">
+            <el-tag effect="plain">{{ filteredThreads.length }} 条</el-tag>
+            <el-button :loading="threadLoading" @click="loadConversations">刷新</el-button>
+          </div>
+        </div>
+      </template>
+
+      <div class="table-toolbar__filters">
+        <el-input
+          v-model.trim="keyword"
+          clearable
+          placeholder="搜索服务项目或对方姓名"
+          style="width: 100%"
+        />
+        <el-select v-model="statusFilter" clearable placeholder="状态筛选" style="width: 100%">
+          <el-option label="待接单" value="PENDING" />
+          <el-option label="已接单" value="ACCEPTED" />
+          <el-option label="待上门" value="CONFIRMED" />
+          <el-option label="服务中" value="IN_SERVICE" />
+          <el-option label="待确认完工" value="WAITING_USER_CONFIRMATION" />
+          <el-option label="已完成" value="COMPLETED" />
+        </el-select>
+      </div>
+
+      <el-scrollbar max-height="620px" class="message-thread-scroll">
+        <div v-if="filteredThreads.length" class="message-thread-list">
+          <button
+            v-for="thread in filteredThreads"
+            :key="thread.orderId"
+            type="button"
+            class="message-thread-item"
+            :class="{ 'is-active': String(selectedOrderId) === String(thread.orderId) }"
+            @click="selectedOrderId = thread.orderId"
+          >
+            <div class="message-thread-item__top">
+              <strong>{{ thread.serviceName }}</strong>
+              <el-tag size="small" :type="getOrderStatusTagType(thread.status)">{{ getOrderStatusLabel(thread.status) }}</el-tag>
+            </div>
+            <div class="message-thread-item__sub">
+              {{ portal === 'worker' ? '用户' : '服务人员' }}：{{ thread.counterpartName }}
+            </div>
+            <div class="message-thread-item__meta">
+              <span>{{ [thread.bookingDate, thread.bookingSlot].filter(Boolean).join(' ') || '--' }}</span>
+              <span class="muted-line">{{ thread.progressNote || '等待更新进度' }}</span>
+            </div>
+            <div class="message-thread-item__preview">
+              {{ thread.latestMessage || '暂时还没有留言，点击右侧可以发起沟通。' }}
+            </div>
+          </button>
+        </div>
+        <el-empty v-else :description="emptyDescription" class="empty-surface" />
+      </el-scrollbar>
+    </el-card>
+
+    <el-card shadow="never">
+      <template #header>
+        <div class="card-header-between">
+          <div>
+            <strong>{{ selectedThread?.serviceName || '订单沟通' }}</strong>
+            <div class="section-caption">
+              {{ selectedThread ? `${portal === 'worker' ? '用户' : '服务人员'}：${selectedThread.counterpartName}` : '选择左侧订单后查看沟通详情' }}
+            </div>
+          </div>
+          <el-tag v-if="selectedThread" :type="getOrderStatusTagType(selectedThread.status)">
+            {{ getOrderStatusLabel(selectedThread.status) }}
+          </el-tag>
+        </div>
+      </template>
+
+      <el-empty v-if="!selectedThread" :description="emptyDescription" class="empty-surface" />
+      <div v-else class="message-thread-panel">
+        <div class="message-summary-panel">
+          <div class="message-summary-panel__meta">
+            <div class="order-meta-item">
+              <span class="order-meta-item__label">预约时间</span>
+              <strong>{{ [selectedThread.bookingDate, selectedThread.bookingSlot].filter(Boolean).join(' ') || '--' }}</strong>
+            </div>
+            <div class="order-meta-item">
+              <span class="order-meta-item__label">服务地址</span>
+              <strong>{{ selectedOrder?.serviceAddress || '--' }}</strong>
+            </div>
+          </div>
+          <el-alert
+            :title="selectedFlowMeta.title"
+            :description="selectedFlowMeta.description"
+            show-icon
+            :closable="false"
+            type="info"
+          />
+        </div>
+
+        <el-scrollbar max-height="420px" class="message-bubble-scroll" v-loading="messageLoading">
+          <div v-if="messages.length" class="message-bubble-list">
+            <div
+              v-for="item in messages"
+              :key="item.id"
+              class="message-bubble"
+              :class="item.senderUserId === authStore.state.user?.id ? 'message-bubble--self' : 'message-bubble--other'"
+            >
+              <div class="message-bubble__meta">
+                <strong>{{ item.senderName }}</strong>
+                <span>{{ formatMessageTime(item.createdAt) }}</span>
+              </div>
+              <div class="message-bubble__content">{{ item.content }}</div>
+            </div>
+          </div>
+          <el-empty v-else description="当前订单还没有留言记录" class="empty-surface" />
+        </el-scrollbar>
+
+        <div class="message-compose">
+          <div class="tag-list">
+            <el-tag
+              v-for="item in quickPhrases"
+              :key="item"
+              effect="plain"
+              class="message-quick-tag"
+              @click="appendQuickPhrase(item)"
+            >
+              {{ item }}
+            </el-tag>
+          </div>
+          <el-input
+            v-model.trim="draft"
+            type="textarea"
+            :rows="4"
+            maxlength="300"
+            show-word-limit
+            placeholder="可记录上门时间、门禁说明、服务确认等沟通内容。"
+          />
+          <div class="order-card__actions">
+            <span class="muted-line">{{ selectedFlowMeta.hint }}</span>
+            <el-button type="primary" :loading="sending" @click="submitMessage">发送留言</el-button>
+          </div>
+        </div>
+      </div>
+    </el-card>
+  </div>
+</template>
+
+<script setup>
+import { computed, onMounted, ref, watch } from 'vue'
+import { ElMessage } from 'element-plus'
+import { fetchOrderConversations, fetchOrderMessages, sendOrderMessage } from '../../api'
+import { authStore } from '../../stores/auth'
+import { getOrderStatusLabel, getOrderStatusTagType, normalizeOrderStatus } from '../../utils/order'
+import { getUserOrderFlowMeta, getWorkerOrderFlowMeta } from '../../utils/orderFlow'
+
+const props = defineProps({
+  portal: {
+    type: String,
+    required: true
+  },
+  orders: {
+    type: Array,
+    default: () => []
+  },
+  initialOrderId: {
+    type: [String, Number],
+    default: ''
+  }
+})
+
+const keyword = ref('')
+const statusFilter = ref('')
+const threadLoading = ref(false)
+const messageLoading = ref(false)
+const sending = ref(false)
+const selectedOrderId = ref('')
+const conversations = ref([])
+const messages = ref([])
+const draft = ref('')
+
+const quickPhrases = computed(() => {
+  if (props.portal === 'worker') {
+    return ['我已接单，稍后电话确认', '预计会准时到达，如有变化我会提前联系', '完工资料已上传，请你确认']
+  }
+  return ['门禁请提前电话联系', '如果有临时调整我会在这里说明', '服务完成后请提醒我确认']
+})
+
+const orderMap = computed(() =>
+  Object.fromEntries((props.orders || []).map((item) => [String(item.id), item]))
+)
+
+const filteredThreads = computed(() => {
+  const normalizedKeyword = keyword.value.toLowerCase()
+  const items = [...conversations.value]
+
+  return items.filter((item) => {
+    if (statusFilter.value && normalizeOrderStatus(item.status) !== statusFilter.value) {
+      return false
+    }
+    if (!normalizedKeyword) {
+      return true
+    }
+    return [item.serviceName, item.counterpartName, item.latestMessage]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(normalizedKeyword))
+  })
+})
+
+const selectedThread = computed(() =>
+  filteredThreads.value.find((item) => String(item.orderId) === String(selectedOrderId.value)) ||
+  filteredThreads.value[0] ||
+  null
+)
+
+const selectedOrder = computed(() =>
+  selectedThread.value ? orderMap.value[String(selectedThread.value.orderId)] || null : null
+)
+
+const selectedFlowMeta = computed(() => {
+  if (!selectedOrder.value) {
+    return {
+      title: '暂无流程提示',
+      description: '选择左侧订单后查看当前阶段说明。',
+      hint: '你可以围绕当前订单与对方沟通关键安排。'
+    }
+  }
+  return props.portal === 'worker'
+    ? getWorkerOrderFlowMeta(selectedOrder.value)
+    : getUserOrderFlowMeta(selectedOrder.value)
+})
+
+const emptyDescription = computed(() =>
+  threadLoading.value ? '会话加载中' : '当前还没有可展示的订单沟通'
+)
+
+watch(
+  () => props.initialOrderId,
+  (orderId) => {
+    if (orderId) {
+      selectedOrderId.value = String(orderId)
+    }
+  },
+  { immediate: true }
+)
+
+watch(
+  filteredThreads,
+  (list) => {
+    if (!list.length) {
+      selectedOrderId.value = ''
+      return
+    }
+    if (!selectedOrderId.value || !list.some((item) => String(item.orderId) === String(selectedOrderId.value))) {
+      selectedOrderId.value = String(props.initialOrderId || list[0].orderId)
+    }
+  },
+  { immediate: true }
+)
+
+watch(
+  () => selectedThread.value?.orderId,
+  async (orderId) => {
+    if (!orderId) {
+      messages.value = []
+      return
+    }
+    await loadMessages(orderId)
+  },
+  { immediate: true }
+)
+
+async function loadConversations() {
+  threadLoading.value = true
+  try {
+    conversations.value = await fetchOrderConversations()
+  } catch (error) {
+    ElMessage.error(error.message || '获取订单沟通列表失败')
+  } finally {
+    threadLoading.value = false
+  }
+}
+
+async function loadMessages(orderId) {
+  messageLoading.value = true
+  try {
+    messages.value = await fetchOrderMessages(orderId)
+  } catch (error) {
+    ElMessage.error(error.message || '获取留言记录失败')
+  } finally {
+    messageLoading.value = false
+  }
+}
+
+function appendQuickPhrase(text) {
+  draft.value = draft.value ? `${draft.value}\n${text}` : text
+}
+
+function formatMessageTime(value) {
+  if (!value) {
+    return '刚刚'
+  }
+  return String(value).replace('T', ' ').slice(0, 16)
+}
+
+async function submitMessage() {
+  if (!selectedThread.value) {
+    ElMessage.warning('请先选择订单会话')
+    return
+  }
+  if (!draft.value) {
+    ElMessage.warning('请输入留言内容')
+    return
+  }
+
+  sending.value = true
+  try {
+    await sendOrderMessage(selectedThread.value.orderId, {
+      content: draft.value
+    })
+    draft.value = ''
+    ElMessage.success('留言已发送')
+    await Promise.all([
+      loadMessages(selectedThread.value.orderId),
+      loadConversations()
+    ])
+  } catch (error) {
+    ElMessage.error(error.message || '发送留言失败')
+  } finally {
+    sending.value = false
+  }
+}
+
+onMounted(loadConversations)
+</script>
+
+<style scoped>
+.message-center-layout {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 16px;
+}
+
+.message-thread-scroll,
+.message-bubble-scroll {
+  margin-top: 16px;
+}
+
+.message-thread-list,
+.message-bubble-list,
+.message-thread-panel,
+.message-summary-panel,
+.message-compose {
+  display: grid;
+  gap: 12px;
+}
+
+.message-thread-item {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: #fff;
+  padding: 14px 16px;
+  text-align: left;
+  cursor: pointer;
+  display: grid;
+  gap: 8px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.message-thread-item:hover,
+.message-thread-item.is-active {
+  border-color: rgba(15, 118, 110, 0.32);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+
+.message-thread-item__top,
+.message-thread-item__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.message-thread-item__sub,
+.message-thread-item__preview {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.message-summary-panel__meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.message-bubble {
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: #fff;
+}
+
+.message-bubble--self {
+  background: rgba(15, 118, 110, 0.08);
+  border-color: rgba(15, 118, 110, 0.18);
+}
+
+.message-bubble--other {
+  background: #fff;
+}
+
+.message-bubble__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.message-bubble__content {
+  line-height: 1.75;
+  white-space: pre-wrap;
+}
+
+.message-quick-tag {
+  cursor: pointer;
+}
+
+@media (max-width: 1080px) {
+  .message-center-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .message-summary-panel__meta,
+  .message-thread-item__top,
+  .message-thread-item__meta,
+  .message-bubble__meta {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+}
+</style>

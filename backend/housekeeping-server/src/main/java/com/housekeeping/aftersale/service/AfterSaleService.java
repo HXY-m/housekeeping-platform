@@ -11,8 +11,11 @@ import com.housekeeping.aftersale.mapper.AfterSaleMapper;
 import com.housekeeping.audit.OperationLogActions;
 import com.housekeeping.audit.service.OperationLogService;
 import com.housekeeping.auth.support.CurrentUserContext;
+import com.housekeeping.auth.support.RoleCodes;
 import com.housekeeping.auth.support.SessionUser;
 import com.housekeeping.exception.BusinessException;
+import com.housekeeping.notification.NotificationType;
+import com.housekeeping.notification.service.NotificationService;
 import com.housekeeping.order.OrderStatus;
 import com.housekeeping.order.entity.OrderEntity;
 import com.housekeeping.order.mapper.OrderMapper;
@@ -37,17 +40,20 @@ public class AfterSaleService {
     private final WorkerMapper workerMapper;
     private final AfterSaleAttachmentService afterSaleAttachmentService;
     private final OperationLogService operationLogService;
+    private final NotificationService notificationService;
 
     public AfterSaleService(AfterSaleMapper afterSaleMapper,
                             OrderMapper orderMapper,
                             WorkerMapper workerMapper,
                             AfterSaleAttachmentService afterSaleAttachmentService,
-                            OperationLogService operationLogService) {
+                            OperationLogService operationLogService,
+                            NotificationService notificationService) {
         this.afterSaleMapper = afterSaleMapper;
         this.orderMapper = orderMapper;
         this.workerMapper = workerMapper;
         this.afterSaleAttachmentService = afterSaleAttachmentService;
         this.operationLogService = operationLogService;
+        this.notificationService = notificationService;
     }
 
     public List<AfterSaleDto> listCurrentUserAfterSales() {
@@ -106,6 +112,28 @@ public class AfterSaleService {
                 entity.getId(),
                 "创建售后工单，订单ID=" + entity.getOrderId() + "，问题类型=" + entity.getIssueType()
         );
+        notificationService.notifyAdmins(
+                NotificationType.AFTER_SALE,
+                "有新的售后工单待处理",
+                "订单 #" + entity.getOrderId() + " 提交了售后反馈，请及时处理。",
+                "AFTER_SALE",
+                entity.getId(),
+                "/admin/after-sales"
+        );
+
+        WorkerEntity worker = workerMapper.selectById(order.getWorkerId());
+        if (worker != null && worker.getUserId() != null) {
+            notificationService.notifyUser(
+                    worker.getUserId(),
+                    RoleCodes.WORKER,
+                    NotificationType.AFTER_SALE,
+                    "你的订单产生了售后反馈",
+                    "订单 #" + entity.getOrderId() + " 已被用户发起售后，请关注处理进度。",
+                    "AFTER_SALE",
+                    entity.getId(),
+                    "/worker/messages?tab=notifications"
+            );
+        }
         return buildSingleDto(entity);
     }
 
@@ -131,6 +159,16 @@ public class AfterSaleService {
                 "AFTER_SALE",
                 entity.getId(),
                 "处理售后工单，状态变更为 " + entity.getStatus()
+        );
+        notificationService.notifyUser(
+                entity.getUserId(),
+                RoleCodes.USER,
+                NotificationType.AFTER_SALE,
+                "你的售后工单有新进展",
+                "售后工单 #" + entity.getId() + " 已更新为 " + entity.getStatus() + "。",
+                "AFTER_SALE",
+                entity.getId(),
+                "/user/messages?tab=notifications"
         );
         return buildSingleDto(entity);
     }

@@ -7,6 +7,7 @@ public final class OperationLogActions {
     public static final String ORDER_START = "ORDER_START";
     public static final String ORDER_COMPLETE = "ORDER_COMPLETE";
     public static final String ORDER_REVIEW = "ORDER_REVIEW";
+    public static final String ORDER_MESSAGE_SEND = "ORDER_MESSAGE_SEND";
     public static final String AFTER_SALE_CREATE = "AFTER_SALE_CREATE";
     public static final String AFTER_SALE_HANDLE = "AFTER_SALE_HANDLE";
     public static final String WORKER_APPLICATION_SUBMIT = "WORKER_APPLICATION_SUBMIT";

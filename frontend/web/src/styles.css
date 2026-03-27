@@ -360,6 +360,13 @@ a {
 .worker-menu .el-menu-item {
   border-radius: 10px;
   margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.layout-menu-badge {
+  margin-left: auto;
 }
 
 .user-menu .el-menu-item {

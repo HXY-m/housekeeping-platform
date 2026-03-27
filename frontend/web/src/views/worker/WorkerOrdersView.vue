@@ -118,6 +118,9 @@
         </div>
 
         <div class="order-card__actions">
+          <el-button plain @click="goToMessageCenter(order.id)">
+            订单沟通
+          </el-button>
           <el-button
             v-if="normalizeOrderStatus(order.status) === 'PENDING'"
             type="primary"
@@ -232,6 +235,7 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import OrderServiceRecordTimeline from '../../components/common/OrderServiceRecordTimeline.vue'
 import {
@@ -244,6 +248,7 @@ import {
 import { getWorkerOrderFlowMeta, getOrderStepProgress, getOrderSteps } from '../../utils/orderFlow'
 import { getOrderStatusLabel, getOrderStatusTagType, normalizeOrderStatus } from '../../utils/order'
 
+const router = useRouter()
 const statusFilter = ref('ALL')
 const orders = ref([])
 const loading = ref(false)
@@ -306,6 +311,13 @@ const availableRecordStages = computed(() => {
   }
   return Object.entries(stageOptions).map(([value, label]) => ({ value, label }))
 })
+
+function goToMessageCenter(orderId) {
+  router.push({
+    path: '/worker/messages',
+    query: { orderId: String(orderId) }
+  })
+}
 
 async function loadOrders() {
   loading.value = true

@@ -13,6 +13,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
         "com.housekeeping.aftersale.mapper",
         "com.housekeeping.category.mapper",
         "com.housekeeping.favorite.mapper",
+        "com.housekeeping.message.mapper",
+        "com.housekeeping.notification.mapper",
         "com.housekeeping.user.mapper",
         "com.housekeeping.worker.mapper",
         "com.housekeeping.worker.application.mapper",
