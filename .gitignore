@@ -1,22 +1,32 @@
 # ==========================================
-# 操作系统临时文件 (OS-specific)
+# 1. 编译与运行输出 (Heavy Hitters)
 # ==========================================
-.DS_Store
-Thumbs.db
-desktop.ini
+target/
+bin/
+build/
+out/
+.gradle/
+dist/
+dist-ssr/
+node_modules/
+.temp/
+.cache/
 
 # ==========================================
-# 开发工具 (IDE & Editors)
+# 2. IDE 与 编辑器 (The "Invisible" Clutter)
 # ==========================================
 # IntelliJ IDEA
 .idea/
 *.iws
 *.iml
 *.ipr
-out/
-# 排除配置文件中可能包含的敏感信息
-.idea/libraries/
+cmake-build-*/
+# 即使不忽略 .idea，也必须忽略下面这个，它每秒都在变
 .idea/workspace.xml
+.idea/usage.statistics.xml
+.idea/tasks.xml
+.idea/shelf/
+.idea/dictionaries/
 
 # VS Code
 .vscode/
@@ -25,68 +35,56 @@ out/
 !.vscode/launch.json
 !.vscode/extensions.json
 *.code-workspace
+.history/
+
+# 其他编辑器
+*.swp
+*.bak
+*~
+.classpath
+.project
+.settings/
 
 # ==========================================
-# 后端 (Java & Spring Boot)
+# 3. 日志、临时文件与进程 (The Noise)
 # ==========================================
-# 编译输出
-target/
-*.class
-
-# 日志文件
 logs/
 *.log
-
-# 单元测试报告
-TEST-*.xml
-
-# Maven/Gradle 依赖与临时文件
-.mvn/wrapper/maven-wrapper.jar
-.gradle/
-build/
-
-# ==========================================
-# 前端 (Vue / Node.js)
-# ==========================================
-node_modules/
-dist/
-dist-ssr/
-*.local
-
-# 编辑器/打包工具缓存
-.eslintcache
-.stylelintcache
-.vite/
-.nuxt/
-
-# npm/yarn/pnpm 错误日志
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+pid
+*.pid
+*.seed
+*.pid.lock
 
 # ==========================================
-# 数据库与安全 (MySQL & Security)
+# 4. 数据库与系统产生的垃圾 (Safety & Cleanliness)
 # ==========================================
-# 数据库导出文件
+# MySQL / Redis 产生的临时文件或导出
 *.sql
-*.sql.gz
+*.hprof
+*.pyc
+dump.rdb
 
-# 环境配置文件 (非常重要！防止泄露数据库密码)
+# 操作系统
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ==========================================
+# 5. 环境与密钥 (Security - DO NOT REMOVE)
+# ==========================================
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Spring Boot 外部配置（如果有敏感数据）
-application-*.properties
-application-*.yml
-!application.yml
-!application.properties
-
-# ==========================================
-# 其他 (Others)
-# ==========================================
-temp/
-tmp/
+*.local
+.env.*.local
+*.pem
+*.key
+*.p12
+*.jks
