@@ -1,0 +1,92 @@
+# ==========================================
+# 操作系统临时文件 (OS-specific)
+# ==========================================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ==========================================
+# 开发工具 (IDE & Editors)
+# ==========================================
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+# 排除配置文件中可能包含的敏感信息
+.idea/libraries/
+.idea/workspace.xml
+
+# VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# ==========================================
+# 后端 (Java & Spring Boot)
+# ==========================================
+# 编译输出
+target/
+*.class
+
+# 日志文件
+logs/
+*.log
+
+# 单元测试报告
+TEST-*.xml
+
+# Maven/Gradle 依赖与临时文件
+.mvn/wrapper/maven-wrapper.jar
+.gradle/
+build/
+
+# ==========================================
+# 前端 (Vue / Node.js)
+# ==========================================
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# 编辑器/打包工具缓存
+.eslintcache
+.stylelintcache
+.vite/
+.nuxt/
+
+# npm/yarn/pnpm 错误日志
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ==========================================
+# 数据库与安全 (MySQL & Security)
+# ==========================================
+# 数据库导出文件
+*.sql
+*.sql.gz
+
+# 环境配置文件 (非常重要！防止泄露数据库密码)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Spring Boot 外部配置（如果有敏感数据）
+application-*.properties
+application-*.yml
+!application.yml
+!application.properties
+
+# ==========================================
+# 其他 (Others)
+# ==========================================
+temp/
+tmp/
