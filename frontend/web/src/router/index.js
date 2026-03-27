@@ -10,6 +10,7 @@ import WorkerDetailView from '../views/consumer/WorkerDetailView.vue'
 import BookingView from '../views/consumer/BookingView.vue'
 import OrdersView from '../views/consumer/OrdersView.vue'
 import LoginView from '../views/auth/LoginView.vue'
+import RegisterView from '../views/auth/RegisterView.vue'
 import AdminDashboardView from '../views/admin/AdminDashboardView.vue'
 import AdminApplicationsView from '../views/admin/AdminApplicationsView.vue'
 import WorkerApplyView from '../views/worker/WorkerApplyView.vue'
@@ -43,9 +44,12 @@ const router = createRouter({
       ]
     },
     {
-      path: '/login',
+      path: '/',
       component: AuthLayout,
-      children: [{ path: '', component: LoginView }]
+      children: [
+        { path: 'login', component: LoginView },
+        { path: 'register', component: RegisterView }
+      ]
     },
     {
       path: '/worker',
@@ -67,17 +71,15 @@ const router = createRouter({
   ]
 })
 
-function defaultHomePath() {
-  if (authStore.hasRole('ADMIN')) return '/admin/dashboard'
-  if (authStore.hasRole('WORKER')) return '/worker/orders'
-  return '/'
+function isAuthPage(path) {
+  return path === '/login' || path === '/register'
 }
 
 router.beforeEach(async (to) => {
   await authStore.ensureLoaded()
 
-  if (to.path === '/login' && authStore.isLoggedIn()) {
-    return defaultHomePath()
+  if (isAuthPage(to.path) && authStore.isLoggedIn()) {
+    return authStore.resolveHomePath()
   }
 
   if (!to.meta.requiresAuth) {

@@ -63,6 +63,7 @@ npm run dev
 ## 认证接口
 
 - `POST /api/auth/login`
+- `POST /api/auth/register`
 - `GET /api/auth/me`
 - `GET /api/auth/demo-accounts`
 
@@ -76,29 +77,39 @@ npm run dev
 }
 ```
 
+注册请求示例：
+
+```json
+{
+  "realName": "张三",
+  "phone": "13800138000",
+  "password": "123456"
+}
+```
+
 ## 演示账号
 
 - 普通用户：`13800000011 / 123456 / USER`
 - 服务人员：`13800000022 / 123456 / WORKER`
 - 管理员：`13800000033 / 123456 / ADMIN`
 
-管理员接口访问时请在请求头里带上：
+管理员接口访问时，请在请求头里带上：
 
 ```text
 Authorization: Bearer <token>
 ```
 
-当前已经对 `/api/admin/**` 做角色保护。
+当前已经对 `/api/admin/**` 和 `/api/worker/orders/**` 做了角色保护。
 
 ## API 文档地址
 
 启动后端后可访问：
 
-- Swagger UI：`http://localhost:8080/swagger-ui.html`
-- Knife4j：`http://localhost:8080/doc.html`
-- OpenAPI JSON：`http://localhost:8080/v3/api-docs`
+- Swagger UI: `http://localhost:8080/swagger-ui.html`
+- Knife4j: `http://localhost:8080/doc.html`
+- OpenAPI JSON: `http://localhost:8080/v3/api-docs`
 
-测试管理员接口时，建议先调用登录接口，拿到 `token` 后点击页面上的 `Authorize`，填入：
+测试受保护接口时，建议先调用登录接口，拿到 `token` 后点击页面上的 `Authorize`，填入：
 
 ```text
 Bearer 你的token
@@ -110,5 +121,10 @@ Bearer 你的token
 - `/workers` 服务人员列表
 - `/workers/1` 服务人员详情
 - `/booking/1` 在线预约
-- `/orders` 订单进度
-- `/admin` 管理员统计看板
+- `/orders` 用户订单中心
+- `/worker/apply` 普通用户申请入驻
+- `/worker/orders` 服务人员工作台
+- `/login` 登录页
+- `/register` 注册页
+- `/admin/dashboard` 管理员看板
+- `/admin/applications` 入驻审核

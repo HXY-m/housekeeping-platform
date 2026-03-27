@@ -1,5 +1,6 @@
 import { reactive } from 'vue'
 import { clearToken, fetchCurrentUser, hasToken, setToken } from '../api'
+import { resolveHomePath } from '../utils/auth'
 
 const state = reactive({
   token: localStorage.getItem('housekeeping_token') || '',
@@ -39,11 +40,14 @@ export const authStore = {
   async refresh() {
     return loadCurrentUser()
   },
-  loginSuccess(payload) {
+  setUserSession(payload) {
     setToken(payload.token)
     state.token = payload.token
     state.user = payload.user
     state.loaded = true
+  },
+  loginSuccess(payload) {
+    this.setUserSession(payload)
   },
   logout() {
     logout()
@@ -53,6 +57,9 @@ export const authStore = {
   },
   hasRole(roleCode) {
     return state.user?.roleCode === roleCode
+  },
+  resolveHomePath(roleCode = state.user?.roleCode) {
+    return resolveHomePath(roleCode)
   }
 }
 

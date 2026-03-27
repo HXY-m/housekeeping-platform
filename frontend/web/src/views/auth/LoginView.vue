@@ -36,7 +36,7 @@
             shadow="never"
             @click="fillDemoAccount(account)"
           >
-            <strong>{{ account.description }}</strong>
+            <strong>{{ account.realName }}</strong>
             <div class="muted-line">{{ account.roleCode }} / {{ account.phone }}</div>
           </el-card>
         </div>
@@ -69,19 +69,13 @@ function fillDemoAccount(account) {
   form.roleCode = account.roleCode
 }
 
-function resolveDefaultRedirect(roleCode) {
-  if (roleCode === 'ADMIN') return '/admin/dashboard'
-  if (roleCode === 'WORKER') return '/worker/orders'
-  return '/'
-}
-
 async function handleLogin() {
   try {
     errorMessage.value = ''
     const result = await login(form)
-    authStore.loginSuccess(result)
+    authStore.setUserSession(result)
     ElMessage.success('登录成功')
-    const redirect = route.query.redirect || resolveDefaultRedirect(result.user.roleCode)
+    const redirect = route.query.redirect || authStore.resolveHomePath(result.user.roleCode)
     router.push(redirect)
   } catch (error) {
     errorMessage.value = error.message || '登录失败'
@@ -90,8 +84,14 @@ async function handleLogin() {
 
 onMounted(async () => {
   demoAccounts.value = await fetchDemoAccounts().catch(() => [])
+  if (route.query.phone) {
+    form.phone = String(route.query.phone)
+  }
   if (route.query.error === 'no_permission') {
     errorMessage.value = '当前账号没有目标页面访问权限，请切换角色后重新登录。'
+  }
+  if (route.query.registered === '1') {
+    ElMessage.success('注册成功，请登录')
   }
 })
 </script>
