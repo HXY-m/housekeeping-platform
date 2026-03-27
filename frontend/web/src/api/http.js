@@ -4,10 +4,11 @@ export function getToken() {
   return localStorage.getItem(TOKEN_KEY) || ''
 }
 
-function buildHeaders(extraHeaders = {}) {
-  const headers = {
-    'Content-Type': 'application/json',
-    ...extraHeaders
+function buildHeaders(body, extraHeaders = {}) {
+  const headers = { ...extraHeaders }
+
+  if (!(body instanceof FormData) && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json'
   }
 
   const token = getToken()
@@ -20,7 +21,7 @@ function buildHeaders(extraHeaders = {}) {
 
 export async function request(url, options = {}) {
   const response = await fetch(url, {
-    headers: buildHeaders(options.headers),
+    headers: buildHeaders(options.body, options.headers),
     ...options
   })
 

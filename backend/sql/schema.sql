@@ -126,3 +126,13 @@ CREATE TABLE IF NOT EXISTS order_after_sale (
   CONSTRAINT fk_after_sale_user FOREIGN KEY (user_id) REFERENCES sys_user(id),
   CONSTRAINT fk_after_sale_worker FOREIGN KEY (worker_id) REFERENCES worker_profile(id)
 ) COMMENT='售后反馈表';
+
+CREATE TABLE IF NOT EXISTS order_after_sale_attachment (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  after_sale_id BIGINT NOT NULL,
+  file_name VARCHAR(120) NOT NULL,
+  file_url VARCHAR(255) NOT NULL,
+  created_at DATETIME NOT NULL,
+  KEY idx_after_sale_attachment_after_sale (after_sale_id),
+  CONSTRAINT fk_after_sale_attachment_after_sale FOREIGN KEY (after_sale_id) REFERENCES order_after_sale(id)
+) COMMENT='售后凭证图片表';

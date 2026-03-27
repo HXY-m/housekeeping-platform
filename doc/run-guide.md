@@ -98,8 +98,21 @@ npm run dev
 - `POST /api/worker/orders/{id}/complete`
 - `GET /api/after-sales/my`
 - `POST /api/after-sales`
+- `POST /api/after-sales/{id}/attachments`
 - `GET /api/admin/after-sales`
 - `POST /api/admin/after-sales/{id}/handle`
+
+售后凭证上传说明：
+
+- 先调用 `POST /api/after-sales` 创建售后工单
+- 再调用 `POST /api/after-sales/{id}/attachments` 逐张上传凭证图片
+- 上传接口使用 `multipart/form-data`，字段名为 `file`
+
+图片访问说明：
+
+- 后端会把上传文件暴露到 `/uploads/**`
+- 前端开发环境已代理 `/uploads` 到 `http://localhost:8080`
+- 因此前端页面和接口返回的图片地址可以直接预览
 
 ## 演示账号
 

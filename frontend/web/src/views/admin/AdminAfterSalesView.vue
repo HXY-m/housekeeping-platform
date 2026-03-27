@@ -1,34 +1,73 @@
 <template>
   <div class="page-stack">
+    <div class="summary-grid">
+      <el-card shadow="never" class="summary-card">
+        <el-statistic title="售后总量" :value="afterSaleStats.total" />
+      </el-card>
+      <el-card shadow="never" class="summary-card">
+        <el-statistic title="待处理" :value="afterSaleStats.pending" />
+      </el-card>
+      <el-card shadow="never" class="summary-card">
+        <el-statistic title="处理中" :value="afterSaleStats.processing" />
+      </el-card>
+      <el-card shadow="never" class="summary-card">
+        <el-statistic title="已解决" :value="afterSaleStats.resolved" />
+      </el-card>
+    </div>
+
     <el-card shadow="never">
       <template #header>
         <div class="section-title">
           <div>
-            <h2>售后处理中心</h2>
-            <p>管理员可以查看用户售后反馈，并更新处理状态与处理备注。</p>
+            <h2>售后处理中台</h2>
+            <p>查看售后诉求、核对凭证图片，并快速更新工单处理状态。</p>
           </div>
           <el-button @click="loadAfterSales">刷新</el-button>
         </div>
       </template>
 
-      <el-table :data="afterSales" v-loading="loading" stripe>
-        <el-table-column prop="orderId" label="订单号" width="100" />
+      <div class="filter-row">
+        <span class="muted-line">状态筛选</span>
+        <el-radio-group v-model="statusFilter" size="small">
+          <el-radio-button label="ALL">全部</el-radio-button>
+          <el-radio-button label="PENDING">待处理</el-radio-button>
+          <el-radio-button label="PROCESSING">处理中</el-radio-button>
+          <el-radio-button label="RESOLVED">已解决</el-radio-button>
+          <el-radio-button label="REJECTED">已驳回</el-radio-button>
+        </el-radio-group>
+      </div>
+
+      <el-table :data="filteredAfterSales" v-loading="loading" stripe>
+        <el-table-column prop="orderId" label="订单号" width="90" />
         <el-table-column prop="serviceName" label="服务项目" min-width="140" />
         <el-table-column prop="workerName" label="服务人员" width="120" />
         <el-table-column prop="customerName" label="联系人" width="120" />
         <el-table-column label="订单状态" width="120">
           <template #default="{ row }">
-            <el-tag :type="getOrderStatusTagType(row.orderStatus)">{{ getOrderStatusLabel(row.orderStatus) }}</el-tag>
+            <el-tag :type="getOrderStatusTagType(row.orderStatus)">
+              {{ getOrderStatusLabel(row.orderStatus) }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="issueType" label="问题类型" min-width="160" />
-        <el-table-column prop="content" label="问题描述" min-width="240" />
-        <el-table-column label="售后状态" width="120">
+        <el-table-column prop="content" label="问题描述" min-width="240" show-overflow-tooltip />
+        <el-table-column label="凭证图片" min-width="220">
           <template #default="{ row }">
-            <el-tag :type="afterSaleTagType(row.status)">{{ afterSaleStatusLabel(row.status) }}</el-tag>
+            <AttachmentGallery
+              :attachments="row.attachments"
+              compact
+              empty-text="未上传凭证"
+            />
           </template>
         </el-table-column>
-        <el-table-column prop="adminRemark" label="处理备注" min-width="180" />
+        <el-table-column label="售后状态" width="120">
+          <template #default="{ row }">
+            <el-tag :type="getAfterSaleStatusTagType(row.status)">
+              {{ getAfterSaleStatusLabel(row.status) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="adminRemark" label="处理备注" min-width="200" show-overflow-tooltip />
         <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
             <el-space v-if="canHandle(row)">
@@ -45,8 +84,8 @@
     <el-dialog v-model="dialogVisible" title="处理售后反馈" width="520px">
       <el-form label-position="top">
         <el-form-item label="处理状态">
-          <el-tag :type="afterSaleTagType(handleForm.status)">
-            {{ afterSaleStatusLabel(handleForm.status) }}
+          <el-tag :type="getAfterSaleStatusTagType(handleForm.status)">
+            {{ getAfterSaleStatusLabel(handleForm.status) }}
           </el-tag>
         </el-form-item>
         <el-form-item label="处理备注">
@@ -69,35 +108,39 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
+import AttachmentGallery from '../../components/common/AttachmentGallery.vue'
 import { fetchAdminAfterSales, handleAdminAfterSale } from '../../api'
+import {
+  getAfterSaleStatusLabel,
+  getAfterSaleStatusTagType
+} from '../../utils/afterSale'
 import { getOrderStatusLabel, getOrderStatusTagType } from '../../utils/order'
 
 const afterSales = ref([])
 const loading = ref(false)
 const dialogVisible = ref(false)
 const selectedId = ref(null)
+const statusFilter = ref('ALL')
 const handleForm = reactive({
   status: 'PROCESSING',
   adminRemark: ''
 })
 
-function afterSaleStatusLabel(status) {
-  if (status === 'PENDING') return '待处理'
-  if (status === 'PROCESSING') return '处理中'
-  if (status === 'RESOLVED') return '已解决'
-  if (status === 'REJECTED') return '已驳回'
-  return status
-}
+const filteredAfterSales = computed(() => {
+  if (statusFilter.value === 'ALL') {
+    return afterSales.value
+  }
+  return afterSales.value.filter((item) => item.status === statusFilter.value)
+})
 
-function afterSaleTagType(status) {
-  if (status === 'PENDING') return 'warning'
-  if (status === 'PROCESSING') return 'primary'
-  if (status === 'RESOLVED') return 'success'
-  if (status === 'REJECTED') return 'danger'
-  return 'info'
-}
+const afterSaleStats = computed(() => ({
+  total: afterSales.value.length,
+  pending: afterSales.value.filter((item) => item.status === 'PENDING').length,
+  processing: afterSales.value.filter((item) => item.status === 'PROCESSING').length,
+  resolved: afterSales.value.filter((item) => item.status === 'RESOLVED').length
+}))
 
 function canHandle(row) {
   return row.status !== 'RESOLVED' && row.status !== 'REJECTED'

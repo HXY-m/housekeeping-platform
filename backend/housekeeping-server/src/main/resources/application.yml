@@ -6,6 +6,10 @@ spring:
     username: ${MYSQL_USER:root}
     password: ${MYSQL_PASSWORD:123456}
     driver-class-name: com.mysql.cj.jdbc.Driver
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 20MB
 
 server:
   port: 8080
@@ -14,6 +18,10 @@ app:
   cors:
     allowed-origins:
       - http://localhost:5173
+  file:
+    upload-dir: ./uploads
+    public-url-prefix: /uploads
+    max-image-size: 5242880
 
 mybatis-plus:
   configuration:

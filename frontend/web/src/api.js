@@ -14,9 +14,11 @@ export { fetchAdminDashboard } from './api/admin'
 export {
   fetchMyAfterSales,
   createAfterSale,
+  uploadAfterSaleAttachment,
   fetchAdminAfterSales,
   handleAdminAfterSale
 } from './api/afterSales'
+export { uploadImage } from './api/upload'
 export {
   login,
   register,

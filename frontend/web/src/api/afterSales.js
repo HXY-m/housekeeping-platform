@@ -11,6 +11,16 @@ export function createAfterSale(payload) {
   })
 }
 
+export function uploadAfterSaleAttachment(id, file) {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  return request(`/api/after-sales/${id}/attachments`, {
+    method: 'POST',
+    body: formData
+  })
+}
+
 export function fetchAdminAfterSales() {
   return request('/api/admin/after-sales')
 }

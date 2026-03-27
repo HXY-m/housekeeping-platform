@@ -395,6 +395,16 @@ a {
   margin-bottom: 6px;
 }
 
+.summary-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.summary-card {
+  border: none;
+}
+
 .muted-line {
   color: var(--muted);
 }
@@ -407,6 +417,80 @@ a {
 .stack-cell {
   display: grid;
   gap: 6px;
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.attachment-gallery {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.attachment-gallery--compact .attachment-thumb {
+  width: 44px;
+  height: 44px;
+}
+
+.attachment-thumb {
+  width: 60px;
+  height: 60px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: #fff;
+  flex: 0 0 auto;
+}
+
+.attachment-count {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.attachment-editor-list {
+  display: grid;
+  gap: 12px;
+}
+
+.attachment-editor-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+}
+
+.attachment-meta {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.attachment-meta span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.visually-hidden-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
 }
 
 @media (max-width: 960px) {
@@ -442,5 +526,14 @@ a {
   .admin-aside,
   .worker-aside {
     width: 100% !important;
+  }
+
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .attachment-editor-item {
+    grid-template-columns: 1fr;
+    justify-items: start;
   }
 }

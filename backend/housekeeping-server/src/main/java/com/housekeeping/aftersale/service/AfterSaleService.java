@@ -2,6 +2,7 @@ package com.housekeeping.aftersale.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.housekeeping.aftersale.AfterSaleStatus;
+import com.housekeeping.aftersale.dto.AfterSaleAttachmentDto;
 import com.housekeeping.aftersale.dto.AfterSaleCreateRequest;
 import com.housekeeping.aftersale.dto.AfterSaleDto;
 import com.housekeeping.aftersale.dto.AfterSaleHandleRequest;
@@ -32,13 +33,16 @@ public class AfterSaleService {
     private final AfterSaleMapper afterSaleMapper;
     private final OrderMapper orderMapper;
     private final WorkerMapper workerMapper;
+    private final AfterSaleAttachmentService afterSaleAttachmentService;
 
     public AfterSaleService(AfterSaleMapper afterSaleMapper,
                             OrderMapper orderMapper,
-                            WorkerMapper workerMapper) {
+                            WorkerMapper workerMapper,
+                            AfterSaleAttachmentService afterSaleAttachmentService) {
         this.afterSaleMapper = afterSaleMapper;
         this.orderMapper = orderMapper;
         this.workerMapper = workerMapper;
+        this.afterSaleAttachmentService = afterSaleAttachmentService;
     }
 
     public List<AfterSaleDto> listCurrentUserAfterSales() {
@@ -140,6 +144,12 @@ public class AfterSaleService {
                 ? Map.of()
                 : workerMapper.selectBatchIds(workerIds).stream()
                 .collect(Collectors.toMap(WorkerEntity::getId, Function.identity()));
+        List<Long> afterSaleIds = entities.stream()
+                .map(AfterSaleEntity::getId)
+                .filter(Objects::nonNull)
+                .toList();
+        Map<Long, List<AfterSaleAttachmentDto>> attachmentMap =
+                afterSaleAttachmentService.groupByAfterSaleIds(afterSaleIds);
 
         return entities.stream()
                 .map(item -> {
@@ -161,6 +171,7 @@ public class AfterSaleService {
                             item.getContactPhone(),
                             item.getStatus(),
                             item.getAdminRemark(),
+                            attachmentMap.getOrDefault(item.getId(), List.of()),
                             item.getCreatedAt(),
                             item.getHandledAt()
                     );

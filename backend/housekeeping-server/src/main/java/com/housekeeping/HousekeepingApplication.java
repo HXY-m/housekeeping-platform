@@ -1,10 +1,12 @@
 package com.housekeeping;
 
 import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
+@ConfigurationPropertiesScan
 @MapperScan({
         "com.housekeeping.auth.mapper",
         "com.housekeeping.aftersale.mapper",
