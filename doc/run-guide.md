@@ -153,8 +153,10 @@ Bearer 你的token
 - `/workers` 服务人员列表
 - `/workers/1` 服务人员详情
 - `/booking/1` 在线预约
-- `/orders` 用户订单中心
-- `/worker/apply` 普通用户申请入驻
+- `/user/dashboard` 普通用户中心看板
+- `/user/orders` 用户订单中心
+- `/user/worker-application` 普通用户申请入驻
+- `/worker/dashboard` 服务人员履约看板
 - `/worker/orders` 服务人员工作台
 - `/login` 登录页
 - `/register` 注册页

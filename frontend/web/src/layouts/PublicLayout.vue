@@ -1,7 +1,7 @@
 <template>
-  <div class="layout-shell">
+  <div class="layout-shell public-shell">
     <ConsumerHeader />
-    <main class="layout-main">
+    <main class="layout-main public-main">
       <router-view />
     </main>
   </div>

@@ -6,6 +6,7 @@
         <span>服务人员工作台</span>
       </div>
       <el-menu :default-active="route.path" class="worker-menu" router>
+        <el-menu-item index="/worker/dashboard">履约看板</el-menu-item>
         <el-menu-item index="/worker/orders">我的服务订单</el-menu-item>
       </el-menu>
     </el-aside>
@@ -13,12 +14,11 @@
     <el-container>
       <el-header class="worker-header">
         <div>
-          <div class="admin-title">履约工作台</div>
-          <div class="admin-subtitle">接单、开工、完工与订单跟进</div>
+          <div class="console-title">服务人员控制台</div>
+          <div class="console-subtitle">接单、开工、完工与每日排期管理</div>
         </div>
-        <div class="admin-header-actions">
-          <el-button @click="router.push('/')">返回首页</el-button>
-          <span class="worker-user">{{ authStore.state.user?.realName }}</span>
+        <div class="console-header-actions">
+          <span class="console-user-label">{{ authStore.state.user?.realName }}</span>
           <el-button type="danger" plain @click="logout">退出登录</el-button>
         </div>
       </el-header>

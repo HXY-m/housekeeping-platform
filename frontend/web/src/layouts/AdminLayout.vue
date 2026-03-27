@@ -15,12 +15,11 @@
     <el-container>
       <el-header class="admin-header">
         <div>
-          <div class="admin-title">后台工作台</div>
-          <div class="admin-subtitle">审核入驻、处理售后并监控平台运行状态</div>
+          <div class="console-title">运营管理中台</div>
+          <div class="console-subtitle">审核入驻、处理售后并监控平台运行状态</div>
         </div>
-        <div class="admin-header-actions">
-          <el-button @click="router.push('/')">返回首页</el-button>
-          <span class="admin-user">{{ authStore.state.user?.realName }}</span>
+        <div class="console-header-actions">
+          <span class="console-user-label">{{ authStore.state.user?.realName }}</span>
           <el-button type="danger" plain @click="logout">退出登录</el-button>
         </div>
       </el-header>

@@ -17,9 +17,6 @@
       >
         <el-menu-item index="/">首页</el-menu-item>
         <el-menu-item index="/workers">找服务人员</el-menu-item>
-        <el-menu-item v-if="authStore.hasRole(ROLE_USER)" index="/orders">我的订单</el-menu-item>
-        <el-menu-item v-if="authStore.hasRole(ROLE_USER)" index="/worker/apply">服务者入驻</el-menu-item>
-        <el-menu-item v-if="authStore.hasRole(ROLE_WORKER)" index="/worker/orders">服务工作台</el-menu-item>
       </el-menu>
 
       <div class="public-header__actions">
@@ -41,17 +38,14 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { authStore } from '../../stores/auth'
-import { ROLE_USER, ROLE_WORKER, resolveConsoleEntry } from '../../utils/auth'
+import { resolveConsoleEntry } from '../../utils/auth'
 
 const route = useRoute()
 const router = useRouter()
 
 const activeIndex = computed(() => {
   if (route.path.startsWith('/workers')) return '/workers'
-  if (route.path.startsWith('/orders')) return '/orders'
   if (route.path.startsWith('/booking')) return '/workers'
-  if (route.path.startsWith('/worker/apply')) return '/worker/apply'
-  if (route.path.startsWith('/worker/orders')) return '/worker/orders'
   return '/'
 })
 

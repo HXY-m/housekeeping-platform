@@ -55,7 +55,7 @@
         </el-form-item>
         <el-space wrap>
           <el-button type="primary" @click="submitOrder">提交预约</el-button>
-          <el-button @click="router.push('/orders')">查看订单</el-button>
+          <el-button @click="router.push('/user/orders')">查看订单</el-button>
         </el-space>
         <el-alert v-if="successMessage" :title="successMessage" type="success" show-icon :closable="false" />
       </el-form>

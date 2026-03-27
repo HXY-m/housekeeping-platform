@@ -1,21 +1,11 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { authStore } from '../stores/auth'
-import PublicLayout from '../layouts/PublicLayout.vue'
-import AuthLayout from '../layouts/AuthLayout.vue'
-import AdminLayout from '../layouts/AdminLayout.vue'
-import WorkerLayout from '../layouts/WorkerLayout.vue'
-import HomeView from '../views/consumer/HomeView.vue'
-import WorkersView from '../views/consumer/WorkersView.vue'
-import WorkerDetailView from '../views/consumer/WorkerDetailView.vue'
-import BookingView from '../views/consumer/BookingView.vue'
-import OrdersView from '../views/consumer/OrdersView.vue'
-import LoginView from '../views/auth/LoginView.vue'
-import RegisterView from '../views/auth/RegisterView.vue'
-import AdminDashboardView from '../views/admin/AdminDashboardView.vue'
-import AdminApplicationsView from '../views/admin/AdminApplicationsView.vue'
-import AdminAfterSalesView from '../views/admin/AdminAfterSalesView.vue'
-import WorkerApplyView from '../views/worker/WorkerApplyView.vue'
-import WorkerOrdersView from '../views/worker/WorkerOrdersView.vue'
+
+const PublicLayout = () => import('../layouts/PublicLayout.vue')
+const AuthLayout = () => import('../layouts/AuthLayout.vue')
+const UserLayout = () => import('../layouts/UserLayout.vue')
+const WorkerLayout = () => import('../layouts/WorkerLayout.vue')
+const AdminLayout = () => import('../layouts/AdminLayout.vue')
 
 const router = createRouter({
   history: createWebHistory(),
@@ -23,51 +13,59 @@ const router = createRouter({
     {
       path: '/',
       component: PublicLayout,
+      meta: { surface: 'public' },
       children: [
-        { path: '', component: HomeView },
-        { path: 'workers', component: WorkersView },
-        { path: 'workers/:id', component: WorkerDetailView },
+        { path: '', component: () => import('../views/consumer/HomeView.vue') },
+        { path: 'workers', component: () => import('../views/consumer/WorkersView.vue') },
+        { path: 'workers/:id', component: () => import('../views/consumer/WorkerDetailView.vue') },
         {
           path: 'booking/:workerId',
-          component: BookingView,
-          meta: { requiresAuth: true, role: 'USER' }
+          component: () => import('../views/consumer/BookingView.vue'),
+          meta: { requiresAuth: true, role: 'USER', surface: 'public' }
         },
-        {
-          path: 'orders',
-          component: OrdersView,
-          meta: { requiresAuth: true, role: 'USER' }
-        },
-        {
-          path: 'worker/apply',
-          component: WorkerApplyView,
-          meta: { requiresAuth: true, role: 'USER' }
-        }
+        { path: 'orders', redirect: '/user/orders' },
+        { path: 'worker/apply', redirect: '/user/worker-application' }
       ]
     },
     {
       path: '/',
       component: AuthLayout,
+      meta: { surface: 'auth' },
       children: [
-        { path: 'login', component: LoginView },
-        { path: 'register', component: RegisterView }
+        { path: 'login', component: () => import('../views/auth/LoginView.vue') },
+        { path: 'register', component: () => import('../views/auth/RegisterView.vue') }
+      ]
+    },
+    {
+      path: '/user',
+      component: UserLayout,
+      meta: { requiresAuth: true, role: 'USER', surface: 'user' },
+      redirect: '/user/dashboard',
+      children: [
+        { path: 'dashboard', component: () => import('../views/user/UserDashboardView.vue') },
+        { path: 'orders', component: () => import('../views/consumer/OrdersView.vue') },
+        { path: 'worker-application', component: () => import('../views/worker/WorkerApplyView.vue') }
       ]
     },
     {
       path: '/worker',
       component: WorkerLayout,
-      meta: { requiresAuth: true, role: 'WORKER' },
-      redirect: '/worker/orders',
-      children: [{ path: 'orders', component: WorkerOrdersView }]
+      meta: { requiresAuth: true, role: 'WORKER', surface: 'worker' },
+      redirect: '/worker/dashboard',
+      children: [
+        { path: 'dashboard', component: () => import('../views/worker/WorkerDashboardView.vue') },
+        { path: 'orders', component: () => import('../views/worker/WorkerOrdersView.vue') }
+      ]
     },
     {
       path: '/admin',
       component: AdminLayout,
-      meta: { requiresAuth: true, role: 'ADMIN' },
+      meta: { requiresAuth: true, role: 'ADMIN', surface: 'admin' },
       redirect: '/admin/dashboard',
       children: [
-        { path: 'dashboard', component: AdminDashboardView },
-        { path: 'applications', component: AdminApplicationsView },
-        { path: 'after-sales', component: AdminAfterSalesView }
+        { path: 'dashboard', component: () => import('../views/admin/AdminDashboardView.vue') },
+        { path: 'applications', component: () => import('../views/admin/AdminApplicationsView.vue') },
+        { path: 'after-sales', component: () => import('../views/admin/AdminAfterSalesView.vue') }
       ]
     }
   ]

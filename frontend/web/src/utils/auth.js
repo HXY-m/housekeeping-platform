@@ -4,8 +4,8 @@ export const ROLE_ADMIN = 'ADMIN'
 
 export function resolveHomePath(roleCode) {
   if (roleCode === ROLE_ADMIN) return '/admin/dashboard'
-  if (roleCode === ROLE_WORKER) return '/worker/orders'
-  return '/'
+  if (roleCode === ROLE_WORKER) return '/worker/dashboard'
+  return '/user/dashboard'
 }
 
 export function resolveConsoleEntry(roleCode) {
@@ -13,7 +13,10 @@ export function resolveConsoleEntry(roleCode) {
     return { label: '进入后台', path: '/admin/dashboard' }
   }
   if (roleCode === ROLE_WORKER) {
-    return { label: '进入工作台', path: '/worker/orders' }
+    return { label: '进入工作台', path: '/worker/dashboard' }
   }
-  return null
+  if (roleCode === ROLE_USER) {
+    return { label: '进入用户中心', path: '/user/dashboard' }
+  }
+  return { label: '进入用户中心', path: '/user/dashboard' }
 }
