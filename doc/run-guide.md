@@ -8,12 +8,6 @@
 cd F:\Desktop\demo\project\housekeeping\backend\housekeeping-server
 ```
 
-启动：
-
-```powershell
-mvn spring-boot:run
-```
-
 启动前请先准备 MySQL，并执行：
 
 ```powershell
@@ -28,6 +22,12 @@ $env:MYSQL_PORT="3306"
 $env:MYSQL_DB="housekeeping_platform"
 $env:MYSQL_USER="root"
 $env:MYSQL_PASSWORD="123456"
+```
+
+启动：
+
+```powershell
+mvn spring-boot:run
 ```
 
 默认地址：
@@ -59,6 +59,50 @@ npm run dev
 默认地址：
 
 - `http://localhost:5173`
+
+## 认证接口
+
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+- `GET /api/auth/demo-accounts`
+
+登录请求示例：
+
+```json
+{
+  "phone": "13800000033",
+  "password": "123456",
+  "roleCode": "ADMIN"
+}
+```
+
+## 演示账号
+
+- 普通用户：`13800000011 / 123456 / USER`
+- 服务人员：`13800000022 / 123456 / WORKER`
+- 管理员：`13800000033 / 123456 / ADMIN`
+
+管理员接口访问时请在请求头里带上：
+
+```text
+Authorization: Bearer <token>
+```
+
+当前已经对 `/api/admin/**` 做角色保护。
+
+## API 文档地址
+
+启动后端后可访问：
+
+- Swagger UI：`http://localhost:8080/swagger-ui.html`
+- Knife4j：`http://localhost:8080/doc.html`
+- OpenAPI JSON：`http://localhost:8080/v3/api-docs`
+
+测试管理员接口时，建议先调用登录接口，拿到 `token` 后点击页面上的 `Authorize`，填入：
+
+```text
+Bearer 你的token
+```
 
 ## 当前可访问页面
 

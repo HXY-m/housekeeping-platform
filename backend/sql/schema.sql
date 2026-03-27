@@ -4,6 +4,29 @@ CREATE DATABASE IF NOT EXISTS housekeeping_platform
 
 USE housekeeping_platform;
 
+CREATE TABLE IF NOT EXISTS sys_user (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  phone VARCHAR(20) NOT NULL UNIQUE,
+  password VARCHAR(128) NOT NULL,
+  real_name VARCHAR(50) NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE'
+) COMMENT='系统用户表';
+
+CREATE TABLE IF NOT EXISTS sys_role (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  role_code VARCHAR(50) NOT NULL UNIQUE,
+  role_name VARCHAR(50) NOT NULL
+) COMMENT='系统角色表';
+
+CREATE TABLE IF NOT EXISTS sys_user_role (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
+  role_id BIGINT NOT NULL,
+  UNIQUE KEY uk_user_role (user_id, role_id),
+  CONSTRAINT fk_sys_user_role_user FOREIGN KEY (user_id) REFERENCES sys_user(id),
+  CONSTRAINT fk_sys_user_role_role FOREIGN KEY (role_id) REFERENCES sys_role(id)
+) COMMENT='用户角色关系表';
+
 CREATE TABLE IF NOT EXISTS service_category (
   id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '分类ID',
   name VARCHAR(100) NOT NULL COMMENT '分类名称',
@@ -51,3 +74,24 @@ CREATE TABLE IF NOT EXISTS booking_order_progress (
   progress_note VARCHAR(255) NOT NULL COMMENT '进度说明',
   CONSTRAINT fk_order_progress_order FOREIGN KEY (order_id) REFERENCES booking_order(id)
 ) COMMENT='订单进度表';
+
+CREATE TABLE IF NOT EXISTS sys_user (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '用户ID',
+  phone VARCHAR(20) NOT NULL UNIQUE COMMENT '手机号',
+  password VARCHAR(255) NOT NULL COMMENT '密码哈希',
+  real_name VARCHAR(50) NOT NULL COMMENT '真实姓名',
+  status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' COMMENT '状态'
+) COMMENT='系统用户表';
+
+CREATE TABLE IF NOT EXISTS sys_role (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '角色ID',
+  role_code VARCHAR(50) NOT NULL UNIQUE COMMENT '角色编码',
+  role_name VARCHAR(50) NOT NULL COMMENT '角色名称'
+) COMMENT='角色表';
+
+CREATE TABLE IF NOT EXISTS sys_user_role (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '关联ID',
+  user_id BIGINT NOT NULL COMMENT '用户ID',
+  role_id BIGINT NOT NULL COMMENT '角色ID',
+  UNIQUE KEY uk_user_role (user_id, role_id)
+) COMMENT='用户角色关联表';

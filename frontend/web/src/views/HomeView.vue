@@ -16,7 +16,7 @@
           <li>多角色用户管理</li>
           <li>家政服务项目管理</li>
           <li>在线预约与下单</li>
-          <li>订单跟踪与评价售后</li>
+          <li>订单进度跟踪与评价反馈</li>
         </ul>
       </aside>
     </section>
@@ -24,7 +24,7 @@
     <section>
       <div class="section-head">
         <h2>热门家政服务</h2>
-        <p>页面骨架参考 Taskrabbit，但服务内容严格围绕任务书。</p>
+        <p>页面结构参考 Taskrabbit，但业务范围围绕家政预约和本地服务履约。</p>
       </div>
       <div class="grid grid-3">
         <ServiceCard v-for="category in home.categories" :key="category.id" :category="category" />
