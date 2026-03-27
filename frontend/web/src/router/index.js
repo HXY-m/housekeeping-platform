@@ -13,6 +13,7 @@ import LoginView from '../views/auth/LoginView.vue'
 import RegisterView from '../views/auth/RegisterView.vue'
 import AdminDashboardView from '../views/admin/AdminDashboardView.vue'
 import AdminApplicationsView from '../views/admin/AdminApplicationsView.vue'
+import AdminAfterSalesView from '../views/admin/AdminAfterSalesView.vue'
 import WorkerApplyView from '../views/worker/WorkerApplyView.vue'
 import WorkerOrdersView from '../views/worker/WorkerOrdersView.vue'
 
@@ -65,7 +66,8 @@ const router = createRouter({
       redirect: '/admin/dashboard',
       children: [
         { path: 'dashboard', component: AdminDashboardView },
-        { path: 'applications', component: AdminApplicationsView }
+        { path: 'applications', component: AdminApplicationsView },
+        { path: 'after-sales', component: AdminAfterSalesView }
       ]
     }
   ]

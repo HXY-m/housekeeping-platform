@@ -87,19 +87,38 @@ npm run dev
 }
 ```
 
+## 订单与售后接口
+
+- `GET /api/orders`
+- `POST /api/orders`
+- `POST /api/orders/{id}/review`
+- `GET /api/worker/orders`
+- `POST /api/worker/orders/{id}/accept`
+- `POST /api/worker/orders/{id}/start`
+- `POST /api/worker/orders/{id}/complete`
+- `GET /api/after-sales/my`
+- `POST /api/after-sales`
+- `GET /api/admin/after-sales`
+- `POST /api/admin/after-sales/{id}/handle`
+
 ## 演示账号
 
 - 普通用户：`13800000011 / 123456 / USER`
 - 服务人员：`13800000022 / 123456 / WORKER`
 - 管理员：`13800000033 / 123456 / ADMIN`
 
-管理员接口访问时，请在请求头里带上：
+访问受保护接口时，请在请求头里带上：
 
 ```text
 Authorization: Bearer <token>
 ```
 
-当前已经对 `/api/admin/**` 和 `/api/worker/orders/**` 做了角色保护。
+当前已经对以下接口做了角色保护：
+
+- `/api/admin/**`
+- `/api/worker/orders/**`
+- `/api/orders/**`
+- `/api/after-sales/**`
 
 ## API 文档地址
 
@@ -128,3 +147,4 @@ Bearer 你的token
 - `/register` 注册页
 - `/admin/dashboard` 管理员看板
 - `/admin/applications` 入驻审核
+- `/admin/after-sales` 售后处理中心

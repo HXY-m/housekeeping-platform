@@ -12,6 +12,12 @@ export {
 } from './api/orders'
 export { fetchAdminDashboard } from './api/admin'
 export {
+  fetchMyAfterSales,
+  createAfterSale,
+  fetchAdminAfterSales,
+  handleAdminAfterSale
+} from './api/afterSales'
+export {
   login,
   register,
   fetchCurrentUser,

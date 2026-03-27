@@ -404,6 +404,11 @@ a {
   gap: 6px;
 }
 
+.stack-cell {
+  display: grid;
+  gap: 6px;
+}
+
 @media (max-width: 960px) {
   .hero-grid,
   .detail-header,

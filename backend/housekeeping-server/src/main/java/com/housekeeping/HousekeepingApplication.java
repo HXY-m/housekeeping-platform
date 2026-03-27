@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 @MapperScan({
         "com.housekeeping.auth.mapper",
+        "com.housekeeping.aftersale.mapper",
         "com.housekeeping.category.mapper",
         "com.housekeeping.worker.mapper",
         "com.housekeeping.worker.application.mapper",
