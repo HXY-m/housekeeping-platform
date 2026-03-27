@@ -1,11 +1,9 @@
 package com.housekeeping.config;
 
-import com.housekeeping.auth.support.AuthInterceptor;
 import com.housekeeping.upload.config.FileStorageProperties;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -14,14 +12,12 @@ import java.nio.file.Paths;
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
-    private final AuthInterceptor authInterceptor;
     private final FileStorageProperties fileStorageProperties;
 
     @Value("${app.cors.allowed-origins:http://localhost:5173}")
     private String[] allowedOrigins;
 
-    public WebConfig(AuthInterceptor authInterceptor, FileStorageProperties fileStorageProperties) {
-        this.authInterceptor = authInterceptor;
+    public WebConfig(FileStorageProperties fileStorageProperties) {
         this.fileStorageProperties = fileStorageProperties;
     }
 
@@ -31,11 +27,6 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowedOrigins(allowedOrigins)
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*");
-    }
-
-    @Override
-    public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(authInterceptor).addPathPatterns("/api/**");
     }
 
     @Override

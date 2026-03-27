@@ -1,11 +1,11 @@
 package com.housekeeping.favorite;
 
-import com.housekeeping.auth.annotation.RequireRole;
 import com.housekeeping.common.ApiResponse;
 import com.housekeeping.favorite.service.FavoriteWorkerService;
 import com.housekeeping.home.dto.WorkerCardDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,7 +17,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/favorites/workers")
-@RequireRole("USER")
+@PreAuthorize("hasRole('USER')")
 @Tag(name = "服务人员收藏", description = "用户收藏、取消收藏和查询收藏的服务人员")
 public class FavoriteController {
 

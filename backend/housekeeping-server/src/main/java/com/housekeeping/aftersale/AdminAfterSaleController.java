@@ -3,11 +3,11 @@ package com.housekeeping.aftersale;
 import com.housekeeping.aftersale.dto.AfterSaleDto;
 import com.housekeeping.aftersale.dto.AfterSaleHandleRequest;
 import com.housekeeping.aftersale.service.AfterSaleService;
-import com.housekeeping.auth.annotation.RequireRole;
 import com.housekeeping.common.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,7 +19,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/after-sales")
-@RequireRole("ADMIN")
+@PreAuthorize("hasRole('ADMIN')")
 @Tag(name = "后台售后管理", description = "管理员查看并处理用户售后反馈")
 public class AdminAfterSaleController {
 

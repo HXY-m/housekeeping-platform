@@ -1,11 +1,11 @@
 package com.housekeeping.order;
 
-import com.housekeeping.auth.annotation.RequireRole;
 import com.housekeeping.common.ApiResponse;
 import com.housekeeping.order.dto.OrderDto;
 import com.housekeeping.order.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,7 +16,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/worker/orders")
-@RequireRole("WORKER")
+@PreAuthorize("hasRole('WORKER')")
 @Tag(name = "服务人员订单工作台", description = "服务人员查看、接单、开工和完成订单")
 public class WorkerOrderController {
 

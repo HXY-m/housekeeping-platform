@@ -1,6 +1,5 @@
 package com.housekeeping.order;
 
-import com.housekeeping.auth.annotation.RequireRole;
 import com.housekeeping.common.ApiResponse;
 import com.housekeeping.order.dto.BookingAvailabilityDto;
 import com.housekeeping.order.dto.OrderDto;
@@ -10,6 +9,7 @@ import com.housekeeping.order.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,6 +22,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/orders")
+@PreAuthorize("hasRole('USER')")
 @Tag(name = "订单模块", description = "用户侧下单、订单查询、时段校验与评价接口")
 public class OrderController {
 
@@ -31,14 +32,12 @@ public class OrderController {
         this.orderService = orderService;
     }
 
-    @RequireRole("USER")
     @GetMapping
     @Operation(summary = "获取当前用户订单列表")
     public ApiResponse<List<OrderDto>> orders() {
         return ApiResponse.ok(orderService.listCurrentUserOrders());
     }
 
-    @RequireRole("USER")
     @GetMapping("/availability")
     @Operation(summary = "查询服务人员在指定日期的可预约时段")
     public ApiResponse<BookingAvailabilityDto> availability(@RequestParam Long workerId,
@@ -46,14 +45,12 @@ public class OrderController {
         return ApiResponse.ok(orderService.getBookingAvailability(workerId, bookingDate));
     }
 
-    @RequireRole("USER")
     @PostMapping
     @Operation(summary = "创建预约订单")
     public ApiResponse<OrderDto> create(@Valid @RequestBody OrderRequest request) {
         return ApiResponse.ok(orderService.createOrder(request));
     }
 
-    @RequireRole("USER")
     @PostMapping("/{id}/review")
     @Operation(summary = "提交订单评价")
     public ApiResponse<OrderDto> review(@PathVariable Long id,

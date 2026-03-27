@@ -3,11 +3,11 @@ package com.housekeeping.admin;
 import com.housekeeping.admin.dto.AdminCategoryDto;
 import com.housekeeping.admin.dto.AdminCategorySaveRequest;
 import com.housekeeping.admin.service.AdminCategoryService;
-import com.housekeeping.auth.annotation.RequireRole;
 import com.housekeeping.common.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,7 +22,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/categories")
-@RequireRole("ADMIN")
+@PreAuthorize("hasRole('ADMIN')")
 @Tag(name = "管理员服务项目管理", description = "管理员查看、创建、编辑和删除服务项目")
 public class AdminCategoryController {
 

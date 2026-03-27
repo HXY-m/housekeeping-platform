@@ -20,12 +20,12 @@ import java.util.List;
 public class AuthService {
 
     private final AuthAccountService authAccountService;
-    private final SessionService sessionService;
+    private final JwtTokenService jwtTokenService;
 
     public AuthService(AuthAccountService authAccountService,
-                       SessionService sessionService) {
+                       JwtTokenService jwtTokenService) {
         this.authAccountService = authAccountService;
-        this.sessionService = sessionService;
+        this.jwtTokenService = jwtTokenService;
     }
 
     public LoginResponse login(LoginRequest request) {
@@ -72,7 +72,7 @@ public class AuthService {
     }
 
     private LoginResponse buildLoginResponse(SysUserEntity user, String roleCode) {
-        String token = sessionService.createToken(user.getId(), user.getPhone(), user.getRealName(), roleCode);
+        String token = jwtTokenService.createToken(user.getId(), user.getPhone(), user.getRealName(), roleCode);
         return new LoginResponse(token, new CurrentUserDto(user.getId(), user.getPhone(), user.getRealName(), roleCode));
     }
 

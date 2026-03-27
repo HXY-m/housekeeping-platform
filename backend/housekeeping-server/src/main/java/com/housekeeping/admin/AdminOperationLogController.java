@@ -2,10 +2,10 @@ package com.housekeeping.admin;
 
 import com.housekeeping.audit.dto.OperationLogDto;
 import com.housekeeping.audit.service.OperationLogService;
-import com.housekeeping.auth.annotation.RequireRole;
 import com.housekeeping.common.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -15,8 +15,8 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/operation-logs")
-@RequireRole("ADMIN")
-@Tag(name = "管理员操作日志", description = "管理员筛选查看关键操作日志")
+@PreAuthorize("hasRole('ADMIN')")
+@Tag(name = "管理员操作日志", description = "管理员筛选查看关键治理操作日志")
 public class AdminOperationLogController {
 
     private final OperationLogService operationLogService;

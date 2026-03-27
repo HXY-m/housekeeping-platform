@@ -67,6 +67,7 @@ pid
 *.hprof
 *.pyc
 dump.rdb
+uploads/
 
 # 操作系统
 .DS_Store

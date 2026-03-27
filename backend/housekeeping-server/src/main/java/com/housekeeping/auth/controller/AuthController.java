@@ -1,6 +1,5 @@
 package com.housekeeping.auth.controller;
 
-import com.housekeeping.auth.annotation.RequireLogin;
 import com.housekeeping.auth.dto.CurrentUserDto;
 import com.housekeeping.auth.dto.DemoAccountDto;
 import com.housekeeping.auth.dto.LoginRequest;
@@ -11,6 +10,7 @@ import com.housekeeping.common.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -42,7 +42,7 @@ public class AuthController {
         return ApiResponse.ok(authService.register(request));
     }
 
-    @RequireLogin
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/me")
     @Operation(summary = "获取当前用户", description = "需要先登录")
     public ApiResponse<CurrentUserDto> me() {

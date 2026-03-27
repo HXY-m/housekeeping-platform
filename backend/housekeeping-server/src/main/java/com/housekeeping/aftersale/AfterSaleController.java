@@ -1,22 +1,22 @@
 package com.housekeeping.aftersale;
 
-import com.housekeeping.aftersale.dto.AfterSaleCreateRequest;
 import com.housekeeping.aftersale.dto.AfterSaleAttachmentDto;
+import com.housekeeping.aftersale.dto.AfterSaleCreateRequest;
 import com.housekeeping.aftersale.dto.AfterSaleDto;
 import com.housekeeping.aftersale.service.AfterSaleAttachmentService;
 import com.housekeeping.aftersale.service.AfterSaleService;
-import com.housekeeping.auth.annotation.RequireRole;
 import com.housekeeping.common.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -24,7 +24,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/after-sales")
-@RequireRole("USER")
+@PreAuthorize("hasRole('USER')")
 @Tag(name = "售后反馈模块", description = "用户提交售后反馈与查看处理状态")
 public class AfterSaleController {
 

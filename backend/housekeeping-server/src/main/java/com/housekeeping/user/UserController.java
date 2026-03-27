@@ -1,6 +1,5 @@
 package com.housekeeping.user;
 
-import com.housekeeping.auth.annotation.RequireRole;
 import com.housekeeping.common.ApiResponse;
 import com.housekeeping.user.dto.UserAddressDto;
 import com.housekeeping.user.dto.UserAddressSaveRequest;
@@ -10,6 +9,7 @@ import com.housekeeping.user.service.UserProfileService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,7 +23,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/user")
-@RequireRole("USER")
+@PreAuthorize("hasRole('USER')")
 @Tag(name = "用户中心模块", description = "普通用户资料与地址簿接口")
 public class UserController {
 
