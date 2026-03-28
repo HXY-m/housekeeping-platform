@@ -46,7 +46,7 @@
     <el-empty v-if="!filteredOrders.length && !loading" description="当前没有匹配的订单" />
 
     <div v-else class="order-card-grid" v-loading="loading">
-      <el-card v-for="row in filteredOrders" :key="row.id" shadow="never" class="order-card">
+      <el-card v-for="row in pagedOrders" :key="row.id" shadow="never" class="order-card">
         <div class="order-card__header">
           <div>
             <div class="order-card__title">{{ row.serviceName }}</div>
@@ -127,9 +127,7 @@
         </div>
 
         <div class="order-card__actions">
-          <el-button plain @click="goToMessageCenter(row.id)">
-            订单沟通
-          </el-button>
+          <el-button plain @click="goToMessageCenter(row.id)">订单沟通</el-button>
           <el-button
             v-if="normalizeOrderStatus(row.status) === 'ACCEPTED'"
             type="primary"
@@ -163,6 +161,14 @@
         </div>
       </el-card>
     </div>
+
+    <ListPagination
+      v-if="filteredOrders.length"
+      v-model:current-page="currentPage"
+      v-model:page-size="pageSize"
+      :page-sizes="pageSizes"
+      :total="total"
+    />
 
     <el-dialog v-model="reviewDialogVisible" title="提交订单评价" width="520px">
       <el-form label-position="top">
@@ -260,11 +266,13 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import AttachmentGallery from '../../components/common/AttachmentGallery.vue'
+import ListPagination from '../../components/common/ListPagination.vue'
 import OrderServiceRecordTimeline from '../../components/common/OrderServiceRecordTimeline.vue'
+import { useClientPagination } from '../../composables/useClientPagination'
 import {
   confirmUserOrder,
   confirmUserOrderCompletion,
@@ -324,6 +332,10 @@ const filteredOrders = computed(() => {
   }
   return orderRows.value.filter((item) => normalizeOrderStatus(item.status) === statusFilter.value)
 })
+
+const { currentPage, pageSize, pageSizes, total, pagedItems: pagedOrders, resetPage } = useClientPagination(filteredOrders, 6)
+
+watch(statusFilter, () => resetPage())
 
 const orderSummary = computed(() => ({
   total: orderRows.value.length,
@@ -454,6 +466,7 @@ async function loadData() {
     ])
     orders.value = orderResult
     afterSales.value = afterSaleResult
+    resetPage()
   } catch (error) {
     ElMessage.error(error.message || '获取订单数据失败')
   } finally {

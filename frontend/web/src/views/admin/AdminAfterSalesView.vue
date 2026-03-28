@@ -5,7 +5,7 @@
         <div>
           <h1 class="page-panel__title">售后处理</h1>
           <p class="page-panel__desc">
-            售后单集中展示问题类型、订单状态和凭证图片。先看详情，再更新处理状态，减少表格横向冗余。
+            售后工单集中展示问题类型、订单状态和凭证图片，先看详情，再更新处理状态，减少表格横向冗余。
           </p>
         </div>
         <div class="filter-actions">
@@ -53,7 +53,7 @@
         <span class="section-caption">建议优先处理待处理和处理中工单</span>
       </div>
 
-      <el-table :data="filteredAfterSales" v-loading="loading" stripe style="margin-top: 16px">
+      <el-table :data="pagedAfterSales" v-loading="loading" stripe style="margin-top: 16px">
         <el-table-column label="订单 / 服务" min-width="180">
           <template #default="{ row }">
             <div class="table-cell-primary">
@@ -118,6 +118,13 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <ListPagination
+        v-model:current-page="currentPage"
+        v-model:page-size="pageSize"
+        :page-sizes="pageSizes"
+        :total="total"
+      />
     </el-card>
 
     <el-drawer v-model="detailVisible" title="售后详情" size="560px">
@@ -180,9 +187,11 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import AttachmentGallery from '../../components/common/AttachmentGallery.vue'
+import ListPagination from '../../components/common/ListPagination.vue'
+import { useClientPagination } from '../../composables/useClientPagination'
 import { fetchAdminAfterSales, handleAdminAfterSale } from '../../api'
 import { getAfterSaleStatusLabel, getAfterSaleStatusTagType } from '../../utils/afterSale'
 import { getOrderStatusLabel, getOrderStatusTagType } from '../../utils/order'
@@ -218,6 +227,10 @@ const filteredAfterSales = computed(() => {
   })
 })
 
+const { currentPage, pageSize, pageSizes, total, pagedItems: pagedAfterSales, resetPage } = useClientPagination(filteredAfterSales, 8)
+
+watch([keyword, statusFilter], () => resetPage())
+
 const afterSaleStats = computed(() => ({
   total: afterSales.value.length,
   pending: afterSales.value.filter((item) => item.status === 'PENDING').length,
@@ -246,6 +259,7 @@ async function loadAfterSales() {
   loading.value = true
   try {
     afterSales.value = await fetchAdminAfterSales()
+    resetPage()
   } catch (error) {
     ElMessage.error(error.message || '获取售后列表失败')
   } finally {

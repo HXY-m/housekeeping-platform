@@ -5,7 +5,7 @@
         <div>
           <h1 class="page-panel__title">服务人员资质审核</h1>
           <p class="page-panel__desc">
-            审核服务人员提交的能力说明、服务区域和证明文件。所有材料会集中展示在详情抽屉中，方便一次性核验。
+            审核服务人员提交的能力说明、服务区域和证明文件，所有材料集中展示在详情抽屉中，方便一次性核验。
           </p>
         </div>
         <div class="filter-actions">
@@ -49,10 +49,10 @@
             style="width: 280px"
           />
         </div>
-        <span class="section-caption">只有待审核记录保留操作按钮，已处理记录以结果追溯为主。</span>
+        <span class="section-caption">只有待审核记录保留操作按钮，已处理记录以结果追溯为主</span>
       </div>
 
-      <el-table :data="filteredApplications" v-loading="loading" stripe style="margin-top: 16px">
+      <el-table :data="pagedApplications" v-loading="loading" stripe style="margin-top: 16px">
         <el-table-column label="申请人" min-width="180">
           <template #default="{ row }">
             <div class="table-cell-primary">
@@ -103,6 +103,13 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <ListPagination
+        v-model:current-page="currentPage"
+        v-model:page-size="pageSize"
+        :page-sizes="pageSizes"
+        :total="total"
+      />
     </el-card>
 
     <el-drawer v-model="detailVisible" title="资质申请详情" size="560px">
@@ -170,9 +177,11 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import FileAttachmentList from '../../components/common/FileAttachmentList.vue'
+import ListPagination from '../../components/common/ListPagination.vue'
+import { useClientPagination } from '../../composables/useClientPagination'
 import { fetchAdminWorkerApplications, reviewWorkerApplication } from '../../api'
 import {
   formatWorkerCertificateSummary,
@@ -208,6 +217,10 @@ const filteredApplications = computed(() => {
       .some((value) => String(value).toLowerCase().includes(normalizedKeyword))
   })
 })
+
+const { currentPage, pageSize, pageSizes, total, pagedItems: pagedApplications, resetPage } = useClientPagination(filteredApplications, 8)
+
+watch([keyword, statusFilter], () => resetPage())
 
 const pendingCount = computed(() => applications.value.filter((item) => item.status === 'PENDING').length)
 const approvedCount = computed(() => applications.value.filter((item) => item.status === 'APPROVED').length)
@@ -252,6 +265,7 @@ async function loadApplications() {
       if (right.status === 'PENDING') return 1
       return String(right.createdAt || '').localeCompare(String(left.createdAt || ''))
     })
+    resetPage()
   } catch (error) {
     ElMessage.error(error.message || '获取资质申请失败')
   } finally {

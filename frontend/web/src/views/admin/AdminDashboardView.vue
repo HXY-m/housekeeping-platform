@@ -5,7 +5,7 @@
         <div>
           <h1 class="page-panel__title">运营总览</h1>
           <p class="page-panel__desc">
-            聚合订单规模、服务供给和满意度，便于管理员快速判断当前平台负载和待处理重点。
+            聚合订单规模、服务供给和满意度，帮助管理员快速判断当前平台负载和待处理重点。
           </p>
         </div>
         <div class="filter-actions">
@@ -67,11 +67,18 @@
             <span class="section-caption">用于运营排期和资源调度</span>
           </div>
         </template>
-        <el-table :data="salesRows" stripe>
+        <el-table :data="pagedSalesRows" stripe>
           <el-table-column type="index" label="#" width="60" />
           <el-table-column prop="name" label="服务类型" min-width="180" />
           <el-table-column prop="value" label="销量" width="120" />
         </el-table>
+        <ListPagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :page-sizes="pageSizes"
+          :total="total"
+          small
+        />
       </el-card>
 
       <el-card shadow="never">
@@ -89,7 +96,7 @@
           <div class="info-panel">
             <span class="info-panel__label">建议跟进</span>
             <span class="muted-line">
-              若待审核申请或售后工单偏多，优先进入对应后台页面处理，避免服务供给或用户体验积压。
+              若待审核申请或售后工单偏多，建议优先进入对应后台页面处理，避免服务供给或用户体验积压。
             </span>
           </div>
         </div>
@@ -102,6 +109,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppChart from '../../components/charts/AppChart.vue'
+import ListPagination from '../../components/common/ListPagination.vue'
+import { useClientPagination } from '../../composables/useClientPagination'
 import { fetchAdminDashboard } from '../../api'
 import { mapToSortedRows } from '../../utils/dashboard'
 
@@ -115,6 +124,8 @@ const dashboard = ref({
 })
 
 const salesRows = computed(() => mapToSortedRows(dashboard.value.serviceSales || {}))
+const { currentPage, pageSize, pageSizes, total, pagedItems: pagedSalesRows } = useClientPagination(salesRows, 5)
+
 const completionRate = computed(() => {
   if (!dashboard.value.totalOrders) {
     return 0

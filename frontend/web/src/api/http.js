@@ -20,7 +20,7 @@ function buildHeaders(body, extraHeaders = {}) {
 }
 
 function buildErrorMessage(status, result) {
-  return result?.message || `Request failed: ${status}`
+  return result?.message || `请求失败：${status}`
 }
 
 export async function request(url, options = {}) {

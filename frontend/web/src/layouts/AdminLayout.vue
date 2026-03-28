@@ -2,14 +2,14 @@
   <el-container class="admin-shell">
     <el-aside width="248px" class="admin-aside">
       <div class="admin-brand">
-        <strong>Housekeeping Admin</strong>
-        <span>Operations Console</span>
+        <strong>管理后台</strong>
+        <span>运营治理与平台配置中心</span>
       </div>
 
       <el-menu :default-active="route.path" class="admin-menu" router>
-        <el-menu-item v-if="showMenu('ADMIN_DASHBOARD_VIEW')" index="/admin/dashboard">Dashboard</el-menu-item>
+        <el-menu-item v-if="showMenu('ADMIN_DASHBOARD_VIEW')" index="/admin/dashboard">运营看板</el-menu-item>
         <el-menu-item v-if="showMenu('ADMIN_MESSAGE_VIEW')" index="/admin/messages">
-          <span>Messages</span>
+          <span>消息通知</span>
           <el-badge
             v-if="unreadCount"
             :value="unreadCount"
@@ -17,30 +17,30 @@
             class="layout-menu-badge"
           />
         </el-menu-item>
-        <el-menu-item v-if="showMenu('ADMIN_ORDER_MANAGE')" index="/admin/orders">Orders</el-menu-item>
-        <el-menu-item v-if="showMenu('ADMIN_USER_MANAGE')" index="/admin/users">Users</el-menu-item>
-        <el-menu-item v-if="showMenu('ADMIN_SERVICE_MANAGE')" index="/admin/services">Services</el-menu-item>
-        <el-menu-item v-if="showMenu('ADMIN_APPLICATION_REVIEW')" index="/admin/applications">Qualifications</el-menu-item>
-        <el-menu-item v-if="showMenu('ADMIN_AFTER_SALE_MANAGE')" index="/admin/after-sales">After-sales</el-menu-item>
-        <el-menu-item v-if="showMenu('ADMIN_OPERATION_LOG_VIEW')" index="/admin/operation-logs">Operation Logs</el-menu-item>
-        <el-menu-item v-if="showMenu('ADMIN_REPORT_EXPORT')" index="/admin/reports">Reports</el-menu-item>
-        <el-menu-item v-if="showMenu('ADMIN_PERMISSION_MANAGE')" index="/admin/permissions">Permissions</el-menu-item>
+        <el-menu-item v-if="showMenu('ADMIN_ORDER_MANAGE')" index="/admin/orders">订单监管</el-menu-item>
+        <el-menu-item v-if="showMenu('ADMIN_USER_MANAGE')" index="/admin/users">用户管理</el-menu-item>
+        <el-menu-item v-if="showMenu('ADMIN_SERVICE_MANAGE')" index="/admin/services">服务项目</el-menu-item>
+        <el-menu-item v-if="showMenu('ADMIN_APPLICATION_REVIEW')" index="/admin/applications">资质审核</el-menu-item>
+        <el-menu-item v-if="showMenu('ADMIN_AFTER_SALE_MANAGE')" index="/admin/after-sales">售后处理</el-menu-item>
+        <el-menu-item v-if="showMenu('ADMIN_OPERATION_LOG_VIEW')" index="/admin/operation-logs">操作日志</el-menu-item>
+        <el-menu-item v-if="showMenu('ADMIN_REPORT_EXPORT')" index="/admin/reports">报表导出</el-menu-item>
+        <el-menu-item v-if="showMenu('ADMIN_PERMISSION_MANAGE')" index="/admin/permissions">权限配置</el-menu-item>
       </el-menu>
     </el-aside>
 
     <el-container>
       <el-header class="admin-header">
         <div>
-          <div class="console-title">Housekeeping Platform Admin</div>
-          <div class="console-subtitle">Operate orders, services, audits, notifications and governance in one place.</div>
+          <div class="console-title">家政服务预约平台后台</div>
+          <div class="console-subtitle">统一处理运营数据、消息通知、订单监管、权限配置与审核流程</div>
         </div>
 
         <div class="console-header-actions">
           <el-badge :value="unreadCount" :hidden="!unreadCount" :max="99">
-            <el-button plain @click="router.push('/admin/messages')">Messages</el-button>
+            <el-button plain @click="router.push('/admin/messages')">消息通知</el-button>
           </el-badge>
-          <span class="console-user-label">{{ authStore.state.user?.realName || 'Admin' }}</span>
-          <el-button type="danger" plain @click="logout">Sign out</el-button>
+          <span class="console-user-label">{{ authStore.state.user?.realName || '管理员' }}</span>
+          <el-button type="danger" plain @click="logout">退出登录</el-button>
         </div>
       </el-header>
 

@@ -5,7 +5,7 @@
         <div>
           <h1 class="page-panel__title">服务订单工作台</h1>
           <p class="page-panel__desc">
-            订单不再由服务人员单方面推进。你可以接单、补充打卡与过程记录、提交完工，但关键节点仍需要用户确认。
+            订单不再由服务人员单方面推进。你可以接单、补充打卡与过程记录、提交完工，但关键节点仍需用户确认。
           </p>
         </div>
         <el-button @click="loadOrders">刷新</el-button>
@@ -50,7 +50,7 @@
     <el-empty v-if="!filteredOrders.length && !loading" description="当前没有匹配的服务订单" />
 
     <div v-else class="order-card-grid" v-loading="loading">
-      <el-card v-for="order in filteredOrders" :key="order.id" shadow="never" class="order-card">
+      <el-card v-for="order in pagedOrders" :key="order.id" shadow="never" class="order-card">
         <div class="order-card__header">
           <div>
             <div class="order-card__title">{{ order.serviceName }}</div>
@@ -118,9 +118,7 @@
         </div>
 
         <div class="order-card__actions">
-          <el-button plain @click="goToMessageCenter(order.id)">
-            订单沟通
-          </el-button>
+          <el-button plain @click="goToMessageCenter(order.id)">订单沟通</el-button>
           <el-button
             v-if="normalizeOrderStatus(order.status) === 'PENDING'"
             type="primary"
@@ -170,11 +168,19 @@
             已提交完工，等待用户确认
           </span>
           <span v-if="normalizeOrderStatus(order.status) === 'COMPLETED'" class="muted-line">
-            {{ order.reviewed ? '订单已闭环，可继续处理新的预约。' : '订单已完成，等待用户评价或售后。' }}
+            {{ order.reviewed ? '订单已闭环，可以继续处理新的预约。' : '订单已完成，等待用户评价或售后。' }}
           </span>
         </div>
       </el-card>
     </div>
+
+    <ListPagination
+      v-if="filteredOrders.length"
+      v-model:current-page="currentPage"
+      v-model:page-size="pageSize"
+      :page-sizes="pageSizes"
+      :total="total"
+    />
 
     <el-dialog v-model="recordDialogVisible" title="上传服务记录" width="560px">
       <el-form label-position="top">
@@ -234,10 +240,12 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import OrderServiceRecordTimeline from '../../components/common/OrderServiceRecordTimeline.vue'
+import ListPagination from '../../components/common/ListPagination.vue'
+import { useClientPagination } from '../../composables/useClientPagination'
 import {
   acceptWorkerOrder,
   completeWorkerOrder,
@@ -298,6 +306,10 @@ const filteredOrders = computed(() => {
   return sorted.filter((item) => normalizeOrderStatus(item.status) === statusFilter.value)
 })
 
+const { currentPage, pageSize, pageSizes, total, pagedItems: pagedOrders, resetPage } = useClientPagination(filteredOrders, 6)
+
+watch(statusFilter, () => resetPage())
+
 const availableRecordStages = computed(() => {
   const status = normalizeOrderStatus(selectedOrder.value?.status)
   if (status === 'CONFIRMED') {
@@ -323,6 +335,7 @@ async function loadOrders() {
   loading.value = true
   try {
     orders.value = await fetchWorkerOrders()
+    resetPage()
   } catch (error) {
     ElMessage.error(error.message || '获取服务订单失败')
   } finally {

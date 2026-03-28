@@ -2,9 +2,9 @@
   <header class="public-header">
     <div class="public-header__inner">
       <RouterLink to="/" class="brand-link">
-        <div class="brand-mark">H</div>
+        <div class="brand-mark">家</div>
         <div class="brand-copy">
-          <strong>Housekeeping Hub</strong>
+          <strong>安心家政</strong>
           <span>家政服务预约平台</span>
         </div>
       </RouterLink>
@@ -21,7 +21,7 @@
 
       <div class="public-header__actions">
         <template v-if="authStore.isLoggedIn()">
-          <el-tag>{{ authStore.state.user?.realName }} / {{ authStore.state.user?.roleCode }}</el-tag>
+          <el-tag>{{ authStore.state.user?.realName }} / {{ roleLabel }}</el-tag>
           <el-button v-if="consoleEntry" @click="router.push(consoleEntry.path)">{{ consoleEntry.label }}</el-button>
           <el-button type="primary" plain @click="logout">退出登录</el-button>
         </template>
@@ -50,6 +50,12 @@ const activeIndex = computed(() => {
 })
 
 const consoleEntry = computed(() => resolveConsoleEntry(authStore.state.user?.roleCode))
+const roleLabel = computed(() => {
+  const roleCode = authStore.state.user?.roleCode
+  if (roleCode === 'ADMIN') return '管理员'
+  if (roleCode === 'WORKER') return '服务人员'
+  return '普通用户'
+})
 
 function handleSelect(index) {
   router.push(index)

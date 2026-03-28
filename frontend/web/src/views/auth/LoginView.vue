@@ -37,7 +37,7 @@
             @click="fillDemoAccount(account)"
           >
             <strong>{{ account.realName }}</strong>
-            <div class="muted-line">{{ account.roleCode }} / {{ account.phone }}</div>
+            <div class="muted-line">{{ formatRoleLabel(account.roleCode) }} / {{ account.phone }}</div>
           </el-card>
         </div>
       </div>
@@ -62,6 +62,12 @@ const form = reactive({
   password: '',
   roleCode: 'USER'
 })
+
+function formatRoleLabel(roleCode) {
+  if (roleCode === 'ADMIN') return '管理员'
+  if (roleCode === 'WORKER') return '服务人员'
+  return '普通用户'
+}
 
 function fillDemoAccount(account) {
   form.phone = account.phone

@@ -1,70 +1,88 @@
 <template>
   <div class="page-stack">
-    <el-card shadow="never">
-      <div class="section-title">
+    <el-card shadow="never" class="page-panel">
+      <div class="page-panel__header">
         <div>
-          <h1>找服务人员</h1>
-          <p>按服务类型快速筛选，查看技能、价格和最近可约时间，也可以先收藏再比较。</p>
+          <h1 class="page-panel__title">查找服务人员</h1>
+          <p class="page-panel__desc">
+            按服务类型筛选家政服务人员，查看评分、服务标签和可预约时间，也支持先收藏再下单。
+          </p>
         </div>
-        <el-space>
+        <div class="filter-actions">
           <el-button plain @click="openFavorites">查看收藏</el-button>
-        </el-space>
+        </div>
       </div>
 
-      <el-form inline>
-        <el-form-item label="服务类型">
-          <el-select v-model="serviceName" placeholder="全部服务" style="width: 220px" @change="loadWorkers">
-            <el-option label="全部" value="" />
-            <el-option label="日常保洁" value="日常保洁" />
-            <el-option label="深度清洁" value="深度清洁" />
-            <el-option label="母婴护理" value="母婴护理" />
-            <el-option label="老人陪护" value="老人陪护" />
-            <el-option label="家电清洗" value="家电清洗" />
+      <div class="table-toolbar">
+        <div class="table-toolbar__filters">
+          <el-select
+            v-model="serviceName"
+            placeholder="全部服务类型"
+            style="width: 220px"
+            @change="handleFilterChange"
+          >
+            <el-option label="全部服务" value="" />
+            <el-option
+              v-for="item in serviceOptions"
+              :key="item"
+              :label="item"
+              :value="item"
+            />
           </el-select>
-        </el-form-item>
-      </el-form>
+        </div>
+        <span class="section-caption">共 {{ workers.length }} 位服务人员，支持分页浏览</span>
+      </div>
     </el-card>
 
     <el-row :gutter="16" v-loading="loading">
-      <el-col v-for="worker in workers" :key="worker.id" :xs="24" :md="12">
-        <el-card shadow="hover" class="worker-card">
-          <template #header>
+      <el-col v-for="worker in pagedItems" :key="worker.id" :xs="24" :md="12" :xl="8">
+        <el-card shadow="hover" class="worker-browser-card">
+          <el-image :src="getWorkerImage(worker)" :alt="worker.name" fit="cover" class="worker-browser-card__image" />
+
+          <div class="worker-browser-card__body">
             <div class="card-header-between">
               <div>
                 <strong>{{ worker.name }}</strong>
-                <p class="muted-line">{{ worker.roleLabel }}</p>
+                <p class="muted-line">{{ worker.roleLabel }} · {{ worker.city }}</p>
               </div>
               <el-tag type="success">{{ formatCurrency(worker.hourlyPrice) }}/小时</el-tag>
             </div>
-          </template>
 
-          <p>{{ worker.intro }}</p>
+            <p class="worker-browser-card__intro">{{ worker.intro }}</p>
 
-          <div class="tag-wrap">
-            <el-tag v-for="tag in worker.tags" :key="tag" size="small" effect="plain">{{ tag }}</el-tag>
-          </div>
+            <div class="tag-wrap">
+              <el-tag v-for="tag in worker.tags" :key="tag" size="small" effect="plain">{{ tag }}</el-tag>
+            </div>
 
-          <el-descriptions :column="2" border size="small">
-            <el-descriptions-item label="评分">{{ worker.rating }}</el-descriptions-item>
-            <el-descriptions-item label="完成单量">{{ worker.completedOrders }}</el-descriptions-item>
-            <el-descriptions-item label="城市">{{ worker.city }}</el-descriptions-item>
-            <el-descriptions-item label="最近可约">{{ worker.nextAvailable }}</el-descriptions-item>
-          </el-descriptions>
+            <el-descriptions :column="2" border size="small">
+              <el-descriptions-item label="评分">{{ worker.rating }}</el-descriptions-item>
+              <el-descriptions-item label="完成订单">{{ worker.completedOrders }}</el-descriptions-item>
+              <el-descriptions-item label="城市">{{ worker.city }}</el-descriptions-item>
+              <el-descriptions-item label="最近可约">{{ worker.nextAvailable }}</el-descriptions-item>
+            </el-descriptions>
 
-          <div class="action-row">
-            <el-button @click="router.push(`/workers/${worker.id}`)">查看详情</el-button>
-            <el-button type="primary" @click="router.push(`/booking/${worker.id}`)">立即预约</el-button>
-            <el-button
-              :type="favoriteIds.includes(Number(worker.id)) ? 'warning' : 'default'"
-              plain
-              @click="handleFavorite(worker)"
-            >
-              {{ favoriteIds.includes(Number(worker.id)) ? '已收藏' : '收藏' }}
-            </el-button>
+            <div class="action-row worker-browser-card__actions">
+              <el-button @click="router.push(`/workers/${worker.id}`)">查看详情</el-button>
+              <el-button type="primary" @click="router.push(`/booking/${worker.id}`)">立即预约</el-button>
+              <el-button
+                :type="favoriteIds.includes(Number(worker.id)) ? 'warning' : 'default'"
+                plain
+                @click="handleFavorite(worker)"
+              >
+                {{ favoriteIds.includes(Number(worker.id)) ? '已收藏' : '收藏' }}
+              </el-button>
+            </div>
           </div>
         </el-card>
       </el-col>
     </el-row>
+
+    <ListPagination
+      v-model:current-page="currentPage"
+      v-model:page-size="pageSize"
+      :page-sizes="pageSizes"
+      :total="total"
+    />
   </div>
 </template>
 
@@ -72,9 +90,12 @@
 import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { favoriteWorker, fetchFavoriteWorkerIds, fetchWorkers, unfavoriteWorker } from '../../api'
+import { favoriteWorker, fetchFavoriteWorkerIds, fetchHome, fetchWorkers, unfavoriteWorker } from '../../api'
 import { authStore } from '../../stores/auth'
+import { useClientPagination } from '../../composables/useClientPagination'
 import { formatCurrency } from '../../utils/format'
+import { getWorkerImage } from '../../utils/displayAssets'
+import ListPagination from '../../components/common/ListPagination.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -82,6 +103,18 @@ const workers = ref([])
 const loading = ref(false)
 const serviceName = ref(route.query.serviceName ?? '')
 const favoriteIds = ref([])
+const serviceOptions = ref([])
+
+const { currentPage, pageSize, pageSizes, total, pagedItems, resetPage } = useClientPagination(workers, 6)
+
+async function loadServiceOptions() {
+  try {
+    const home = await fetchHome()
+    serviceOptions.value = (home?.categories || []).map((item) => item.name)
+  } catch {
+    serviceOptions.value = ['日常保洁', '深度清洁', '母婴护理', '老人陪护', '家电清洗']
+  }
+}
 
 async function loadFavoriteIds() {
   if (!authStore.isLoggedIn() || !authStore.hasRole('USER')) {
@@ -123,6 +156,14 @@ function openFavorites() {
   router.push('/user/favorites')
 }
 
+function handleFilterChange() {
+  resetPage()
+  router.replace({
+    path: '/workers',
+    query: serviceName.value ? { serviceName: serviceName.value } : {}
+  })
+}
+
 async function loadWorkers() {
   loading.value = true
   try {
@@ -131,6 +172,7 @@ async function loadWorkers() {
       loadFavoriteIds()
     ])
     workers.value = workerRows
+    resetPage()
   } finally {
     loading.value = false
   }
@@ -146,6 +188,33 @@ watch(
 
 onMounted(async () => {
   await authStore.ensureLoaded()
+  await loadServiceOptions()
   await loadWorkers()
 })
 </script>
+
+<style scoped>
+.worker-browser-card {
+  overflow: hidden;
+  border: none;
+}
+
+.worker-browser-card__image {
+  width: 100%;
+  height: 220px;
+  display: block;
+}
+
+.worker-browser-card__body {
+  padding-top: 18px;
+}
+
+.worker-browser-card__intro {
+  line-height: 1.75;
+  min-height: 72px;
+}
+
+.worker-browser-card__actions {
+  margin-top: 16px;
+}
+</style>

@@ -3,14 +3,17 @@
     <el-card class="hero-card" shadow="never">
       <div class="hero-grid">
         <div>
-          <el-tag type="success" round>Taskrabbit 风格家政平台</el-tag>
-          <h1>{{ home?.headline || '快速找到靠谱的家政服务人员' }}</h1>
-          <p>{{ home?.subHeadline || '围绕家政服务预约、履约、评价和管理后台的完整平台。' }}</p>
-          <el-space wrap>
+          <el-tag type="success" round>本地家政服务预约平台</el-tag>
+          <h1 class="hero-title">{{ home?.headline || '快速找到靠谱的家政服务人员' }}</h1>
+          <p class="hero-copy">
+            {{ home?.subHeadline || '覆盖服务浏览、在线预约、订单履约、评价反馈和后台管理的一站式家政服务平台。' }}
+          </p>
+          <div class="hero-actions">
             <el-button type="primary" size="large" @click="router.push('/workers')">立即预约</el-button>
             <el-button size="large" @click="router.push('/register?roleCode=WORKER')">注册服务人员账号</el-button>
-          </el-space>
+          </div>
         </div>
+
         <el-card shadow="hover" class="hero-side">
           <h3>平台核心能力</h3>
           <el-timeline>
@@ -27,23 +30,19 @@
       <div class="section-title">
         <div>
           <h2>热门服务分类</h2>
-          <p>从标准化项目切入，快速打通平台交易闭环。</p>
+          <p>精选标准化家政服务，支持按项目快速查找合适的服务人员。</p>
         </div>
+        <el-button text type="primary" @click="router.push('/workers')">查看全部服务人员</el-button>
       </div>
       <el-row :gutter="16">
-        <el-col v-for="category in home?.categories || []" :key="category.id" :xs="24" :sm="12" :lg="8">
-          <el-card class="category-card" shadow="hover">
-            <template #header>
-              <div class="card-header-between">
-                <span>{{ category.name }}</span>
-                <el-tag type="warning">{{ category.priceLabel }}</el-tag>
-              </div>
-            </template>
-            <p>{{ category.description }}</p>
-            <el-button link type="primary" @click="router.push(`/workers?serviceName=${encodeURIComponent(category.name)}`)">
-              查看服务人员
-            </el-button>
-          </el-card>
+        <el-col
+          v-for="category in home?.categories || []"
+          :key="category.id"
+          :xs="24"
+          :sm="12"
+          :lg="8"
+        >
+          <ServiceCard :category="category" />
         </el-col>
       </el-row>
     </section>
@@ -52,37 +51,19 @@
       <div class="section-title">
         <div>
           <h2>推荐服务人员</h2>
-          <p>展示评分、经验、服务标签与最近可约时间。</p>
+          <p>展示评分、经验、服务标签和最近可预约时间，帮助你更快比较与选择。</p>
         </div>
+        <el-button text type="primary" @click="router.push('/workers')">进入服务人员列表</el-button>
       </div>
       <el-row :gutter="16">
-        <el-col v-for="worker in home?.featuredWorkers || []" :key="worker.id" :xs="24" :sm="12" :lg="8">
-          <el-card shadow="hover">
-            <template #header>
-              <div class="card-header-between">
-                <div>
-                  <strong>{{ worker.name }}</strong>
-                  <p class="muted-line">{{ worker.roleLabel }}</p>
-                </div>
-                <el-tag type="success">¥{{ worker.hourlyPrice }}/小时</el-tag>
-              </div>
-            </template>
-            <p>{{ worker.intro }}</p>
-            <div class="tag-wrap">
-              <el-tag v-for="tag in worker.tags" :key="tag" size="small" effect="plain">{{ tag }}</el-tag>
-            </div>
-            <div class="worker-meta-row">
-              <span>评分 {{ worker.rating }}</span>
-              <span>已完成 {{ worker.completedOrders }} 单</span>
-            </div>
-            <div class="worker-meta-row">
-              <span>{{ worker.city }}</span>
-              <span>{{ worker.nextAvailable }}</span>
-            </div>
-            <el-button class="full-width" type="primary" plain @click="router.push(`/workers/${worker.id}`)">
-              查看详情
-            </el-button>
-          </el-card>
+        <el-col
+          v-for="worker in home?.featuredWorkers || []"
+          :key="worker.id"
+          :xs="24"
+          :sm="12"
+          :lg="8"
+        >
+          <WorkerCard :worker="worker" />
         </el-col>
       </el-row>
     </section>
@@ -93,6 +74,8 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { fetchHome } from '../../api'
+import ServiceCard from '../../components/ServiceCard.vue'
+import WorkerCard from '../../components/WorkerCard.vue'
 
 const router = useRouter()
 const home = ref(null)

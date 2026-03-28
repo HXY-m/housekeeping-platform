@@ -44,7 +44,7 @@
         <el-button @click="resetFilters">重置</el-button>
       </div>
 
-      <el-table :data="users" v-loading="loading" stripe>
+      <el-table :data="pagedUsers" v-loading="loading" stripe>
         <el-table-column prop="id" label="ID" width="90" />
         <el-table-column prop="realName" label="姓名" width="140" />
         <el-table-column prop="phone" label="手机号" width="160" />
@@ -85,6 +85,13 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <ListPagination
+        v-model:current-page="currentPage"
+        v-model:page-size="pageSize"
+        :page-sizes="pageSizes"
+        :total="total"
+      />
     </el-card>
 
     <el-dialog v-model="dialogVisible" :title="dialogMode === 'create' ? '新增用户' : '编辑用户'" width="640px">
@@ -143,6 +150,8 @@ import {
   fetchAdminUsers,
   updateAdminUser
 } from '../../api'
+import { useClientPagination } from '../../composables/useClientPagination'
+import ListPagination from '../../components/common/ListPagination.vue'
 
 const roleLabelMap = {
   USER: '普通用户',
@@ -189,6 +198,8 @@ const form = reactive({
   roleCodes: ['USER']
 })
 
+const { currentPage, pageSize, pageSizes, total, pagedItems: pagedUsers, resetPage } = useClientPagination(users, 10)
+
 const activeCount = computed(() => users.value.filter((item) => item.status === 'ACTIVE').length)
 const workerCount = computed(() => users.value.filter((item) => item.roleCodes.includes('WORKER')).length)
 const adminCount = computed(() => users.value.filter((item) => item.roleCodes.includes('ADMIN')).length)
@@ -231,6 +242,7 @@ async function loadUsers() {
   loading.value = true
   try {
     users.value = await fetchAdminUsers(filters)
+    resetPage()
   } catch (error) {
     ElMessage.error(error.message || '获取用户列表失败')
   } finally {

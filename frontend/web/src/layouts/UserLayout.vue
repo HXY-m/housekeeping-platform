@@ -2,15 +2,15 @@
   <el-container class="user-shell">
     <el-aside width="248px" class="user-aside">
       <div class="user-brand">
-        <strong>Client Center</strong>
-        <span>User Workspace</span>
+        <strong>用户中心</strong>
+        <span>个人资料、订单与收藏工作台</span>
       </div>
       <el-menu :default-active="route.path" class="user-menu" router>
-        <el-menu-item v-if="showMenu('USER_DASHBOARD_VIEW')" index="/user/dashboard">Dashboard</el-menu-item>
-        <el-menu-item v-if="showMenu('USER_PROFILE_MANAGE')" index="/user/profile">Profile</el-menu-item>
-        <el-menu-item v-if="showMenu('USER_FAVORITE_MANAGE')" index="/user/favorites">Favorites</el-menu-item>
+        <el-menu-item v-if="showMenu('USER_DASHBOARD_VIEW')" index="/user/dashboard">个人看板</el-menu-item>
+        <el-menu-item v-if="showMenu('USER_PROFILE_MANAGE')" index="/user/profile">个人资料</el-menu-item>
+        <el-menu-item v-if="showMenu('USER_FAVORITE_MANAGE')" index="/user/favorites">我的收藏</el-menu-item>
         <el-menu-item v-if="showMenu('USER_MESSAGE_USE')" index="/user/messages">
-          <span>Messages</span>
+          <span>消息通知</span>
           <el-badge
             v-if="unreadCount"
             :value="unreadCount"
@@ -18,24 +18,24 @@
             class="layout-menu-badge"
           />
         </el-menu-item>
-        <el-menu-item v-if="showMenu('USER_ORDER_USE')" index="/user/orders">Orders</el-menu-item>
+        <el-menu-item v-if="showMenu('USER_ORDER_USE')" index="/user/orders">我的订单</el-menu-item>
       </el-menu>
     </el-aside>
 
     <el-container>
       <el-header class="user-header">
         <div>
-          <div class="console-title">User Center</div>
-          <div class="console-subtitle">Manage profile, addresses, favorites, messages, orders and after-sales requests.</div>
+          <div class="console-title">用户中心</div>
+          <div class="console-subtitle">统一管理个人资料、地址簿、订单、收藏、通知与售后反馈</div>
         </div>
         <div class="console-header-actions">
-          <el-button @click="router.push('/workers')">Browse Services</el-button>
-          <el-button v-if="showMenu('USER_FAVORITE_MANAGE')" plain @click="router.push('/user/favorites')">Favorites</el-button>
+          <el-button @click="router.push('/workers')">继续找服务</el-button>
+          <el-button v-if="showMenu('USER_FAVORITE_MANAGE')" plain @click="router.push('/user/favorites')">我的收藏</el-button>
           <el-badge v-if="showMenu('USER_MESSAGE_USE')" :value="unreadCount" :hidden="!unreadCount" :max="99">
-            <el-button plain @click="router.push('/user/messages')">Messages</el-button>
+            <el-button plain @click="router.push('/user/messages')">消息通知</el-button>
           </el-badge>
           <span class="console-user-label">{{ authStore.state.user?.realName }}</span>
-          <el-button type="danger" plain @click="logout">Sign out</el-button>
+          <el-button type="danger" plain @click="logout">退出登录</el-button>
         </div>
       </el-header>
       <el-main class="user-main">

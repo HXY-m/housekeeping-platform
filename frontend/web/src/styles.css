@@ -910,6 +910,12 @@ a {
   align-items: center;
 }
 
+.table-pagination {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+
 .table-cell-primary {
   display: grid;
   gap: 6px;
@@ -1033,7 +1039,8 @@ a {
   .table-toolbar,
   .table-toolbar__filters,
   .order-card__header,
-  .order-stage-callout {
+  .order-stage-callout,
+  .table-pagination {
     display: grid;
   }
 

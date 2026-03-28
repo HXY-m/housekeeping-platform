@@ -22,7 +22,7 @@
         <el-statistic title="停用项目" :value="disabledCount" />
       </el-card>
       <el-card shadow="never" class="summary-card">
-        <el-statistic title="带扩展信息" :value="richInfoCount" />
+        <el-statistic title="扩展信息完整" :value="richInfoCount" />
       </el-card>
     </div>
 
@@ -37,7 +37,7 @@
         <el-button @click="resetFilters">重置</el-button>
       </div>
 
-      <el-table :data="categories" v-loading="loading" stripe>
+      <el-table :data="pagedCategories" v-loading="loading" stripe>
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="name" label="项目名称" min-width="140" />
         <el-table-column prop="priceLabel" label="价格标签" width="140" />
@@ -52,7 +52,7 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="slug" label="Slug" width="160" />
+        <el-table-column prop="slug" label="标识" width="160" />
         <el-table-column prop="description" label="项目描述" min-width="220" show-overflow-tooltip />
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
@@ -63,6 +63,13 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <ListPagination
+        v-model:current-page="currentPage"
+        v-model:page-size="pageSize"
+        :page-sizes="pageSizes"
+        :total="total"
+      />
     </el-card>
 
     <el-dialog v-model="dialogVisible" :title="dialogMode === 'create' ? '新增服务项目' : '编辑服务项目'" width="720px">
@@ -75,13 +82,13 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="价格标签">
-              <el-input v-model="form.priceLabel" maxlength="50" placeholder="例如：98元起 / 2小时起" />
+              <el-input v-model="form.priceLabel" maxlength="50" placeholder="例如：128元起 / 2小时起" />
             </el-form-item>
           </el-col>
         </el-row>
         <el-row :gutter="16">
           <el-col :span="12">
-            <el-form-item label="Slug">
+            <el-form-item label="标识">
               <el-input v-model="form.slug" maxlength="100" placeholder="例如：deep-cleaning" />
             </el-form-item>
           </el-col>
@@ -131,6 +138,8 @@ import {
   fetchAdminCategories,
   updateAdminCategory
 } from '../../api'
+import { useClientPagination } from '../../composables/useClientPagination'
+import ListPagination from '../../components/common/ListPagination.vue'
 
 const loading = ref(false)
 const categories = ref([])
@@ -154,6 +163,8 @@ const form = reactive({
   extraServices: '',
   enabled: true
 })
+
+const { currentPage, pageSize, pageSizes, total, pagedItems: pagedCategories, resetPage } = useClientPagination(categories, 10)
 
 const enabledCount = computed(() => categories.value.filter((item) => item.enabled).length)
 const disabledCount = computed(() => categories.value.filter((item) => !item.enabled).length)
@@ -205,6 +216,7 @@ async function loadCategories() {
   loading.value = true
   try {
     categories.value = await fetchAdminCategories(filters)
+    resetPage()
   } catch (error) {
     ElMessage.error(error.message || '获取服务项目失败')
   } finally {

@@ -14,7 +14,7 @@
     <el-empty v-if="!favorites.length && !loading" description="还没有收藏任何服务人员" />
 
     <el-row v-else :gutter="16" v-loading="loading">
-      <el-col v-for="worker in favorites" :key="worker.id" :xs="24" :md="12">
+      <el-col v-for="worker in pagedFavorites" :key="worker.id" :xs="24" :md="12">
         <el-card shadow="hover">
           <template #header>
             <div class="card-header-between">
@@ -45,6 +45,14 @@
         </el-card>
       </el-col>
     </el-row>
+
+    <ListPagination
+      v-if="favorites.length"
+      v-model:current-page="currentPage"
+      v-model:page-size="pageSize"
+      :page-sizes="pageSizes"
+      :total="total"
+    />
   </div>
 </template>
 
@@ -53,16 +61,20 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { fetchFavoriteWorkers, unfavoriteWorker } from '../../api'
+import ListPagination from '../../components/common/ListPagination.vue'
+import { useClientPagination } from '../../composables/useClientPagination'
 import { formatCurrency } from '../../utils/format'
 
 const router = useRouter()
 const favorites = ref([])
 const loading = ref(false)
+const { currentPage, pageSize, pageSizes, total, pagedItems: pagedFavorites, resetPage } = useClientPagination(favorites, 6)
 
 async function loadFavorites() {
   loading.value = true
   try {
     favorites.value = await fetchFavoriteWorkers()
+    resetPage()
   } catch (error) {
     ElMessage.error(error.message || '获取收藏列表失败')
   } finally {

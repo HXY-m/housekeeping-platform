@@ -5,7 +5,7 @@
         <div>
           <h1 class="page-panel__title">订单监管</h1>
           <p class="page-panel__desc">
-            统一查看平台订单状态、预约时间、履约进度和评价结果。筛选条件集中收口，避免重复的信息卡片。
+            统一查看平台订单状态、预约时间、履约进度和评价结果，筛选条件集中收口，方便快速定位问题订单。
           </p>
         </div>
         <el-button type="primary" :loading="loading" @click="loadOrders">刷新数据</el-button>
@@ -40,11 +40,13 @@
             placeholder="搜索服务项目、服务人员、用户姓名"
             style="width: 280px"
           />
-          <el-select v-model="filters.status" clearable placeholder="订单状态" style="width: 160px">
-            <el-option label="待接单" value="PENDING" />
-            <el-option label="已接单" value="ACCEPTED" />
-            <el-option label="服务中" value="IN_SERVICE" />
-            <el-option label="已完成" value="COMPLETED" />
+          <el-select v-model="filters.status" clearable placeholder="订单状态" style="width: 180px">
+            <el-option
+              v-for="item in statusOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
           </el-select>
           <el-date-picker
             v-model="filters.dateRange"
@@ -55,10 +57,10 @@
             unlink-panels
           />
         </div>
-        <span class="section-caption">按预约日期和状态快速定位问题订单</span>
+        <span class="section-caption">按预约日期和状态快速定位订单</span>
       </div>
 
-      <el-table :data="filteredOrders" v-loading="loading" stripe style="margin-top: 16px">
+      <el-table :data="pagedOrders" v-loading="loading" stripe style="margin-top: 16px">
         <el-table-column label="订单信息" min-width="200">
           <template #default="{ row }">
             <div class="table-cell-primary">
@@ -109,16 +111,34 @@
         </el-table-column>
         <el-table-column prop="remark" label="订单备注" min-width="180" show-overflow-tooltip />
       </el-table>
+
+      <ListPagination
+        v-model:current-page="currentPage"
+        v-model:page-size="pageSize"
+        :page-sizes="pageSizes"
+        :total="total"
+      />
     </el-card>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { fetchAdminOrders } from '../../api'
+import ListPagination from '../../components/common/ListPagination.vue'
+import { useClientPagination } from '../../composables/useClientPagination'
 import { getUserOrderFlowMeta } from '../../utils/orderFlow'
 import { getOrderStatusLabel, getOrderStatusTagType, normalizeOrderStatus } from '../../utils/order'
+
+const statusOptions = [
+  { label: '待接单', value: 'PENDING' },
+  { label: '已接单', value: 'ACCEPTED' },
+  { label: '待用户确认', value: 'CONFIRMED' },
+  { label: '服务中', value: 'IN_SERVICE' },
+  { label: '待确认完工', value: 'WAITING_USER_CONFIRMATION' },
+  { label: '已完成', value: 'COMPLETED' }
+]
 
 const loading = ref(false)
 const orders = ref([])
@@ -159,10 +179,18 @@ const filteredOrders = computed(() =>
   })
 )
 
+const { currentPage, pageSize, pageSizes, total, pagedItems: pagedOrders, resetPage } = useClientPagination(filteredOrders, 8)
+
+watch(
+  () => [filters.keyword, filters.status, filters.dateRange?.join('|')],
+  () => resetPage()
+)
+
 async function loadOrders() {
   loading.value = true
   try {
     orders.value = await fetchAdminOrders()
+    resetPage()
   } catch (error) {
     ElMessage.error(error.message || '获取平台订单失败')
   } finally {

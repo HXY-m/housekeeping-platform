@@ -54,7 +54,7 @@
         <el-button @click="resetFilters">重置</el-button>
       </div>
 
-      <el-table :data="logs" v-loading="loading" stripe>
+      <el-table :data="pagedLogs" v-loading="loading" stripe>
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="createdAt" label="时间" width="170">
           <template #default="{ row }">
@@ -79,6 +79,13 @@
         <el-table-column prop="content" label="操作内容" min-width="260" show-overflow-tooltip />
         <el-table-column prop="ipAddress" label="IP 地址" width="140" />
       </el-table>
+
+      <ListPagination
+        v-model:current-page="currentPage"
+        v-model:page-size="pageSize"
+        :page-sizes="pageSizes"
+        :total="total"
+      />
     </el-card>
   </div>
 </template>
@@ -87,6 +94,8 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { fetchAdminOperationLogs } from '../../api'
+import ListPagination from '../../components/common/ListPagination.vue'
+import { useClientPagination } from '../../composables/useClientPagination'
 import { formatDateTime } from '../../utils/format'
 
 const roleLabelMap = {
@@ -131,6 +140,8 @@ const filters = reactive({
   actionType: ''
 })
 
+const { currentPage, pageSize, pageSizes, total, pagedItems: pagedLogs, resetPage } = useClientPagination(logs, 10)
+
 const createCount = computed(() =>
   logs.value.filter((item) => String(item.actionType || '').includes('CREATE')).length
 )
@@ -160,6 +171,7 @@ async function loadLogs() {
       dateFrom: dateRange.value?.[0] || '',
       dateTo: dateRange.value?.[1] || ''
     })
+    resetPage()
   } catch (error) {
     ElMessage.error(error.message || '获取操作日志失败')
   } finally {
