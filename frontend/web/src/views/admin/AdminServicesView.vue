@@ -2,9 +2,9 @@
   <div class="page-stack">
     <div class="console-overview console-overview--admin">
       <div>
-        <el-tag type="danger" round>服务治理</el-tag>
-        <h1>服务项目管理</h1>
-        <p>维护首页与列表页展示的服务项目信息，支持启停、扩展说明与自定义展示图片。</p>
+        <el-tag type="success" round>服务管理</el-tag>
+        <h1>服务项目</h1>
+        <p>维护前台展示的服务项目、价格标签和图片。</p>
       </div>
       <div class="hero-actions">
         <el-button type="primary" @click="openCreate">新增项目</el-button>
@@ -22,7 +22,7 @@
         <el-statistic title="停用项目" :value="summary.disabled" />
       </el-card>
       <el-card shadow="never" class="summary-card">
-        <el-statistic title="资料较完整" :value="summary.richInfo" />
+        <el-statistic title="资料完整" :value="summary.richInfo" />
       </el-card>
     </div>
 
@@ -42,11 +42,11 @@
           <el-button type="primary" @click="loadCategories">查询</el-button>
           <el-button @click="resetFilters">重置</el-button>
         </div>
-        <span class="section-caption">摘要卡片与表格数据均来自后端汇总接口</span>
+        <span class="section-caption">统计数据来自后端汇总接口</span>
       </div>
 
       <el-table :data="categories" v-loading="loading" stripe style="margin-top: 16px">
-        <el-table-column label="展示图" width="110">
+        <el-table-column label="图片" width="110">
           <template #default="{ row }">
             <el-image
               :src="getServiceImage(row)"
@@ -95,7 +95,7 @@
           </div>
           <div class="media-upload-panel__meta">
             <strong>展示图片</strong>
-            <span class="muted-line">若未上传，前台会自动使用雅致风格的默认插画。</span>
+            <span class="muted-line">未上传时前台会使用系统默认图。</span>
             <div class="hero-actions">
               <el-button plain :loading="uploadingImage" @click="openImagePicker">上传图片</el-button>
               <el-button text @click="clearImage">恢复默认图</el-button>
@@ -290,12 +290,12 @@ async function handleImageChange(event) {
     return
   }
   if (!file.type.startsWith('image/')) {
-    ElMessage.warning('请选择图片格式的服务展示图')
+    ElMessage.warning('请选择图片格式的展示图')
     event.target.value = ''
     return
   }
   if (file.size > 5 * 1024 * 1024) {
-    ElMessage.warning('服务展示图不能超过 5MB')
+    ElMessage.warning('展示图不能超过 5MB')
     event.target.value = ''
     return
   }
@@ -304,9 +304,9 @@ async function handleImageChange(event) {
   try {
     const uploaded = await uploadImage(file)
     form.imageUrl = uploaded.url
-    ElMessage.success('服务展示图上传成功')
+    ElMessage.success('图片上传成功')
   } catch (error) {
-    ElMessage.error(error.message || '上传服务展示图失败')
+    ElMessage.error(error.message || '上传图片失败')
   } finally {
     uploadingImage.value = false
     event.target.value = ''
@@ -398,7 +398,7 @@ onMounted(loadCategories)
 .table-cover {
   width: 68px;
   height: 52px;
-  border-radius: 14px;
+  border-radius: 12px;
   overflow: hidden;
 }
 
@@ -407,16 +407,16 @@ onMounted(loadCategories)
   grid-template-columns: 180px minmax(0, 1fr);
   gap: 18px;
   padding: 16px;
-  border-radius: 22px;
-  background: rgba(250, 245, 238, 0.9);
-  border: 1px solid rgba(145, 117, 87, 0.12);
+  border-radius: 18px;
+  background: #f8fafc;
+  border: 1px solid #e4e7ec;
   margin-bottom: 18px;
 }
 
 .media-upload-panel__image {
   width: 100%;
   height: 126px;
-  border-radius: 18px;
+  border-radius: 14px;
   overflow: hidden;
 }
 

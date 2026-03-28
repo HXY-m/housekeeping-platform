@@ -2,9 +2,8 @@
   <el-card class="login-card" shadow="hover">
     <div class="page-stack">
       <div>
-        <el-tag type="primary" round>登录系统</el-tag>
-        <div class="login-title">进入家政服务预约平台</div>
-        <div class="login-subtitle">支持普通用户、服务人员、管理员三类角色登录。</div>
+        <div class="login-title">登录</div>
+        <div class="login-subtitle">输入手机号、密码和角色</div>
       </div>
 
       <el-form :model="form" label-position="top" @submit.prevent="handleLogin">
@@ -27,7 +26,7 @@
       <el-alert v-if="errorMessage" :title="errorMessage" type="error" show-icon :closable="false" />
 
       <div class="page-stack">
-        <el-divider>演示账号</el-divider>
+        <el-divider>测试账号</el-divider>
         <div class="demo-account-list">
           <el-card
             v-for="account in demoAccounts"
@@ -51,6 +50,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { fetchDemoAccounts, login } from '../../api'
 import { authStore } from '../../stores/auth'
+import { formatRoleLabel } from '../../utils/auth'
 
 const route = useRoute()
 const router = useRouter()
@@ -62,12 +62,6 @@ const form = reactive({
   password: '',
   roleCode: 'USER'
 })
-
-function formatRoleLabel(roleCode) {
-  if (roleCode === 'ADMIN') return '管理员'
-  if (roleCode === 'WORKER') return '服务人员'
-  return '普通用户'
-}
 
 function fillDemoAccount(account) {
   form.phone = account.phone
@@ -94,7 +88,7 @@ onMounted(async () => {
     form.phone = String(route.query.phone)
   }
   if (route.query.error === 'no_permission') {
-    errorMessage.value = '当前账号没有目标页面访问权限，请切换角色后重新登录。'
+    errorMessage.value = '当前账号没有目标页面的访问权限，请切换角色后重新登录。'
   }
   if (route.query.registered === '1') {
     ElMessage.success('注册成功，请登录')

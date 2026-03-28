@@ -1,15 +1,5 @@
 import { downloadFile, request } from './http'
-
-function buildQuery(params = {}) {
-  const search = new URLSearchParams()
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== '' && value !== null && value !== undefined) {
-      search.set(key, value)
-    }
-  })
-  const query = search.toString()
-  return query ? `?${query}` : ''
-}
+import { buildQuery } from './query'
 
 export function fetchAdminDashboard() {
   return request('/api/admin/dashboard')

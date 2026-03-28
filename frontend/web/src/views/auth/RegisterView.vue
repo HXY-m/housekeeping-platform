@@ -1,20 +1,9 @@
 <template>
   <el-card class="register-card" shadow="hover">
     <div class="page-stack">
-      <div class="register-hero">
-        <div>
-          <el-tag type="warning" round>创建账号</el-tag>
-          <div class="login-title">选择注册身份并补全基础资料</div>
-          <div class="login-subtitle">
-            普通用户可直接预约与收藏服务，服务人员可直接注册并进入工作台维护资质资料。
-          </div>
-        </div>
-        <el-alert
-          :title="form.roleCode === 'WORKER' ? '服务人员注册后将进入服务人员端，并继续维护资质审核资料。' : '普通用户注册后将进入用户中心，可直接下单与管理地址簿。'"
-          type="info"
-          show-icon
-          :closable="false"
-        />
+      <div>
+        <div class="login-title">注册</div>
+        <div class="login-subtitle">创建普通用户或服务人员账号</div>
       </div>
 
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="handleRegister">
@@ -65,9 +54,9 @@
           <div class="worker-section__header">
             <div>
               <h3>服务人员资料</h3>
-              <p>这些内容会作为首轮资质资料一并提交，后续可在服务人员端继续完善。</p>
+              <p>注册后可继续在服务人员端补充资质文件与展示信息。</p>
             </div>
-            <el-tag type="warning">服务人员专属</el-tag>
+            <el-tag type="warning">服务人员</el-tag>
           </div>
 
           <el-row :gutter="16">
@@ -78,15 +67,10 @@
                   multiple
                   collapse-tags
                   collapse-tags-tooltip
-                  placeholder="请选择擅长的服务类型"
+                  placeholder="请选择服务类型"
                   style="width: 100%"
                 >
-                  <el-option
-                    v-for="item in serviceTypeOptions"
-                    :key="item"
-                    :label="item"
-                    :value="item"
-                  />
+                  <el-option v-for="item in serviceTypeOptions" :key="item" :label="item" :value="item" />
                 </el-select>
               </el-form-item>
             </el-col>
@@ -111,12 +95,7 @@
                   placeholder="可输入健康证、育婴师证等"
                   style="width: 100%"
                 >
-                  <el-option
-                    v-for="item in certificateOptions"
-                    :key="item"
-                    :label="item"
-                    :value="item"
-                  />
+                  <el-option v-for="item in certificateOptions" :key="item" :label="item" :value="item" />
                 </el-select>
               </el-form-item>
             </el-col>
@@ -133,12 +112,7 @@
                   placeholder="请输入可服务区域"
                   style="width: 100%"
                 >
-                  <el-option
-                    v-for="item in areaOptions"
-                    :key="item"
-                    :label="item"
-                    :value="item"
-                  />
+                  <el-option v-for="item in areaOptions" :key="item" :label="item" :value="item" />
                 </el-select>
               </el-form-item>
             </el-col>
@@ -146,11 +120,7 @@
 
           <el-form-item label="可服务时段">
             <el-checkbox-group v-model="form.availableSchedule" class="slot-group">
-              <el-checkbox-button
-                v-for="slot in scheduleOptions"
-                :key="slot"
-                :label="slot"
-              >
+              <el-checkbox-button v-for="slot in scheduleOptions" :key="slot" :label="slot">
                 {{ slot }}
               </el-checkbox-button>
             </el-checkbox-group>
@@ -160,10 +130,10 @@
             <el-input
               v-model.trim="form.intro"
               type="textarea"
-              :rows="5"
+              :rows="4"
               maxlength="300"
               show-word-limit
-              placeholder="请简要说明擅长领域、服务经验和服务风格"
+              placeholder="简要说明擅长领域和服务经验"
             />
           </el-form-item>
         </div>
@@ -258,7 +228,7 @@ function buildPayload() {
     payload.yearsOfExperience = form.yearsOfExperience
     payload.certificates = form.certificates.join('、')
     payload.serviceAreas = form.serviceAreas.join('、')
-    payload.availableSchedule = form.availableSchedule.join('；')
+    payload.availableSchedule = form.availableSchedule.join('、')
     payload.intro = form.intro
   }
 
@@ -315,11 +285,6 @@ async function handleRegister() {
   border: none;
 }
 
-.register-hero {
-  display: grid;
-  gap: 16px;
-}
-
 .identity-group {
   display: flex;
   flex-wrap: wrap;
@@ -331,10 +296,10 @@ async function handleRegister() {
 
 .worker-section {
   margin: 8px 0 20px;
-  padding: 20px;
+  padding: 18px;
   border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 20px;
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.92), rgba(255, 255, 255, 1));
+  border-radius: 16px;
+  background: #fafafa;
 }
 
 .worker-section__header {
@@ -352,7 +317,7 @@ async function handleRegister() {
 
 .worker-section__header p {
   margin: 0;
-  color: #64748b;
+  color: #667085;
   line-height: 1.6;
 }
 
@@ -363,11 +328,6 @@ async function handleRegister() {
 }
 
 @media (max-width: 768px) {
-  .worker-section {
-    padding: 16px;
-    border-radius: 16px;
-  }
-
   .worker-section__header {
     flex-direction: column;
   }

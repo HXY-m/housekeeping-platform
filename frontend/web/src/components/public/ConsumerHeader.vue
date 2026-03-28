@@ -2,10 +2,9 @@
   <header class="public-header">
     <div class="public-header__inner">
       <RouterLink to="/" class="brand-link">
-        <div class="brand-mark">家</div>
+        <div class="brand-mark">安</div>
         <div class="brand-copy">
           <strong>安心家政</strong>
-          <span>家政服务预约平台</span>
         </div>
       </RouterLink>
 
@@ -21,9 +20,9 @@
 
       <div class="public-header__actions">
         <template v-if="authStore.isLoggedIn()">
-          <el-tag>{{ authStore.state.user?.realName }} / {{ roleLabel }}</el-tag>
+          <el-tag effect="plain">{{ authStore.state.user?.realName }} / {{ formatRoleLabel(authStore.state.user?.roleCode) }}</el-tag>
           <el-button v-if="consoleEntry" @click="router.push(consoleEntry.path)">{{ consoleEntry.label }}</el-button>
-          <el-button type="primary" plain @click="logout">退出登录</el-button>
+          <el-button type="primary" plain @click="logout">退出</el-button>
         </template>
         <template v-else>
           <el-button @click="router.push('/register')">注册</el-button>
@@ -38,7 +37,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { authStore } from '../../stores/auth'
-import { resolveConsoleEntry } from '../../utils/auth'
+import { formatRoleLabel, resolveConsoleEntry } from '../../utils/auth'
 
 const route = useRoute()
 const router = useRouter()
@@ -50,12 +49,6 @@ const activeIndex = computed(() => {
 })
 
 const consoleEntry = computed(() => resolveConsoleEntry(authStore.state.user?.roleCode))
-const roleLabel = computed(() => {
-  const roleCode = authStore.state.user?.roleCode
-  if (roleCode === 'ADMIN') return '管理员'
-  if (roleCode === 'WORKER') return '服务人员'
-  return '普通用户'
-})
 
 function handleSelect(index) {
   router.push(index)

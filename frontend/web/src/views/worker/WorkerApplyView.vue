@@ -572,9 +572,9 @@ onMounted(loadApplications)
 <style scoped>
 .worker-avatar-panel {
   padding: 16px 18px;
-  border-radius: 22px;
-  background: rgba(250, 245, 238, 0.92);
-  border: 1px solid rgba(145, 117, 87, 0.12);
+  border-radius: 18px;
+  background: #f8fafc;
+  border: 1px solid #e4e7ec;
 }
 
 .worker-avatar-panel__meta {

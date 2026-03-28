@@ -3,15 +3,13 @@
     <el-card shadow="never" class="page-panel">
       <div class="page-panel__header">
         <div>
-          <h1 class="page-panel__title">角色权限配置</h1>
-          <p class="page-panel__desc">
-            以角色为单位管理后台入口、页面访问与操作权限。界面仅保留中文分组、权限名称和必要说明，避免信息过载。
-          </p>
+          <h1 class="page-panel__title">权限配置</h1>
+          <p class="page-panel__desc">按角色勾选后台可访问模块，保留清晰的中文名称与必要说明。</p>
         </div>
         <div class="filter-actions">
           <el-button :loading="loading" @click="loadCatalog">刷新目录</el-button>
           <el-button type="primary" :disabled="!canSaveCurrent" :loading="saving" @click="savePermissions">
-            保存权限
+            保存当前角色
           </el-button>
         </div>
       </div>
@@ -26,7 +24,7 @@
           <strong>{{ permissionGroups.length }}</strong>
         </div>
         <div class="metric-chip">
-          <span class="metric-chip__label">已选权限</span>
+          <span class="metric-chip__label">当前已选</span>
           <strong>{{ selectedPermissions.length }}</strong>
         </div>
       </div>
@@ -38,7 +36,7 @@
           <template #header>
             <div class="card-header-between">
               <strong>角色列表</strong>
-              <span class="section-caption">点击切换角色</span>
+              <span class="section-caption">点击切换</span>
             </div>
           </template>
 
@@ -57,7 +55,6 @@
               </div>
               <div class="role-item__meta">
                 <span>{{ role.permissionCodes.length }} 项权限</span>
-                <span>{{ role.roleCode }}</span>
               </div>
             </button>
           </div>
@@ -71,20 +68,20 @@
               <div>
                 <strong>{{ selectedRole?.roleName || '请选择角色' }}</strong>
                 <div class="section-caption">
-                  <span v-if="selectedRole">{{ selectedRole.userCount }} 位账号使用该角色</span>
-                  <span v-if="hasChanges" class="dirty-indicator">存在未保存修改</span>
+                  <span v-if="selectedRole">{{ selectedRole.userCount }} 个账号正在使用该角色</span>
+                  <span v-if="hasChanges" class="dirty-indicator">有未保存的修改</span>
                 </div>
               </div>
               <el-space>
                 <el-tag v-if="selectedRole" effect="plain">{{ selectedPermissions.length }} 项已选</el-tag>
                 <el-button type="primary" :disabled="!canSaveCurrent" :loading="saving" @click="savePermissions">
-                  保存当前角色
+                  保存
                 </el-button>
               </el-space>
             </div>
           </template>
 
-          <el-empty v-if="!selectedRole" description="请先从左侧选择一个角色" />
+          <el-empty v-if="!selectedRole" description="请先选择一个角色" />
 
           <div v-else class="permission-group-list">
             <el-card
@@ -95,11 +92,9 @@
             >
               <template #header>
                 <div class="group-header">
-                  <div>
-                    <div class="group-header__title-row">
-                      <strong>{{ group.groupLabel }}</strong>
-                      <span class="section-caption">{{ group.permissions.length }} 项</span>
-                    </div>
+                  <div class="group-header__title-row">
+                    <strong>{{ group.groupLabel }}</strong>
+                    <span class="section-caption">{{ group.permissions.length }} 项</span>
                   </div>
                   <el-checkbox
                     :model-value="groupState(group).allSelected"
@@ -245,7 +240,7 @@ async function handleRoleSelect(roleCode) {
   if (hasChanges.value) {
     try {
       await ElMessageBox.confirm(
-        '当前角色还有未保存的权限调整，切换角色后这些修改会丢失，是否继续？',
+        '当前角色还有未保存的修改，切换后这些更改会丢失，是否继续？',
         '切换角色',
         {
           type: 'warning',
@@ -338,15 +333,16 @@ onMounted(loadCatalog)
   top: 16px;
 }
 
-.role-list {
+.role-list,
+.permission-group-list {
   display: grid;
   gap: 12px;
 }
 
 .role-item {
-  border: 1px solid rgba(145, 117, 87, 0.18);
-  border-radius: 18px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(249, 243, 236, 0.88));
+  border: 1px solid #e4e7ec;
+  border-radius: 16px;
+  background: #fff;
   padding: 16px;
   text-align: left;
   cursor: pointer;
@@ -358,8 +354,8 @@ onMounted(loadCatalog)
 
 .role-item:hover,
 .role-item--active {
-  border-color: rgba(143, 106, 73, 0.48);
-  box-shadow: 0 18px 36px rgba(94, 67, 46, 0.08);
+  border-color: rgba(15, 179, 74, 0.36);
+  box-shadow: 0 16px 32px rgba(16, 24, 40, 0.06);
   transform: translateY(-1px);
 }
 
@@ -372,44 +368,32 @@ onMounted(loadCatalog)
   gap: 12px;
 }
 
-.role-item__count {
-  color: #7a6f64;
-  font-size: 12px;
-}
-
+.role-item__count,
 .role-item__meta,
 .permission-card__desc {
-  color: #7a6f64;
+  color: #667085;
   font-size: 12px;
   line-height: 1.7;
 }
 
 .role-item__meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 .dirty-indicator {
   margin-left: 8px;
-  color: #b95d48;
+  color: #0a8a38;
   font-weight: 600;
 }
 
-.permission-group-list {
-  display: grid;
-  gap: 16px;
-}
-
 .permission-group-card {
-  border-radius: 20px;
+  border-radius: 18px;
 }
 
 .group-header__title-row {
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: 8px;
 }
 
 .permission-grid {
@@ -419,9 +403,9 @@ onMounted(loadCatalog)
 }
 
 .permission-card {
-  border: 1px solid rgba(145, 117, 87, 0.14);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #eaecf0;
+  border-radius: 14px;
+  background: #fcfcfd;
   padding: 14px;
   margin-right: 0;
   margin-bottom: 0;

@@ -33,10 +33,7 @@ public class AdminCategoryService {
     }
 
     public List<AdminCategoryDto> listCategories(String keyword, Integer enabled) {
-        return serviceCategoryMapper.selectList(buildCategoryWrapper(keyword, enabled))
-                .stream()
-                .map(this::toDto)
-                .toList();
+        return buildCategoryDtos(findCategories(keyword, enabled));
     }
 
     public PageResult<AdminCategoryDto> pageCategories(long current, long size, String keyword, Integer enabled) {
@@ -44,11 +41,11 @@ public class AdminCategoryService {
                 new Page<>(current, size),
                 buildCategoryWrapper(keyword, enabled)
         );
-        return PageResult.from(page, page.getRecords().stream().map(this::toDto).toList());
+        return PageResult.from(page, buildCategoryDtos(page.getRecords()));
     }
 
     public Map<String, Long> summarizeCategories(String keyword, Integer enabled) {
-        List<ServiceCategoryEntity> categories = serviceCategoryMapper.selectList(buildCategoryWrapper(keyword, enabled));
+        List<ServiceCategoryEntity> categories = findCategories(keyword, enabled);
         long total = categories.size();
         long enabledCount = categories.stream().filter(item -> item.getEnabled() == null || item.getEnabled() == 1).count();
         long disabledCount = total - enabledCount;
@@ -146,6 +143,16 @@ public class AdminCategoryService {
 
     private String safeValue(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private List<ServiceCategoryEntity> findCategories(String keyword, Integer enabled) {
+        return serviceCategoryMapper.selectList(buildCategoryWrapper(keyword, enabled));
+    }
+
+    private List<AdminCategoryDto> buildCategoryDtos(List<ServiceCategoryEntity> entities) {
+        return entities.stream()
+                .map(this::toDto)
+                .toList();
     }
 
     private AdminCategoryDto toDto(ServiceCategoryEntity entity) {

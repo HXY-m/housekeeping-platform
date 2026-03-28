@@ -1,44 +1,55 @@
 <template>
   <div class="page-stack" v-loading="loading">
-    <el-card v-if="worker" shadow="never">
-      <div class="detail-header">
-        <div>
-          <el-tag type="success" round>{{ worker.roleLabel }}</el-tag>
+    <el-card v-if="worker" shadow="never" class="worker-detail-card">
+      <div class="worker-detail-hero">
+        <el-image :src="getWorkerImage(worker)" :alt="worker.name" fit="cover" class="worker-detail-hero__image" />
+
+        <div class="worker-detail-hero__content">
+          <div class="tag-wrap">
+            <el-tag type="success" effect="plain">实名认证</el-tag>
+            <el-tag type="success" effect="plain">平台可预约</el-tag>
+          </div>
           <h1>{{ worker.name }}</h1>
-          <p>{{ worker.intro }}</p>
+          <p class="muted-line">{{ worker.city }}</p>
+
+          <div class="worker-detail-metrics">
+            <div class="worker-detail-metric">
+              <span>评分</span>
+              <strong>{{ worker.rating }}</strong>
+            </div>
+            <div class="worker-detail-metric">
+              <span>完成订单</span>
+              <strong>{{ worker.completedOrders }}</strong>
+            </div>
+            <div class="worker-detail-metric">
+              <span>从业年限</span>
+              <strong>{{ worker.yearsOfExperience }} 年</strong>
+            </div>
+          </div>
+
+          <p class="worker-detail-intro">{{ worker.intro }}</p>
+
           <div class="tag-wrap">
             <el-tag v-for="tag in worker.tags" :key="tag" size="small" effect="plain">{{ tag }}</el-tag>
           </div>
-        </div>
 
-        <el-card class="price-panel" shadow="hover">
-          <el-statistic title="参考时薪" :value="worker.hourlyPrice" prefix="¥" suffix="/小时" />
-          <p class="muted-line">{{ worker.nextAvailable }}</p>
-          <el-space direction="vertical" fill style="width: 100%">
-            <el-button class="full-width" type="primary" @click="router.push(`/booking/${worker.id}`)">
-              预约这位服务人员
-            </el-button>
-            <el-button
-              class="full-width"
-              :type="isFavorited ? 'warning' : 'default'"
-              plain
-              @click="handleFavorite"
-            >
+          <div class="worker-detail-actions">
+            <el-button type="primary" @click="router.push(`/booking/${worker.id}`)">立即预约</el-button>
+            <el-button :type="isFavorited ? 'warning' : 'default'" plain @click="handleFavorite">
               {{ isFavorited ? '取消收藏' : '收藏服务人员' }}
             </el-button>
-          </el-space>
-        </el-card>
+          </div>
+        </div>
       </div>
     </el-card>
 
     <el-row v-if="worker" :gutter="16">
       <el-col :xs="24" :lg="12">
         <el-card shadow="hover">
-          <template #header><strong>服务档案</strong></template>
+          <template #header><strong>服务信息</strong></template>
           <el-descriptions :column="1" border>
-            <el-descriptions-item label="评分">{{ worker.rating }}</el-descriptions-item>
-            <el-descriptions-item label="完成订单">{{ worker.completedOrders }}</el-descriptions-item>
-            <el-descriptions-item label="从业年限">{{ worker.yearsOfExperience }} 年</el-descriptions-item>
+            <el-descriptions-item label="参考时薪">{{ worker.hourlyPrice }} 元 / 小时</el-descriptions-item>
+            <el-descriptions-item label="最近可约">{{ worker.nextAvailable }}</el-descriptions-item>
             <el-descriptions-item label="服务区域">{{ worker.serviceAreas.join('、') }}</el-descriptions-item>
           </el-descriptions>
         </el-card>
@@ -67,6 +78,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { favoriteWorker, fetchFavoriteWorkerIds, fetchWorker, unfavoriteWorker } from '../../api'
 import { authStore } from '../../stores/auth'
+import { getWorkerImage } from '../../utils/displayAssets'
 
 const route = useRoute()
 const router = useRouter()
@@ -125,3 +137,73 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+.worker-detail-card {
+  border: 1px solid rgba(16, 24, 40, 0.08);
+}
+
+.worker-detail-hero {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 24px;
+}
+
+.worker-detail-hero__image {
+  width: 100%;
+  height: 320px;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.worker-detail-hero__content {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+}
+
+.worker-detail-hero__content h1 {
+  margin: 0;
+}
+
+.worker-detail-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.worker-detail-metric {
+  border: 1px solid rgba(16, 24, 40, 0.08);
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: grid;
+  gap: 6px;
+  background: #fafafa;
+}
+
+.worker-detail-metric span {
+  color: #667085;
+  font-size: 12px;
+}
+
+.worker-detail-intro {
+  margin: 0;
+  line-height: 1.8;
+}
+
+.worker-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+@media (max-width: 960px) {
+  .worker-detail-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .worker-detail-metrics {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
