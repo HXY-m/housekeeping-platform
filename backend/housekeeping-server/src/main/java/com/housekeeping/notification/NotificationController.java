@@ -16,7 +16,9 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/notifications")
-@PreAuthorize("hasAnyRole('USER','WORKER','ADMIN')")
+@PreAuthorize("(hasRole('USER') and hasAuthority('USER_MESSAGE_USE'))"
+        + " or (hasRole('WORKER') and hasAuthority('WORKER_MESSAGE_USE'))"
+        + " or (hasRole('ADMIN') and hasAuthority('ADMIN_MESSAGE_VIEW'))")
 @Tag(name = "通知中心", description = "用户、服务人员和管理员的站内通知接口")
 public class NotificationController {
 

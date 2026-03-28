@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/admin")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasRole('ADMIN') and hasAuthority('ADMIN_DASHBOARD_VIEW')")
 @Tag(name = "管理后台模块", description = "管理员统计与运营接口")
 public class AdminController {
 

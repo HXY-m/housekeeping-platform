@@ -21,7 +21,7 @@ const router = createRouter({
         {
           path: 'booking/:workerId',
           component: () => import('../views/consumer/BookingView.vue'),
-          meta: { requiresAuth: true, role: 'USER', surface: 'public' }
+          meta: { requiresAuth: true, role: 'USER', permission: 'USER_ORDER_USE', surface: 'public' }
         },
         { path: 'orders', redirect: '/user/orders' },
         { path: 'worker/apply', redirect: '/register?roleCode=WORKER' }
@@ -42,11 +42,11 @@ const router = createRouter({
       meta: { requiresAuth: true, role: 'USER', surface: 'user' },
       redirect: '/user/dashboard',
       children: [
-        { path: 'dashboard', component: () => import('../views/user/UserDashboardView.vue') },
-        { path: 'profile', component: () => import('../views/user/UserProfileView.vue') },
-        { path: 'favorites', component: () => import('../views/user/UserFavoritesView.vue') },
-        { path: 'messages', component: () => import('../views/user/UserMessagesView.vue') },
-        { path: 'orders', component: () => import('../views/consumer/OrdersView.vue') }
+        { path: 'dashboard', component: () => import('../views/user/UserDashboardView.vue'), meta: { permission: 'USER_DASHBOARD_VIEW' } },
+        { path: 'profile', component: () => import('../views/user/UserProfileView.vue'), meta: { permission: 'USER_PROFILE_MANAGE' } },
+        { path: 'favorites', component: () => import('../views/user/UserFavoritesView.vue'), meta: { permission: 'USER_FAVORITE_MANAGE' } },
+        { path: 'messages', component: () => import('../views/user/UserMessagesView.vue'), meta: { permission: 'USER_MESSAGE_USE' } },
+        { path: 'orders', component: () => import('../views/consumer/OrdersView.vue'), meta: { permission: 'USER_ORDER_USE' } }
       ]
     },
     {
@@ -55,10 +55,10 @@ const router = createRouter({
       meta: { requiresAuth: true, role: 'WORKER', surface: 'worker' },
       redirect: '/worker/dashboard',
       children: [
-        { path: 'dashboard', component: () => import('../views/worker/WorkerDashboardView.vue') },
-        { path: 'orders', component: () => import('../views/worker/WorkerOrdersView.vue') },
-        { path: 'messages', component: () => import('../views/worker/WorkerMessagesView.vue') },
-        { path: 'qualification', component: () => import('../views/worker/WorkerApplyView.vue') }
+        { path: 'dashboard', component: () => import('../views/worker/WorkerDashboardView.vue'), meta: { permission: 'WORKER_DASHBOARD_VIEW' } },
+        { path: 'orders', component: () => import('../views/worker/WorkerOrdersView.vue'), meta: { permission: 'WORKER_ORDER_HANDLE' } },
+        { path: 'messages', component: () => import('../views/worker/WorkerMessagesView.vue'), meta: { permission: 'WORKER_MESSAGE_USE' } },
+        { path: 'qualification', component: () => import('../views/worker/WorkerApplyView.vue'), meta: { permission: 'WORKER_QUALIFICATION_SUBMIT' } }
       ]
     },
     {
@@ -67,15 +67,20 @@ const router = createRouter({
       meta: { requiresAuth: true, role: 'ADMIN', surface: 'admin' },
       redirect: '/admin/dashboard',
       children: [
-        { path: 'dashboard', component: () => import('../views/admin/AdminDashboardView.vue') },
-        { path: 'messages', component: () => import('../views/admin/AdminMessagesView.vue') },
-        { path: 'orders', component: () => import('../views/admin/AdminOrdersView.vue') },
-        { path: 'users', component: () => import('../views/admin/AdminUsersView.vue') },
-        { path: 'services', component: () => import('../views/admin/AdminServicesView.vue') },
-        { path: 'applications', component: () => import('../views/admin/AdminApplicationsView.vue') },
-        { path: 'after-sales', component: () => import('../views/admin/AdminAfterSalesView.vue') },
-        { path: 'operation-logs', component: () => import('../views/admin/AdminOperationLogsView.vue') },
-        { path: 'reports', component: () => import('../views/admin/AdminReportsView.vue') }
+        { path: 'dashboard', component: () => import('../views/admin/AdminDashboardView.vue'), meta: { permission: 'ADMIN_DASHBOARD_VIEW' } },
+        { path: 'messages', component: () => import('../views/admin/AdminMessagesView.vue'), meta: { permission: 'ADMIN_MESSAGE_VIEW' } },
+        { path: 'orders', component: () => import('../views/admin/AdminOrdersView.vue'), meta: { permission: 'ADMIN_ORDER_MANAGE' } },
+        { path: 'users', component: () => import('../views/admin/AdminUsersView.vue'), meta: { permission: 'ADMIN_USER_MANAGE' } },
+        { path: 'services', component: () => import('../views/admin/AdminServicesView.vue'), meta: { permission: 'ADMIN_SERVICE_MANAGE' } },
+        { path: 'applications', component: () => import('../views/admin/AdminApplicationsView.vue'), meta: { permission: 'ADMIN_APPLICATION_REVIEW' } },
+        { path: 'after-sales', component: () => import('../views/admin/AdminAfterSalesView.vue'), meta: { permission: 'ADMIN_AFTER_SALE_MANAGE' } },
+        { path: 'operation-logs', component: () => import('../views/admin/AdminOperationLogsView.vue'), meta: { permission: 'ADMIN_OPERATION_LOG_VIEW' } },
+        { path: 'reports', component: () => import('../views/admin/AdminReportsView.vue'), meta: { permission: 'ADMIN_REPORT_EXPORT' } },
+        {
+          path: 'permissions',
+          component: () => import('../views/admin/AdminPermissionsView.vue'),
+          meta: { permission: 'ADMIN_PERMISSION_MANAGE' }
+        }
       ]
     }
   ]
@@ -83,6 +88,19 @@ const router = createRouter({
 
 function isAuthPage(path) {
   return path === '/login' || path === '/register'
+}
+
+function getRequiredPermissions(meta) {
+  if (!meta) {
+    return []
+  }
+  if (Array.isArray(meta.permissions)) {
+    return meta.permissions.filter(Boolean)
+  }
+  if (meta.permission) {
+    return [meta.permission]
+  }
+  return []
 }
 
 router.beforeEach(async (to) => {
@@ -102,6 +120,14 @@ router.beforeEach(async (to) => {
 
   if (to.meta.role && !authStore.hasRole(to.meta.role)) {
     return { path: '/login', query: { redirect: to.fullPath, error: 'no_permission' } }
+  }
+
+  const requiredPermissions = getRequiredPermissions(to.meta)
+  if (requiredPermissions.length && authStore.hasPermissionData()) {
+    const hasAccess = requiredPermissions.some((permissionCode) => authStore.hasPermission(permissionCode))
+    if (!hasAccess) {
+      return { path: '/login', query: { redirect: to.fullPath, error: 'no_permission' } }
+    }
   }
 
   return true

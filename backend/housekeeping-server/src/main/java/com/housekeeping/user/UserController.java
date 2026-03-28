@@ -23,7 +23,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/user")
-@PreAuthorize("hasRole('USER')")
+@PreAuthorize("hasRole('USER') and hasAuthority('USER_PROFILE_MANAGE')")
 @Tag(name = "用户中心模块", description = "普通用户资料与地址簿接口")
 public class UserController {
 

@@ -19,6 +19,17 @@ export function fetchAdminOrders() {
   return request('/api/admin/orders')
 }
 
+export function fetchAdminPermissionCatalog() {
+  return request('/api/admin/permissions/catalog')
+}
+
+export function updateAdminRolePermissions(roleCode, payload) {
+  return request(`/api/admin/permissions/roles/${encodeURIComponent(roleCode)}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  })
+}
+
 export function fetchAdminUsers(params = {}) {
   return request(`/api/admin/users${buildQuery(params)}`)
 }

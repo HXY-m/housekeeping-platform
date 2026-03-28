@@ -22,7 +22,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/users")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasRole('ADMIN') and hasAuthority('ADMIN_USER_MANAGE')")
 @Tag(name = "管理员用户管理", description = "管理员查看、创建、更新和停用平台用户")
 public class AdminUserController {
 

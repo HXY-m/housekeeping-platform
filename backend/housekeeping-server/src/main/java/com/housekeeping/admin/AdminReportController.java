@@ -19,7 +19,7 @@ import java.nio.charset.StandardCharsets;
 
 @RestController
 @RequestMapping("/api/admin/reports")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasRole('ADMIN') and hasAuthority('ADMIN_REPORT_EXPORT')")
 @Tag(name = "管理员报表导出", description = "管理员导出仪表盘、订单、用户、售后和操作日志报表")
 public class AdminReportController {
 

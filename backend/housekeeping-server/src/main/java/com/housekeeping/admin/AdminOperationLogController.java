@@ -15,7 +15,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/operation-logs")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasRole('ADMIN') and hasAuthority('ADMIN_OPERATION_LOG_VIEW')")
 @Tag(name = "管理员操作日志", description = "管理员筛选查看关键治理操作日志")
 public class AdminOperationLogController {
 

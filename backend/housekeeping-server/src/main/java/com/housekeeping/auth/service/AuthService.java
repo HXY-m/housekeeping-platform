@@ -26,15 +26,18 @@ public class AuthService {
 
     private final AuthAccountService authAccountService;
     private final JwtTokenService jwtTokenService;
+    private final RolePermissionService rolePermissionService;
     private final UserProfileService userProfileService;
     private final WorkerProfileService workerProfileService;
 
     public AuthService(AuthAccountService authAccountService,
                        JwtTokenService jwtTokenService,
+                       RolePermissionService rolePermissionService,
                        UserProfileService userProfileService,
                        WorkerProfileService workerProfileService) {
         this.authAccountService = authAccountService;
         this.jwtTokenService = jwtTokenService;
+        this.rolePermissionService = rolePermissionService;
         this.userProfileService = userProfileService;
         this.workerProfileService = workerProfileService;
     }
@@ -44,10 +47,10 @@ public class AuthService {
         SysUserEntity user = authAccountService.requireActiveUserByPhone(request.phone());
 
         if (!PasswordUtil.matches(request.password(), user.getPassword())) {
-            throw new BusinessException("密码错误");
+            throw new BusinessException("Incorrect password.");
         }
         if (!authAccountService.userHasRole(user.getId(), roleCode)) {
-            throw new BusinessException("当前账号不具备所选角色");
+            throw new BusinessException("The selected role is not assigned to this account.");
         }
 
         return buildLoginResponse(user, roleCode);
@@ -57,8 +60,9 @@ public class AuthService {
     public LoginResponse register(RegisterRequest request) {
         String roleCode = normalizeRoleCode(request.roleCode());
         if (RoleCodes.ADMIN.equals(roleCode)) {
-            throw new BusinessException("管理员账号仅支持后台创建");
+            throw new BusinessException("Admin accounts can only be created from the management console.");
         }
+
         authAccountService.ensurePhoneAvailable(request.phone());
         SysUserEntity user = authAccountService.createUser(
                 request.phone().trim(),
@@ -82,8 +86,8 @@ public class AuthService {
                     request.serviceAreas().trim(),
                     request.intro().trim(),
                     WorkerQualificationStatus.UNSUBMITTED,
-                    "待认证服务人员",
-                    "新注册服务人员，等待资质审核通过后对外展示"
+                    "Qualification not submitted",
+                    "New worker account created. Public listing remains hidden until qualification review passes."
             ));
         }
 
@@ -93,29 +97,45 @@ public class AuthService {
     public CurrentUserDto currentUser() {
         SessionUser sessionUser = CurrentUserContext.get();
         if (sessionUser == null) {
-            throw new BusinessException("未登录");
+            throw new BusinessException("Please log in first.");
         }
         SysUserEntity user = authAccountService.requireActiveUserById(sessionUser.userId());
-        return new CurrentUserDto(user.getId(), user.getPhone(), user.getRealName(), sessionUser.roleCode());
+        return new CurrentUserDto(
+                user.getId(),
+                user.getPhone(),
+                user.getRealName(),
+                sessionUser.roleCode(),
+                rolePermissionService.listPermissionCodes(user.getId(), sessionUser.roleCode())
+        );
     }
 
     public List<DemoAccountDto> demoAccounts() {
         return List.of(
-                new DemoAccountDto(RoleCodes.USER, "13800000011", "123456", "演示用户"),
-                new DemoAccountDto(RoleCodes.WORKER, "13800000022", "123456", "演示服务人员"),
-                new DemoAccountDto(RoleCodes.ADMIN, "13800000033", "123456", "演示管理员")
+                new DemoAccountDto(RoleCodes.USER, "13800000011", "123456", "Demo User"),
+                new DemoAccountDto(RoleCodes.WORKER, "13800000022", "123456", "Demo Worker"),
+                new DemoAccountDto(RoleCodes.ADMIN, "13800000033", "123456", "Demo Admin")
         );
     }
 
     private LoginResponse buildLoginResponse(SysUserEntity user, String roleCode) {
-        String token = jwtTokenService.createToken(user.getId(), user.getPhone(), user.getRealName(), roleCode);
-        return new LoginResponse(token, new CurrentUserDto(user.getId(), user.getPhone(), user.getRealName(), roleCode));
+        List<String> permissionCodes = rolePermissionService.listPermissionCodes(user.getId(), roleCode);
+        String token = jwtTokenService.createToken(
+                user.getId(),
+                user.getPhone(),
+                user.getRealName(),
+                roleCode,
+                permissionCodes
+        );
+        return new LoginResponse(
+                token,
+                new CurrentUserDto(user.getId(), user.getPhone(), user.getRealName(), roleCode, permissionCodes)
+        );
     }
 
     private String normalizeRoleCode(String rawRoleCode) {
         String roleCode = rawRoleCode == null ? "" : rawRoleCode.trim().toUpperCase();
         if (!List.of(RoleCodes.USER, RoleCodes.WORKER, RoleCodes.ADMIN).contains(roleCode)) {
-            throw new BusinessException("不支持的角色类型");
+            throw new BusinessException("Unsupported role type.");
         }
         return roleCode;
     }
@@ -127,10 +147,10 @@ public class AuthService {
                 || !StringUtils.hasText(request.serviceAreas())
                 || !StringUtils.hasText(request.availableSchedule())
                 || !StringUtils.hasText(request.intro())) {
-            throw new BusinessException("注册服务人员时请完整填写服务类型、从业年限、证书、区域、时段和介绍");
+            throw new BusinessException("Worker registration requires service types, experience, certificates, areas, schedule and introduction.");
         }
         if (request.yearsOfExperience() < 0) {
-            throw new BusinessException("从业年限不能小于 0");
+            throw new BusinessException("Years of experience cannot be less than 0.");
         }
     }
 

@@ -12,6 +12,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import java.util.List;
+import java.util.Objects;
 
 @Service
 public class JwtTokenService {
@@ -24,7 +26,11 @@ public class JwtTokenService {
         this.secretKey = Keys.hmacShaKeyFor(jwtProperties.getJwtSecret().getBytes(StandardCharsets.UTF_8));
     }
 
-    public String createToken(Long userId, String phone, String realName, String roleCode) {
+    public String createToken(Long userId,
+                              String phone,
+                              String realName,
+                              String roleCode,
+                              List<String> permissionCodes) {
         Instant now = Instant.now();
         Instant expireAt = now.plus(jwtProperties.getJwtExpireHours(), ChronoUnit.HOURS);
         return Jwts.builder()
@@ -32,6 +38,7 @@ public class JwtTokenService {
                 .claim("phone", phone)
                 .claim("realName", realName)
                 .claim("roleCode", roleCode)
+                .claim("permissions", permissionCodes)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(expireAt))
                 .signWith(secretKey)
@@ -50,7 +57,18 @@ public class JwtTokenService {
                 claims.get("phone", String.class),
                 claims.get("realName", String.class),
                 claims.get("roleCode", String.class),
+                extractPermissions(claims.get("permissions", List.class)),
                 expiration == null ? 0L : expiration.getTime()
         );
+    }
+
+    private List<String> extractPermissions(List<?> rawPermissions) {
+        if (rawPermissions == null || rawPermissions.isEmpty()) {
+            return List.of();
+        }
+        return rawPermissions.stream()
+                .filter(Objects::nonNull)
+                .map(String::valueOf)
+                .toList();
     }
 }

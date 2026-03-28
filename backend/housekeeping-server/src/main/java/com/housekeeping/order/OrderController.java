@@ -22,7 +22,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/orders")
-@PreAuthorize("hasRole('USER')")
+@PreAuthorize("hasRole('USER') and hasAuthority('USER_ORDER_USE')")
 @Tag(name = "订单模块", description = "用户侧下单、订单查询、确认服务与评价接口")
 public class OrderController {
 

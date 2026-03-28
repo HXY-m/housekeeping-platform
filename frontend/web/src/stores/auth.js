@@ -8,6 +8,47 @@ const state = reactive({
   loaded: false
 })
 
+function extractPermissionCodes(value) {
+  const source = Array.isArray(value) ? value : value ? [value] : []
+  return source
+    .map((item) => {
+      if (typeof item === 'string') {
+        return item.trim()
+      }
+      if (item && typeof item === 'object') {
+        return String(
+          item.permissionCode ||
+            item.code ||
+            item.key ||
+            item.value ||
+            item.id ||
+            item.name ||
+            ''
+        ).trim()
+      }
+      return ''
+    })
+    .filter(Boolean)
+}
+
+function readPermissionSnapshot(user) {
+  if (!user) {
+    return { available: false, codes: [] }
+  }
+
+  const knownKeys = ['permissionCodes', 'permissions', 'permissionList', 'authorities']
+  for (const key of knownKeys) {
+    if (Object.prototype.hasOwnProperty.call(user, key)) {
+      return {
+        available: true,
+        codes: extractPermissionCodes(user[key])
+      }
+    }
+  }
+
+  return { available: false, codes: [] }
+}
+
 async function loadCurrentUser() {
   if (!hasToken()) {
     state.token = ''
@@ -57,6 +98,27 @@ export const authStore = {
   },
   hasRole(roleCode) {
     return state.user?.roleCode === roleCode
+  },
+  getPermissionCodes() {
+    return readPermissionSnapshot(state.user).codes
+  },
+  hasPermission(permissionCode) {
+    const snapshot = readPermissionSnapshot(state.user)
+    if (!snapshot.available) {
+      return true
+    }
+    return snapshot.codes.includes(permissionCode)
+  },
+  hasAnyPermission(permissionCodes = []) {
+    const snapshot = readPermissionSnapshot(state.user)
+    if (!snapshot.available) {
+      return true
+    }
+    const required = Array.isArray(permissionCodes) ? permissionCodes : [permissionCodes]
+    return required.some((permissionCode) => snapshot.codes.includes(permissionCode))
+  },
+  hasPermissionData() {
+    return readPermissionSnapshot(state.user).available
   },
   resolveHomePath(roleCode = state.user?.roleCode) {
     return resolveHomePath(roleCode)

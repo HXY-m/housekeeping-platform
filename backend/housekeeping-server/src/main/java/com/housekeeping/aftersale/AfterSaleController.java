@@ -24,7 +24,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/after-sales")
-@PreAuthorize("hasRole('USER')")
+@PreAuthorize("hasRole('USER') and hasAuthority('USER_AFTER_SALE_USE')")
 @Tag(name = "售后反馈模块", description = "用户提交售后反馈与查看处理状态")
 public class AfterSaleController {
 

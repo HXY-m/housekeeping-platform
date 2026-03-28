@@ -29,28 +29,28 @@ public class WorkerApplicationController {
         this.workerApplicationService = workerApplicationService;
     }
 
-    @PreAuthorize("hasRole('WORKER')")
+    @PreAuthorize("hasRole('WORKER') and hasAuthority('WORKER_QUALIFICATION_SUBMIT')")
     @PostMapping
     @Operation(summary = "提交服务人员资质申请")
     public ApiResponse<WorkerApplicationDto> submit(@Valid @RequestBody WorkerApplicationSubmitRequest request) {
         return ApiResponse.ok(workerApplicationService.submit(request));
     }
 
-    @PreAuthorize("hasRole('WORKER')")
+    @PreAuthorize("hasRole('WORKER') and hasAuthority('WORKER_QUALIFICATION_SUBMIT')")
     @GetMapping("/my")
     @Operation(summary = "查看我提交的资质申请")
     public ApiResponse<List<WorkerApplicationDto>> myApplications() {
         return ApiResponse.ok(workerApplicationService.myApplications());
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') and hasAuthority('ADMIN_APPLICATION_REVIEW')")
     @GetMapping("/admin")
     @Operation(summary = "管理员查看所有资质申请")
     public ApiResponse<List<WorkerApplicationDto>> listAll() {
         return ApiResponse.ok(workerApplicationService.listAll());
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') and hasAuthority('ADMIN_APPLICATION_REVIEW')")
     @PostMapping("/admin/{id}/review")
     @Operation(summary = "管理员审核资质申请")
     public ApiResponse<WorkerApplicationDto> review(@PathVariable Long id,

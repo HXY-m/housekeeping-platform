@@ -17,7 +17,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/favorites/workers")
-@PreAuthorize("hasRole('USER')")
+@PreAuthorize("hasRole('USER') and hasAuthority('USER_FAVORITE_MANAGE')")
 @Tag(name = "服务人员收藏", description = "用户收藏、取消收藏和查询收藏的服务人员")
 public class FavoriteController {
 

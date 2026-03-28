@@ -27,6 +27,23 @@ CREATE TABLE IF NOT EXISTS sys_user_role (
   CONSTRAINT fk_sys_user_role_role FOREIGN KEY (role_id) REFERENCES sys_role(id)
 ) COMMENT='user role relations';
 
+CREATE TABLE IF NOT EXISTS sys_permission (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  permission_code VARCHAR(80) NOT NULL UNIQUE,
+  permission_name VARCHAR(120) NOT NULL,
+  permission_group VARCHAR(80) NOT NULL DEFAULT '',
+  description VARCHAR(255) NOT NULL DEFAULT ''
+) COMMENT='system permissions';
+
+CREATE TABLE IF NOT EXISTS sys_role_permission (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  role_id BIGINT NOT NULL,
+  permission_id BIGINT NOT NULL,
+  UNIQUE KEY uk_role_permission (role_id, permission_id),
+  CONSTRAINT fk_sys_role_permission_role FOREIGN KEY (role_id) REFERENCES sys_role(id),
+  CONSTRAINT fk_sys_role_permission_permission FOREIGN KEY (permission_id) REFERENCES sys_permission(id)
+) COMMENT='role permission relations';
+
 CREATE TABLE IF NOT EXISTS user_profile (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   user_id BIGINT NOT NULL,

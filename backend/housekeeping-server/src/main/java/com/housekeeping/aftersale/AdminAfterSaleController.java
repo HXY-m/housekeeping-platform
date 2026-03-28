@@ -19,7 +19,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/after-sales")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasRole('ADMIN') and hasAuthority('ADMIN_AFTER_SALE_MANAGE')")
 @Tag(name = "后台售后管理", description = "管理员查看并处理用户售后反馈")
 public class AdminAfterSaleController {
 

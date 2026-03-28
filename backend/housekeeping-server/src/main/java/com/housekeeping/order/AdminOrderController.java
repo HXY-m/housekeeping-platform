@@ -14,7 +14,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/orders")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasRole('ADMIN') and hasAuthority('ADMIN_ORDER_MANAGE')")
 @Tag(name = "管理员订单总览", description = "管理员查看平台订单总览")
 public class AdminOrderController {
 

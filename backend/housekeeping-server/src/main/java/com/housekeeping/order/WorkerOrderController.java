@@ -20,7 +20,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/worker/orders")
-@PreAuthorize("hasRole('WORKER')")
+@PreAuthorize("hasRole('WORKER') and hasAuthority('WORKER_ORDER_HANDLE')")
 @Tag(name = "服务人员订单工作台", description = "服务人员查看、接单、开工、上传过程凭证与提交完工")
 public class WorkerOrderController {
 

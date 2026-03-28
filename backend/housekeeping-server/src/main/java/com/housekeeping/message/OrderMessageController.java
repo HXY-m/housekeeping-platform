@@ -20,7 +20,8 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/communications/orders")
-@PreAuthorize("hasAnyRole('USER','WORKER')")
+@PreAuthorize("(hasRole('USER') and hasAuthority('USER_MESSAGE_USE'))"
+        + " or (hasRole('WORKER') and hasAuthority('WORKER_MESSAGE_USE'))")
 @Tag(name = "订单沟通", description = "用户与服务人员围绕订单进行留言沟通")
 public class OrderMessageController {
 

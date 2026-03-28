@@ -22,7 +22,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/categories")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasRole('ADMIN') and hasAuthority('ADMIN_SERVICE_MANAGE')")
 @Tag(name = "管理员服务项目管理", description = "管理员查看、创建、编辑和删除服务项目")
 public class AdminCategoryController {
 

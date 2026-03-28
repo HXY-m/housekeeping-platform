@@ -3,6 +3,7 @@ package com.housekeeping.auth.support;
 import com.housekeeping.auth.entity.SysUserEntity;
 import com.housekeeping.auth.service.AuthAccountService;
 import com.housekeeping.auth.service.JwtTokenService;
+import com.housekeeping.auth.service.RolePermissionService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -21,11 +23,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenService jwtTokenService;
     private final AuthAccountService authAccountService;
+    private final RolePermissionService rolePermissionService;
 
     public JwtAuthenticationFilter(JwtTokenService jwtTokenService,
-                                   AuthAccountService authAccountService) {
+                                   AuthAccountService authAccountService,
+                                   RolePermissionService rolePermissionService) {
         this.jwtTokenService = jwtTokenService;
         this.authAccountService = authAccountService;
+        this.rolePermissionService = rolePermissionService;
     }
 
     @Override
@@ -41,19 +46,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     throw new IllegalArgumentException("role not matched");
                 }
 
+                List<String> permissionCodes = rolePermissionService.listPermissionCodes(user.getId(), tokenUser.roleCode());
                 SessionUser authenticatedUser = new SessionUser(
                         user.getId(),
                         user.getPhone(),
                         user.getRealName(),
                         tokenUser.roleCode(),
+                        permissionCodes,
                         tokenUser.expireAt()
                 );
+
+                List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+                authorities.add(new SimpleGrantedAuthority("ROLE_" + authenticatedUser.roleCode()));
+                permissionCodes.forEach(code -> authorities.add(new SimpleGrantedAuthority(code)));
+
                 UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                authenticatedUser,
-                                null,
-                                List.of(new SimpleGrantedAuthority("ROLE_" + authenticatedUser.roleCode()))
-                        );
+                        new UsernamePasswordAuthenticationToken(authenticatedUser, null, authorities);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
                 CurrentUserContext.set(authenticatedUser);
             }

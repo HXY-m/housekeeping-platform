@@ -17,10 +17,12 @@ export {
 export {
   fetchAdminDashboard,
   fetchAdminOrders,
+  fetchAdminPermissionCatalog,
   fetchAdminUsers,
   createAdminUser,
   updateAdminUser,
   deleteAdminUser,
+  updateAdminRolePermissions,
   fetchAdminCategories,
   createAdminCategory,
   updateAdminCategory,
