@@ -92,7 +92,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { favoriteWorker, fetchFavoriteWorkerIds, fetchHome, fetchWorkers, unfavoriteWorker } from '../../api'
 import { authStore } from '../../stores/auth'
-import { useClientPagination } from '../../composables/useClientPagination'
+import { useServerPagination } from '../../composables/useServerPagination'
 import { formatCurrency } from '../../utils/format'
 import { getWorkerImage } from '../../utils/displayAssets'
 import ListPagination from '../../components/common/ListPagination.vue'
@@ -105,7 +105,8 @@ const serviceName = ref(route.query.serviceName ?? '')
 const favoriteIds = ref([])
 const serviceOptions = ref([])
 
-const { currentPage, pageSize, pageSizes, total, pagedItems, resetPage } = useClientPagination(workers, 6)
+const { currentPage, pageSize, pageSizes, total, buildParams, applyPageResult, resetPage } = useServerPagination(6)
+const pagedItems = workers
 
 async function loadServiceOptions() {
   try {
@@ -157,7 +158,6 @@ function openFavorites() {
 }
 
 function handleFilterChange() {
-  resetPage()
   router.replace({
     path: '/workers',
     query: serviceName.value ? { serviceName: serviceName.value } : {}
@@ -168,11 +168,10 @@ async function loadWorkers() {
   loading.value = true
   try {
     const [workerRows] = await Promise.all([
-      fetchWorkers(serviceName.value),
+      fetchWorkers(buildParams({ serviceName: serviceName.value })),
       loadFavoriteIds()
     ])
-    workers.value = workerRows
-    resetPage()
+    workers.value = applyPageResult(workerRows)
   } finally {
     loading.value = false
   }
@@ -182,9 +181,17 @@ watch(
   () => route.query.serviceName,
   (value) => {
     serviceName.value = value ?? ''
+    if (currentPage.value !== 1) {
+      resetPage()
+      return
+    }
     loadWorkers()
   }
 )
+
+watch([currentPage, pageSize], () => {
+  loadWorkers()
+})
 
 onMounted(async () => {
   await authStore.ensureLoaded()

@@ -1,6 +1,7 @@
 package com.housekeeping.admin.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.housekeeping.admin.dto.AdminUserDto;
 import com.housekeeping.admin.dto.AdminUserSaveRequest;
 import com.housekeeping.audit.OperationLogActions;
@@ -15,6 +16,7 @@ import com.housekeeping.auth.support.CurrentUserContext;
 import com.housekeeping.auth.support.RoleCodes;
 import com.housekeeping.auth.support.SessionUser;
 import com.housekeeping.auth.util.PasswordUtil;
+import com.housekeeping.common.PageResult;
 import com.housekeeping.exception.BusinessException;
 import com.housekeeping.user.entity.UserProfileEntity;
 import com.housekeeping.user.mapper.UserProfileMapper;
@@ -122,6 +124,67 @@ public class AdminUserService {
                         workerUserIds.contains(user.getId())
                 ))
                 .toList();
+    }
+
+    public PageResult<AdminUserDto> pageUsers(long current,
+                                              long size,
+                                              String roleCode,
+                                              String realName,
+                                              String phone,
+                                              String status) {
+        LambdaQueryWrapper<SysUserEntity> wrapper = new LambdaQueryWrapper<>();
+        if (StringUtils.hasText(realName)) {
+            wrapper.like(SysUserEntity::getRealName, realName.trim());
+        }
+        if (StringUtils.hasText(phone)) {
+            wrapper.like(SysUserEntity::getPhone, phone.trim());
+        }
+        if (StringUtils.hasText(status)) {
+            wrapper.eq(SysUserEntity::getStatus, status.trim().toUpperCase());
+        }
+        if (StringUtils.hasText(roleCode)) {
+            List<Long> matchedUserIds = findUserIdsByRoleCode(roleCode.trim().toUpperCase());
+            if (matchedUserIds.isEmpty()) {
+                return new PageResult<>(List.of(), 0, current, size, 0);
+            }
+            wrapper.in(SysUserEntity::getId, matchedUserIds);
+        }
+        wrapper.orderByDesc(SysUserEntity::getId);
+
+        Page<SysUserEntity> page = sysUserMapper.selectPage(new Page<>(current, size), wrapper);
+        List<SysUserEntity> records = page.getRecords();
+        if (records.isEmpty()) {
+            return PageResult.from(page, List.of());
+        }
+
+        List<Long> userIds = records.stream().map(SysUserEntity::getId).toList();
+        Map<Long, List<String>> roleMap = buildRoleCodeMap(userIds);
+        Map<Long, UserProfileEntity> profileMap = userProfileMapper.selectList(
+                        new LambdaQueryWrapper<UserProfileEntity>()
+                                .in(UserProfileEntity::getUserId, userIds))
+                .stream()
+                .collect(Collectors.toMap(UserProfileEntity::getUserId, Function.identity()));
+
+        Set<Long> workerUserIds = workerMapper.selectList(
+                        new LambdaQueryWrapper<WorkerEntity>()
+                                .in(WorkerEntity::getUserId, userIds))
+                .stream()
+                .map(WorkerEntity::getUserId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        List<AdminUserDto> dtos = records.stream()
+                .map(user -> new AdminUserDto(
+                        user.getId(),
+                        user.getRealName(),
+                        user.getPhone(),
+                        user.getStatus(),
+                        roleMap.getOrDefault(user.getId(), List.of()),
+                        profileMap.get(user.getId()) == null ? "" : profileMap.get(user.getId()).getCity(),
+                        workerUserIds.contains(user.getId())
+                ))
+                .toList();
+        return PageResult.from(page, dtos);
     }
 
     @Transactional
@@ -239,6 +302,25 @@ public class AdminUserService {
                 .computeIfAbsent(item.getUserId(), key -> new ArrayList<>())
                 .add(roleCodeMap.getOrDefault(item.getRoleId(), "")));
         return grouped;
+    }
+
+    private List<Long> findUserIdsByRoleCode(String roleCode) {
+        SysRoleEntity role = sysRoleMapper.selectOne(
+                new LambdaQueryWrapper<SysRoleEntity>()
+                        .eq(SysRoleEntity::getRoleCode, roleCode)
+                        .last("limit 1")
+        );
+        if (role == null) {
+            return List.of();
+        }
+        return sysUserRoleMapper.selectList(
+                        new LambdaQueryWrapper<SysUserRoleEntity>()
+                                .eq(SysUserRoleEntity::getRoleId, role.getId()))
+                .stream()
+                .map(SysUserRoleEntity::getUserId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
     }
 
     private void saveRoleBindings(Long userId, List<String> roleCodes) {

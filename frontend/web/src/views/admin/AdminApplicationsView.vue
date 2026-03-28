@@ -181,7 +181,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import FileAttachmentList from '../../components/common/FileAttachmentList.vue'
 import ListPagination from '../../components/common/ListPagination.vue'
-import { useClientPagination } from '../../composables/useClientPagination'
+import { useServerPagination } from '../../composables/useServerPagination'
 import { fetchAdminWorkerApplications, reviewWorkerApplication } from '../../api'
 import {
   formatWorkerCertificateSummary,
@@ -218,9 +218,16 @@ const filteredApplications = computed(() => {
   })
 })
 
-const { currentPage, pageSize, pageSizes, total, pagedItems: pagedApplications, resetPage } = useClientPagination(filteredApplications, 8)
+const { currentPage, pageSize, pageSizes, total, buildParams, applyPageResult, resetPage } = useServerPagination(8)
+const pagedApplications = applications
 
-watch([keyword, statusFilter], () => resetPage())
+watch([keyword, statusFilter], () => {
+  if (currentPage.value !== 1) {
+    resetPage()
+    return
+  }
+  loadApplications()
+})
 
 const pendingCount = computed(() => applications.value.filter((item) => item.status === 'PENDING').length)
 const approvedCount = computed(() => applications.value.filter((item) => item.status === 'APPROVED').length)
@@ -256,16 +263,11 @@ function openReview(row, action) {
 async function loadApplications() {
   loading.value = true
   try {
-    const result = await fetchAdminWorkerApplications()
-    applications.value = [...result].sort((left, right) => {
-      if (left.status === right.status) {
-        return String(right.createdAt || '').localeCompare(String(left.createdAt || ''))
-      }
-      if (left.status === 'PENDING') return -1
-      if (right.status === 'PENDING') return 1
-      return String(right.createdAt || '').localeCompare(String(left.createdAt || ''))
-    })
-    resetPage()
+    const result = await fetchAdminWorkerApplications(buildParams({
+      status: statusFilter.value === 'ALL' ? '' : statusFilter.value,
+      keyword: keyword.value.trim()
+    }))
+    applications.value = applyPageResult(result)
   } catch (error) {
     ElMessage.error(error.message || '获取资质申请失败')
   } finally {
@@ -286,6 +288,10 @@ async function submitReview() {
     ElMessage.error(error.message || '资质审核失败')
   }
 }
+
+watch([currentPage, pageSize], () => {
+  loadApplications()
+})
 
 onMounted(loadApplications)
 </script>

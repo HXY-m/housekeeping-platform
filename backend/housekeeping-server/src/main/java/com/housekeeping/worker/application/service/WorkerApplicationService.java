@@ -1,6 +1,7 @@
 package com.housekeeping.worker.application.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.housekeeping.audit.OperationLogActions;
 import com.housekeeping.audit.service.OperationLogService;
 import com.housekeeping.auth.entity.SysUserEntity;
@@ -8,6 +9,7 @@ import com.housekeeping.auth.mapper.SysUserMapper;
 import com.housekeeping.auth.support.CurrentUserContext;
 import com.housekeeping.auth.support.RoleCodes;
 import com.housekeeping.auth.support.SessionUser;
+import com.housekeeping.common.PageResult;
 import com.housekeeping.exception.BusinessException;
 import com.housekeeping.notification.NotificationType;
 import com.housekeeping.notification.service.NotificationService;
@@ -141,6 +143,28 @@ public class WorkerApplicationService {
                         .orderByAsc(WorkerApplicationEntity::getStatus)
                         .orderByDesc(WorkerApplicationEntity::getId)
         ));
+    }
+
+    public PageResult<WorkerApplicationDto> pageAll(long current, long size, String status, String keyword) {
+        LambdaQueryWrapper<WorkerApplicationEntity> wrapper = new LambdaQueryWrapper<WorkerApplicationEntity>()
+                .eq(hasText(status), WorkerApplicationEntity::getStatus, status)
+                .orderByAsc(WorkerApplicationEntity::getStatus)
+                .orderByDesc(WorkerApplicationEntity::getId);
+        if (hasText(keyword)) {
+            wrapper.and(query -> query
+                    .like(WorkerApplicationEntity::getRealName, keyword)
+                    .or()
+                    .like(WorkerApplicationEntity::getPhone, keyword)
+                    .or()
+                    .like(WorkerApplicationEntity::getServiceTypes, keyword)
+                    .or()
+                    .like(WorkerApplicationEntity::getServiceAreas, keyword));
+        }
+        Page<WorkerApplicationEntity> page = workerApplicationMapper.selectPage(
+                new Page<>(current, size),
+                wrapper
+        );
+        return PageResult.from(page, toDtos(page.getRecords()));
     }
 
     @Transactional
@@ -295,5 +319,9 @@ public class WorkerApplicationService {
 
     private String blankToDefault(String value, String defaultValue) {
         return value == null || value.isBlank() ? defaultValue : value.trim();
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 }

@@ -4,6 +4,8 @@ import com.housekeeping.aftersale.dto.AfterSaleDto;
 import com.housekeeping.aftersale.dto.AfterSaleHandleRequest;
 import com.housekeeping.aftersale.service.AfterSaleService;
 import com.housekeeping.common.ApiResponse;
+import com.housekeeping.common.PageQuery;
+import com.housekeeping.common.PageResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -13,9 +15,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/after-sales")
@@ -31,8 +32,15 @@ public class AdminAfterSaleController {
 
     @GetMapping
     @Operation(summary = "获取售后反馈列表")
-    public ApiResponse<List<AfterSaleDto>> listAll() {
-        return ApiResponse.ok(afterSaleService.listAll());
+    public ApiResponse<PageResult<AfterSaleDto>> listAll(PageQuery pageQuery,
+                                                         @RequestParam(required = false) String status,
+                                                         @RequestParam(required = false) String keyword) {
+        return ApiResponse.ok(afterSaleService.pageAll(
+                pageQuery.safeCurrent(),
+                pageQuery.safeSize(),
+                status,
+                keyword
+        ));
     }
 
     @PostMapping("/{id}/handle")

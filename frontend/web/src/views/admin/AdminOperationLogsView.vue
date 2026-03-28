@@ -91,11 +91,11 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { fetchAdminOperationLogs } from '../../api'
 import ListPagination from '../../components/common/ListPagination.vue'
-import { useClientPagination } from '../../composables/useClientPagination'
+import { useServerPagination } from '../../composables/useServerPagination'
 import { formatDateTime } from '../../utils/format'
 
 const roleLabelMap = {
@@ -140,7 +140,8 @@ const filters = reactive({
   actionType: ''
 })
 
-const { currentPage, pageSize, pageSizes, total, pagedItems: pagedLogs, resetPage } = useClientPagination(logs, 10)
+const { currentPage, pageSize, pageSizes, total, buildParams, applyPageResult, resetPage } = useServerPagination(10)
+const pagedLogs = logs
 
 const createCount = computed(() =>
   logs.value.filter((item) => String(item.actionType || '').includes('CREATE')).length
@@ -158,26 +159,34 @@ function resetFilters() {
   filters.roleCode = ''
   filters.actionType = ''
   dateRange.value = []
+  if (currentPage.value !== 1) {
+    resetPage()
+    return
+  }
   loadLogs()
 }
 
 async function loadLogs() {
   loading.value = true
   try {
-    logs.value = await fetchAdminOperationLogs({
+    const result = await fetchAdminOperationLogs(buildParams({
       operatorName: filters.operatorName,
       roleCode: filters.roleCode,
       actionType: filters.actionType,
       dateFrom: dateRange.value?.[0] || '',
       dateTo: dateRange.value?.[1] || ''
-    })
-    resetPage()
+    }))
+    logs.value = applyPageResult(result)
   } catch (error) {
     ElMessage.error(error.message || '获取操作日志失败')
   } finally {
     loading.value = false
   }
 }
+
+watch([currentPage, pageSize], () => {
+  loadLogs()
+})
 
 onMounted(loadLogs)
 </script>

@@ -1,6 +1,8 @@
 package com.housekeeping.order;
 
 import com.housekeeping.common.ApiResponse;
+import com.housekeeping.common.PageQuery;
+import com.housekeeping.common.PageResult;
 import com.housekeeping.order.dto.BookingAvailabilityDto;
 import com.housekeeping.order.dto.OrderDto;
 import com.housekeeping.order.dto.OrderRequest;
@@ -18,8 +20,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/orders")
 @PreAuthorize("hasRole('USER') and hasAuthority('USER_ORDER_USE')")
@@ -34,8 +34,13 @@ public class OrderController {
 
     @GetMapping
     @Operation(summary = "获取当前用户订单列表")
-    public ApiResponse<List<OrderDto>> orders() {
-        return ApiResponse.ok(orderService.listCurrentUserOrders());
+    public ApiResponse<PageResult<OrderDto>> orders(PageQuery pageQuery,
+                                                    @RequestParam(required = false) String status) {
+        return ApiResponse.ok(orderService.pageCurrentUserOrders(
+                pageQuery.safeCurrent(),
+                pageQuery.safeSize(),
+                status
+        ));
     }
 
     @GetMapping("/availability")

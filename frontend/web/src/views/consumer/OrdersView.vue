@@ -272,7 +272,7 @@ import { ElMessage } from 'element-plus'
 import AttachmentGallery from '../../components/common/AttachmentGallery.vue'
 import ListPagination from '../../components/common/ListPagination.vue'
 import OrderServiceRecordTimeline from '../../components/common/OrderServiceRecordTimeline.vue'
-import { useClientPagination } from '../../composables/useClientPagination'
+import { useServerPagination } from '../../composables/useServerPagination'
 import {
   confirmUserOrder,
   confirmUserOrderCompletion,
@@ -333,12 +333,19 @@ const filteredOrders = computed(() => {
   return orderRows.value.filter((item) => normalizeOrderStatus(item.status) === statusFilter.value)
 })
 
-const { currentPage, pageSize, pageSizes, total, pagedItems: pagedOrders, resetPage } = useClientPagination(filteredOrders, 6)
+const { currentPage, pageSize, pageSizes, total, buildParams, applyPageResult, resetPage } = useServerPagination(6)
+const pagedOrders = filteredOrders
 
-watch(statusFilter, () => resetPage())
+watch(statusFilter, () => {
+  if (currentPage.value !== 1) {
+    resetPage()
+    return
+  }
+  loadData()
+})
 
 const orderSummary = computed(() => ({
-  total: orderRows.value.length,
+  total: total.value,
   active: orderRows.value.filter((item) => normalizeOrderStatus(item.status) !== 'COMPLETED').length,
   needUserAction: orderRows.value.filter((item) => {
     const status = normalizeOrderStatus(item.status)
@@ -461,12 +468,13 @@ async function loadData() {
   loading.value = true
   try {
     const [orderResult, afterSaleResult] = await Promise.all([
-      fetchOrders(),
+      fetchOrders(buildParams({
+        status: statusFilter.value === 'ALL' ? '' : statusFilter.value
+      })),
       fetchMyAfterSales()
     ])
-    orders.value = orderResult
+    orders.value = applyPageResult(orderResult)
     afterSales.value = afterSaleResult
-    resetPage()
   } catch (error) {
     ElMessage.error(error.message || '获取订单数据失败')
   } finally {
@@ -547,6 +555,10 @@ async function submitAfterSale() {
     submittingAfterSale.value = false
   }
 }
+
+watch([currentPage, pageSize], () => {
+  loadData()
+})
 
 onMounted(loadData)
 onBeforeUnmount(resetDraftAttachments)

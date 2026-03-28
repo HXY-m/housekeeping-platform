@@ -245,7 +245,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import OrderServiceRecordTimeline from '../../components/common/OrderServiceRecordTimeline.vue'
 import ListPagination from '../../components/common/ListPagination.vue'
-import { useClientPagination } from '../../composables/useClientPagination'
+import { useServerPagination } from '../../composables/useServerPagination'
 import {
   acceptWorkerOrder,
   completeWorkerOrder,
@@ -280,7 +280,7 @@ const stageOptions = {
 }
 
 const summary = computed(() => ({
-  total: orders.value.length,
+  total: total.value,
   pending: orders.value.filter((item) => normalizeOrderStatus(item.status) === 'PENDING').length,
   accepted: orders.value.filter((item) => normalizeOrderStatus(item.status) === 'ACCEPTED').length,
   confirmed: orders.value.filter((item) => normalizeOrderStatus(item.status) === 'CONFIRMED').length,
@@ -306,9 +306,16 @@ const filteredOrders = computed(() => {
   return sorted.filter((item) => normalizeOrderStatus(item.status) === statusFilter.value)
 })
 
-const { currentPage, pageSize, pageSizes, total, pagedItems: pagedOrders, resetPage } = useClientPagination(filteredOrders, 6)
+const { currentPage, pageSize, pageSizes, total, buildParams, applyPageResult, resetPage } = useServerPagination(6)
+const pagedOrders = filteredOrders
 
-watch(statusFilter, () => resetPage())
+watch(statusFilter, () => {
+  if (currentPage.value !== 1) {
+    resetPage()
+    return
+  }
+  loadOrders()
+})
 
 const availableRecordStages = computed(() => {
   const status = normalizeOrderStatus(selectedOrder.value?.status)
@@ -334,8 +341,10 @@ function goToMessageCenter(orderId) {
 async function loadOrders() {
   loading.value = true
   try {
-    orders.value = await fetchWorkerOrders()
-    resetPage()
+    const result = await fetchWorkerOrders(buildParams({
+      status: statusFilter.value === 'ALL' ? '' : statusFilter.value
+    }))
+    orders.value = applyPageResult(result)
   } catch (error) {
     ElMessage.error(error.message || '获取服务订单失败')
   } finally {
@@ -431,6 +440,10 @@ async function submitRecord() {
     submittingRecord.value = false
   }
 }
+
+watch([currentPage, pageSize], () => {
+  loadOrders()
+})
 
 onMounted(loadOrders)
 onBeforeUnmount(clearRecordFile)

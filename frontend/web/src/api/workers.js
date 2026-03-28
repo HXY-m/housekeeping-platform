@@ -1,8 +1,18 @@
 import { request } from './http'
 
-export function fetchWorkers(serviceName) {
-  const query = serviceName ? `?serviceName=${encodeURIComponent(serviceName)}` : ''
-  return request(`/api/workers${query}`)
+function buildQuery(params = {}) {
+  const search = new URLSearchParams()
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== '' && value !== null && value !== undefined) {
+      search.set(key, value)
+    }
+  })
+  const query = search.toString()
+  return query ? `?${query}` : ''
+}
+
+export function fetchWorkers(params = {}) {
+  return request(`/api/workers${buildQuery(params)}`)
 }
 
 export function fetchWorker(id) {

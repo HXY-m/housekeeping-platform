@@ -1,11 +1,13 @@
 package com.housekeeping.audit.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.housekeeping.audit.dto.OperationLogDto;
 import com.housekeeping.audit.entity.OperationLogEntity;
 import com.housekeeping.audit.mapper.OperationLogMapper;
 import com.housekeeping.auth.support.CurrentUserContext;
 import com.housekeeping.auth.support.SessionUser;
+import com.housekeeping.common.PageResult;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -85,6 +87,52 @@ public class OperationLogService {
                         item.getCreatedAt()
                 ))
                 .toList();
+    }
+
+    public PageResult<OperationLogDto> page(long current,
+                                            long size,
+                                            String operatorName,
+                                            String roleCode,
+                                            String actionType,
+                                            String dateFrom,
+                                            String dateTo) {
+        LambdaQueryWrapper<OperationLogEntity> wrapper = new LambdaQueryWrapper<>();
+        if (StringUtils.hasText(operatorName)) {
+            wrapper.like(OperationLogEntity::getOperatorName, operatorName.trim());
+        }
+        if (StringUtils.hasText(roleCode)) {
+            wrapper.eq(OperationLogEntity::getRoleCode, roleCode.trim().toUpperCase());
+        }
+        if (StringUtils.hasText(actionType)) {
+            wrapper.eq(OperationLogEntity::getActionType, actionType.trim().toUpperCase());
+        }
+
+        LocalDateTime start = parseStart(dateFrom);
+        LocalDateTime end = parseEnd(dateTo);
+        if (start != null) {
+            wrapper.ge(OperationLogEntity::getCreatedAt, start);
+        }
+        if (end != null) {
+            wrapper.le(OperationLogEntity::getCreatedAt, end);
+        }
+        wrapper.orderByDesc(OperationLogEntity::getId);
+
+        Page<OperationLogEntity> page = operationLogMapper.selectPage(new Page<>(current, size), wrapper);
+        List<OperationLogDto> records = page.getRecords().stream()
+                .map(item -> new OperationLogDto(
+                        item.getId(),
+                        item.getOperatorUserId(),
+                        item.getOperatorName(),
+                        item.getRoleCode(),
+                        item.getActionType(),
+                        item.getTargetType(),
+                        item.getTargetId(),
+                        item.getContent(),
+                        item.getIpAddress(),
+                        item.getCreatedAt()
+                ))
+                .toList();
+        return PageResult.from(page, records);
     }
 
     private LocalDateTime parseStart(String value) {

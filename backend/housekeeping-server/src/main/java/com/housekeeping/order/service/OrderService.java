@@ -1,11 +1,13 @@
 package com.housekeeping.order.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.housekeeping.audit.OperationLogActions;
 import com.housekeeping.audit.service.OperationLogService;
 import com.housekeeping.auth.support.CurrentUserContext;
 import com.housekeeping.auth.support.RoleCodes;
 import com.housekeeping.auth.support.SessionUser;
+import com.housekeeping.common.PageResult;
 import com.housekeeping.common.mapper.OrderDtoMapper;
 import com.housekeeping.common.mapper.WorkerDtoMapper;
 import com.housekeeping.exception.BusinessException;
@@ -34,6 +36,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -93,14 +96,68 @@ public class OrderService {
         return buildOrderDtos(orderAccessService.listCurrentUserOrders());
     }
 
+    public PageResult<OrderDto> pageCurrentUserOrders(long current, long size, String status) {
+        SessionUser currentUser = orderAccessService.requireCurrentUser();
+        Page<OrderEntity> page = orderMapper.selectPage(
+                new Page<>(current, size),
+                new LambdaQueryWrapper<OrderEntity>()
+                        .eq(OrderEntity::getUserId, currentUser.userId())
+                        .eq(hasText(status), OrderEntity::getStatus, status)
+                        .orderByDesc(OrderEntity::getId)
+        );
+        return PageResult.from(page, buildOrderDtos(page.getRecords()));
+    }
+
     public List<OrderDto> listCurrentWorkerOrders() {
         return buildOrderDtos(orderAccessService.listCurrentWorkerOrders());
+    }
+
+    public PageResult<OrderDto> pageCurrentWorkerOrders(long current, long size, String status) {
+        SessionUser currentUser = orderAccessService.requireCurrentUser();
+        WorkerEntity worker = workerProfileService.requireWorkerByUserId(currentUser.userId());
+        Page<OrderEntity> page = orderMapper.selectPage(
+                new Page<>(current, size),
+                new LambdaQueryWrapper<OrderEntity>()
+                        .eq(OrderEntity::getWorkerId, worker.getId())
+                        .eq(hasText(status), OrderEntity::getStatus, status)
+                        .orderByDesc(OrderEntity::getId)
+        );
+        return PageResult.from(page, buildOrderDtos(page.getRecords()));
     }
 
     public List<OrderDto> listAllOrders() {
         return buildOrderDtos(orderMapper.selectList(
                 new LambdaQueryWrapper<OrderEntity>().orderByDesc(OrderEntity::getId)
         ));
+    }
+
+    public PageResult<OrderDto> pageAllOrders(long current,
+                                              long size,
+                                              String status,
+                                              String keyword,
+                                              String dateFrom,
+                                              String dateTo) {
+        LambdaQueryWrapper<OrderEntity> wrapper = new LambdaQueryWrapper<OrderEntity>()
+                .eq(hasText(status), OrderEntity::getStatus, status)
+                .ge(hasText(dateFrom), OrderEntity::getBookingDate, dateFrom)
+                .le(hasText(dateTo), OrderEntity::getBookingDate, dateTo)
+                .orderByDesc(OrderEntity::getId);
+
+        if (hasText(keyword)) {
+            List<Long> workerIds = findWorkerIdsByKeyword(keyword);
+            wrapper.and(query -> query
+                    .like(OrderEntity::getServiceName, keyword)
+                    .or()
+                    .like(OrderEntity::getCustomerName, keyword)
+                    .or()
+                    .like(OrderEntity::getContactPhone, keyword)
+                    .or()
+                    .like(OrderEntity::getServiceAddress, keyword)
+                    .or(!workerIds.isEmpty(), nested -> nested.in(OrderEntity::getWorkerId, workerIds)));
+        }
+
+        Page<OrderEntity> page = orderMapper.selectPage(new Page<>(current, size), wrapper);
+        return PageResult.from(page, buildOrderDtos(page.getRecords()));
     }
 
     public BookingAvailabilityDto getBookingAvailability(Long workerId, String bookingDate) {
@@ -483,6 +540,23 @@ public class OrderService {
                 .orElse(worker.getRating() == null ? 5.0 : worker.getRating());
         worker.setRating(Math.round(average * 100.0) / 100.0);
         workerMapper.updateById(worker);
+    }
+
+    private List<Long> findWorkerIdsByKeyword(String keyword) {
+        List<WorkerEntity> workers = workerMapper.selectList(
+                new LambdaQueryWrapper<WorkerEntity>()
+                        .like(WorkerEntity::getName, keyword)
+                        .or()
+                        .like(WorkerEntity::getCity, keyword)
+        );
+        return workers.stream()
+                .map(WorkerEntity::getId)
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     private SessionUser requireCurrentUser() {

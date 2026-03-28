@@ -1,7 +1,21 @@
 import { request } from './http'
 
-export function fetchOrders() {
-  return request('/api/orders')
+function buildQuery(params = {}) {
+  const search = new URLSearchParams()
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== '' && value !== null && value !== undefined) {
+      search.set(key, value)
+    }
+  })
+  const query = search.toString()
+  return query ? `?${query}` : ''
+}
+
+export function fetchOrders(params) {
+  if (!params) {
+    return request(`/api/orders${buildQuery({ current: 1, size: 100 })}`).then((result) => result?.records || [])
+  }
+  return request(`/api/orders${buildQuery(params)}`)
 }
 
 export function createOrder(payload) {
@@ -38,8 +52,11 @@ export function submitOrderReview(id, payload) {
   })
 }
 
-export function fetchWorkerOrders() {
-  return request('/api/worker/orders')
+export function fetchWorkerOrders(params) {
+  if (!params) {
+    return request(`/api/worker/orders${buildQuery({ current: 1, size: 100 })}`).then((result) => result?.records || [])
+  }
+  return request(`/api/worker/orders${buildQuery(params)}`)
 }
 
 export function acceptWorkerOrder(id) {

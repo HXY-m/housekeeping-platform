@@ -1,6 +1,8 @@
 package com.housekeeping.order;
 
 import com.housekeeping.common.ApiResponse;
+import com.housekeeping.common.PageQuery;
+import com.housekeeping.common.PageResult;
 import com.housekeeping.order.dto.OrderDto;
 import com.housekeeping.order.dto.OrderServiceRecordDto;
 import com.housekeeping.order.service.OrderService;
@@ -12,11 +14,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/worker/orders")
@@ -32,8 +33,13 @@ public class WorkerOrderController {
 
     @GetMapping
     @Operation(summary = "获取当前服务人员订单列表")
-    public ApiResponse<List<OrderDto>> orders() {
-        return ApiResponse.ok(orderService.listCurrentWorkerOrders());
+    public ApiResponse<PageResult<OrderDto>> orders(PageQuery pageQuery,
+                                                    @RequestParam(required = false) String status) {
+        return ApiResponse.ok(orderService.pageCurrentWorkerOrders(
+                pageQuery.safeCurrent(),
+                pageQuery.safeSize(),
+                status
+        ));
     }
 
     @PostMapping("/{id}/accept")

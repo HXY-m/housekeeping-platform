@@ -130,7 +130,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   createAdminCategory,
@@ -138,7 +138,7 @@ import {
   fetchAdminCategories,
   updateAdminCategory
 } from '../../api'
-import { useClientPagination } from '../../composables/useClientPagination'
+import { useServerPagination } from '../../composables/useServerPagination'
 import ListPagination from '../../components/common/ListPagination.vue'
 
 const loading = ref(false)
@@ -164,7 +164,8 @@ const form = reactive({
   enabled: true
 })
 
-const { currentPage, pageSize, pageSizes, total, pagedItems: pagedCategories, resetPage } = useClientPagination(categories, 10)
+const { currentPage, pageSize, pageSizes, total, buildParams, applyPageResult, resetPage } = useServerPagination(10)
+const pagedCategories = categories
 
 const enabledCount = computed(() => categories.value.filter((item) => item.enabled).length)
 const disabledCount = computed(() => categories.value.filter((item) => !item.enabled).length)
@@ -209,14 +210,18 @@ function openEdit(row) {
 function resetFilters() {
   filters.keyword = ''
   filters.enabled = null
+  if (currentPage.value !== 1) {
+    resetPage()
+    return
+  }
   loadCategories()
 }
 
 async function loadCategories() {
   loading.value = true
   try {
-    categories.value = await fetchAdminCategories(filters)
-    resetPage()
+    const result = await fetchAdminCategories(buildParams(filters))
+    categories.value = applyPageResult(result)
   } catch (error) {
     ElMessage.error(error.message || '获取服务项目失败')
   } finally {
@@ -271,6 +276,10 @@ async function handleDelete(row) {
     }
   }
 }
+
+watch([currentPage, pageSize], () => {
+  loadCategories()
+})
 
 onMounted(loadCategories)
 </script>

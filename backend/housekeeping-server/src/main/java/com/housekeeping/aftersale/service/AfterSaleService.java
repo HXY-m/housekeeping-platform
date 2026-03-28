@@ -1,6 +1,7 @@
 package com.housekeeping.aftersale.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.housekeeping.aftersale.AfterSaleStatus;
 import com.housekeeping.aftersale.dto.AfterSaleAttachmentDto;
 import com.housekeeping.aftersale.dto.AfterSaleCreateRequest;
@@ -13,6 +14,7 @@ import com.housekeeping.audit.service.OperationLogService;
 import com.housekeeping.auth.support.CurrentUserContext;
 import com.housekeeping.auth.support.RoleCodes;
 import com.housekeeping.auth.support.SessionUser;
+import com.housekeeping.common.PageResult;
 import com.housekeeping.exception.BusinessException;
 import com.housekeeping.notification.NotificationType;
 import com.housekeeping.notification.service.NotificationService;
@@ -74,6 +76,30 @@ public class AfterSaleService {
                         .orderByDesc(AfterSaleEntity::getId)
         );
         return buildDtos(records);
+    }
+
+    public PageResult<AfterSaleDto> pageAll(long current, long size, String status, String keyword) {
+        LambdaQueryWrapper<AfterSaleEntity> wrapper = new LambdaQueryWrapper<AfterSaleEntity>()
+                .eq(hasText(status), AfterSaleEntity::getStatus, status)
+                .orderByAsc(AfterSaleEntity::getStatus)
+                .orderByDesc(AfterSaleEntity::getId);
+        if (hasText(keyword)) {
+            List<Long> orderIds = findOrderIdsByKeyword(keyword);
+            List<Long> workerIds = findWorkerIdsByKeyword(keyword);
+            wrapper.and(query -> query
+                    .like(AfterSaleEntity::getIssueType, keyword)
+                    .or()
+                    .like(AfterSaleEntity::getContent, keyword)
+                    .or()
+                    .like(AfterSaleEntity::getContactPhone, keyword)
+                    .or(!orderIds.isEmpty(), nested -> nested.in(AfterSaleEntity::getOrderId, orderIds))
+                    .or(!workerIds.isEmpty(), nested -> nested.in(AfterSaleEntity::getWorkerId, workerIds)));
+        }
+        Page<AfterSaleEntity> page = afterSaleMapper.selectPage(
+                new Page<>(current, size),
+                wrapper
+        );
+        return PageResult.from(page, buildDtos(page.getRecords()));
     }
 
     @Transactional
@@ -260,5 +286,31 @@ public class AfterSaleService {
             throw new BusinessException("请先登录");
         }
         return currentUser;
+    }
+
+    private List<Long> findOrderIdsByKeyword(String keyword) {
+        return orderMapper.selectList(
+                        new LambdaQueryWrapper<OrderEntity>()
+                                .like(OrderEntity::getServiceName, keyword)
+                                .or()
+                                .like(OrderEntity::getCustomerName, keyword)
+                ).stream()
+                .map(OrderEntity::getId)
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    private List<Long> findWorkerIdsByKeyword(String keyword) {
+        return workerMapper.selectList(
+                        new LambdaQueryWrapper<WorkerEntity>()
+                                .like(WorkerEntity::getName, keyword)
+                ).stream()
+                .map(WorkerEntity::getId)
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 }

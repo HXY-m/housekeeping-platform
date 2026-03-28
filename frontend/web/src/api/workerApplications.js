@@ -1,5 +1,16 @@
 import { request } from './http'
 
+function buildQuery(params = {}) {
+  const search = new URLSearchParams()
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== '' && value !== null && value !== undefined) {
+      search.set(key, value)
+    }
+  })
+  const query = search.toString()
+  return query ? `?${query}` : ''
+}
+
 export function submitWorkerApplication(payload) {
   return request('/api/worker-applications', {
     method: 'POST',
@@ -11,8 +22,8 @@ export function fetchMyWorkerApplications() {
   return request('/api/worker-applications/my')
 }
 
-export function fetchAdminWorkerApplications() {
-  return request('/api/worker-applications/admin')
+export function fetchAdminWorkerApplications(params = {}) {
+  return request(`/api/worker-applications/admin${buildQuery(params)}`)
 }
 
 export function reviewWorkerApplication(id, payload) {

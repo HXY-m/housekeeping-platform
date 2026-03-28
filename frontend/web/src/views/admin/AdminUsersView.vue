@@ -142,7 +142,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   createAdminUser,
@@ -150,7 +150,7 @@ import {
   fetchAdminUsers,
   updateAdminUser
 } from '../../api'
-import { useClientPagination } from '../../composables/useClientPagination'
+import { useServerPagination } from '../../composables/useServerPagination'
 import ListPagination from '../../components/common/ListPagination.vue'
 
 const roleLabelMap = {
@@ -198,7 +198,8 @@ const form = reactive({
   roleCodes: ['USER']
 })
 
-const { currentPage, pageSize, pageSizes, total, pagedItems: pagedUsers, resetPage } = useClientPagination(users, 10)
+const { currentPage, pageSize, pageSizes, total, buildParams, applyPageResult, resetPage } = useServerPagination(10)
+const pagedUsers = users
 
 const activeCount = computed(() => users.value.filter((item) => item.status === 'ACTIVE').length)
 const workerCount = computed(() => users.value.filter((item) => item.roleCodes.includes('WORKER')).length)
@@ -235,14 +236,18 @@ function resetFilters() {
   filters.realName = ''
   filters.phone = ''
   filters.status = ''
+  if (currentPage.value !== 1) {
+    resetPage()
+    return
+  }
   loadUsers()
 }
 
 async function loadUsers() {
   loading.value = true
   try {
-    users.value = await fetchAdminUsers(filters)
-    resetPage()
+    const result = await fetchAdminUsers(buildParams(filters))
+    users.value = applyPageResult(result)
   } catch (error) {
     ElMessage.error(error.message || '获取用户列表失败')
   } finally {
@@ -301,6 +306,10 @@ async function handleDelete(row) {
     }
   }
 }
+
+watch([currentPage, pageSize], () => {
+  loadUsers()
+})
 
 onMounted(loadUsers)
 </script>

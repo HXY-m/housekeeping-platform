@@ -1,8 +1,10 @@
 package com.housekeeping.favorite.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.housekeeping.auth.support.CurrentUserContext;
 import com.housekeeping.auth.support.SessionUser;
+import com.housekeeping.common.PageResult;
 import com.housekeeping.common.mapper.WorkerDtoMapper;
 import com.housekeeping.exception.BusinessException;
 import com.housekeeping.favorite.entity.FavoriteWorkerEntity;
@@ -69,6 +71,40 @@ public class FavoriteWorkerService {
                 ))
                 .map(workerDtoMapper::toCardDto)
                 .toList();
+    }
+
+    public PageResult<WorkerCardDto> pageFavoriteWorkers(long current, long size) {
+        SessionUser currentUser = requireCurrentUser();
+        Page<FavoriteWorkerEntity> page = favoriteWorkerMapper.selectPage(
+                new Page<>(current, size),
+                new LambdaQueryWrapper<FavoriteWorkerEntity>()
+                        .eq(FavoriteWorkerEntity::getUserId, currentUser.userId())
+                        .orderByDesc(FavoriteWorkerEntity::getId)
+        );
+
+        List<Long> workerIds = page.getRecords().stream()
+                .map(FavoriteWorkerEntity::getWorkerId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (workerIds.isEmpty()) {
+            return PageResult.from(page, List.of());
+        }
+
+        Map<Long, Integer> orderMap = new LinkedHashMap<>();
+        for (int index = 0; index < workerIds.size(); index++) {
+            orderMap.put(workerIds.get(index), index);
+        }
+
+        List<WorkerCardDto> records = workerMapper.selectBatchIds(workerIds).stream()
+                .filter(worker -> WorkerQualificationStatus.isPublicVisible(worker.getQualificationStatus()))
+                .sorted((left, right) -> Integer.compare(
+                        orderMap.getOrDefault(left.getId(), Integer.MAX_VALUE),
+                        orderMap.getOrDefault(right.getId(), Integer.MAX_VALUE)
+                ))
+                .map(workerDtoMapper::toCardDto)
+                .toList();
+        return PageResult.from(page, records);
     }
 
     @Transactional

@@ -15,8 +15,11 @@ export function fetchAdminDashboard() {
   return request('/api/admin/dashboard')
 }
 
-export function fetchAdminOrders() {
-  return request('/api/admin/orders')
+export function fetchAdminOrders(params) {
+  if (!params) {
+    return request(`/api/admin/orders${buildQuery({ current: 1, size: 100 })}`).then((result) => result?.records || [])
+  }
+  return request(`/api/admin/orders${buildQuery(params)}`)
 }
 
 export function fetchAdminPermissionCatalog() {

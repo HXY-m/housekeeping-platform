@@ -1,12 +1,14 @@
 package com.housekeeping.admin.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.housekeeping.admin.dto.AdminCategoryDto;
 import com.housekeeping.admin.dto.AdminCategorySaveRequest;
 import com.housekeeping.audit.OperationLogActions;
 import com.housekeeping.audit.service.OperationLogService;
 import com.housekeeping.category.entity.ServiceCategoryEntity;
 import com.housekeeping.category.mapper.ServiceCategoryMapper;
+import com.housekeeping.common.PageResult;
 import com.housekeeping.exception.BusinessException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -44,6 +46,23 @@ public class AdminCategoryService {
                 .stream()
                 .map(this::toDto)
                 .toList();
+    }
+
+    public PageResult<AdminCategoryDto> pageCategories(long current, long size, String keyword, Integer enabled) {
+        LambdaQueryWrapper<ServiceCategoryEntity> wrapper = new LambdaQueryWrapper<>();
+        if (StringUtils.hasText(keyword)) {
+            wrapper.and(item -> item
+                    .like(ServiceCategoryEntity::getName, keyword.trim())
+                    .or()
+                    .like(ServiceCategoryEntity::getDescription, keyword.trim()));
+        }
+        if (enabled != null) {
+            wrapper.eq(ServiceCategoryEntity::getEnabled, enabled);
+        }
+        wrapper.orderByAsc(ServiceCategoryEntity::getId);
+
+        Page<ServiceCategoryEntity> page = serviceCategoryMapper.selectPage(new Page<>(current, size), wrapper);
+        return PageResult.from(page, page.getRecords().stream().map(this::toDto).toList());
     }
 
     @Transactional

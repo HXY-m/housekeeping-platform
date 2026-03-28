@@ -4,6 +4,8 @@ import com.housekeeping.admin.dto.AdminCategoryDto;
 import com.housekeeping.admin.dto.AdminCategorySaveRequest;
 import com.housekeeping.admin.service.AdminCategoryService;
 import com.housekeeping.common.ApiResponse;
+import com.housekeeping.common.PageQuery;
+import com.housekeeping.common.PageResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -17,8 +19,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/categories")
@@ -34,9 +34,15 @@ public class AdminCategoryController {
 
     @GetMapping
     @Operation(summary = "获取服务项目列表")
-    public ApiResponse<List<AdminCategoryDto>> categories(@RequestParam(required = false) String keyword,
-                                                          @RequestParam(required = false) Integer enabled) {
-        return ApiResponse.ok(adminCategoryService.listCategories(keyword, enabled));
+    public ApiResponse<PageResult<AdminCategoryDto>> categories(PageQuery pageQuery,
+                                                                @RequestParam(required = false) String keyword,
+                                                                @RequestParam(required = false) Integer enabled) {
+        return ApiResponse.ok(adminCategoryService.pageCategories(
+                pageQuery.safeCurrent(),
+                pageQuery.safeSize(),
+                keyword,
+                enabled
+        ));
     }
 
     @PostMapping

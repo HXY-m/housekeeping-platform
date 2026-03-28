@@ -191,7 +191,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import AttachmentGallery from '../../components/common/AttachmentGallery.vue'
 import ListPagination from '../../components/common/ListPagination.vue'
-import { useClientPagination } from '../../composables/useClientPagination'
+import { useServerPagination } from '../../composables/useServerPagination'
 import { fetchAdminAfterSales, handleAdminAfterSale } from '../../api'
 import { getAfterSaleStatusLabel, getAfterSaleStatusTagType } from '../../utils/afterSale'
 import { getOrderStatusLabel, getOrderStatusTagType } from '../../utils/order'
@@ -227,9 +227,16 @@ const filteredAfterSales = computed(() => {
   })
 })
 
-const { currentPage, pageSize, pageSizes, total, pagedItems: pagedAfterSales, resetPage } = useClientPagination(filteredAfterSales, 8)
+const { currentPage, pageSize, pageSizes, total, buildParams, applyPageResult, resetPage } = useServerPagination(8)
+const pagedAfterSales = afterSales
 
-watch([keyword, statusFilter], () => resetPage())
+watch([keyword, statusFilter], () => {
+  if (currentPage.value !== 1) {
+    resetPage()
+    return
+  }
+  loadAfterSales()
+})
 
 const afterSaleStats = computed(() => ({
   total: afterSales.value.length,
@@ -258,8 +265,11 @@ function openHandle(row, status) {
 async function loadAfterSales() {
   loading.value = true
   try {
-    afterSales.value = await fetchAdminAfterSales()
-    resetPage()
+    const result = await fetchAdminAfterSales(buildParams({
+      status: statusFilter.value === 'ALL' ? '' : statusFilter.value,
+      keyword: keyword.value.trim()
+    }))
+    afterSales.value = applyPageResult(result)
   } catch (error) {
     ElMessage.error(error.message || '获取售后列表失败')
   } finally {
@@ -280,6 +290,10 @@ async function submitHandle() {
     ElMessage.error(error.message || '处理售后失败')
   }
 }
+
+watch([currentPage, pageSize], () => {
+  loadAfterSales()
+})
 
 onMounted(loadAfterSales)
 </script>

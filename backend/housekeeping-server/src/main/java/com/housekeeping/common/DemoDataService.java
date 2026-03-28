@@ -1,6 +1,7 @@
 package com.housekeeping.common;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.housekeeping.admin.dto.AdminDashboardDto;
 import com.housekeeping.category.entity.ServiceCategoryEntity;
 import com.housekeeping.category.mapper.ServiceCategoryMapper;
@@ -85,6 +86,18 @@ public class DemoDataService {
                 .stream()
                 .map(workerDtoMapper::toCardDto)
                 .toList();
+    }
+
+    public PageResult<WorkerCardDto> pageWorkers(long current, long size, String serviceName) {
+        LambdaQueryWrapper<WorkerEntity> wrapper = new LambdaQueryWrapper<WorkerEntity>()
+                .eq(WorkerEntity::getQualificationStatus, WorkerQualificationStatus.APPROVED);
+        if (serviceName != null && !serviceName.isBlank()) {
+            wrapper.like(WorkerEntity::getTags, serviceName);
+        }
+        wrapper.orderByDesc(WorkerEntity::getRating).orderByDesc(WorkerEntity::getCompletedOrders);
+
+        Page<WorkerEntity> page = workerMapper.selectPage(new Page<>(current, size), wrapper);
+        return PageResult.from(page, page.getRecords().stream().map(workerDtoMapper::toCardDto).toList());
     }
 
     public WorkerDetailDto getWorker(Long id) {

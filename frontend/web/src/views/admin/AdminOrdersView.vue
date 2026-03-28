@@ -127,7 +127,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { fetchAdminOrders } from '../../api'
 import ListPagination from '../../components/common/ListPagination.vue'
-import { useClientPagination } from '../../composables/useClientPagination'
+import { useServerPagination } from '../../composables/useServerPagination'
 import { getUserOrderFlowMeta } from '../../utils/orderFlow'
 import { getOrderStatusLabel, getOrderStatusTagType, normalizeOrderStatus } from '../../utils/order'
 
@@ -179,24 +179,40 @@ const filteredOrders = computed(() =>
   })
 )
 
-const { currentPage, pageSize, pageSizes, total, pagedItems: pagedOrders, resetPage } = useClientPagination(filteredOrders, 8)
+const { currentPage, pageSize, pageSizes, total, buildParams, applyPageResult, resetPage } = useServerPagination(8)
+const pagedOrders = orders
 
 watch(
   () => [filters.keyword, filters.status, filters.dateRange?.join('|')],
-  () => resetPage()
+  () => {
+    if (currentPage.value !== 1) {
+      resetPage()
+      return
+    }
+    loadOrders()
+  }
 )
 
 async function loadOrders() {
   loading.value = true
   try {
-    orders.value = await fetchAdminOrders()
-    resetPage()
+    const result = await fetchAdminOrders(buildParams({
+      keyword: filters.keyword.trim(),
+      status: filters.status,
+      dateFrom: filters.dateRange?.[0] || '',
+      dateTo: filters.dateRange?.[1] || ''
+    }))
+    orders.value = applyPageResult(result)
   } catch (error) {
     ElMessage.error(error.message || '获取平台订单失败')
   } finally {
     loading.value = false
   }
 }
+
+watch([currentPage, pageSize], () => {
+  loadOrders()
+})
 
 onMounted(loadOrders)
 </script>

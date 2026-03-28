@@ -1,6 +1,8 @@
 package com.housekeeping.worker.application;
 
 import com.housekeeping.common.ApiResponse;
+import com.housekeeping.common.PageQuery;
+import com.housekeeping.common.PageResult;
 import com.housekeeping.worker.application.dto.WorkerApplicationDto;
 import com.housekeeping.worker.application.dto.WorkerApplicationReviewRequest;
 import com.housekeeping.worker.application.dto.WorkerApplicationSubmitRequest;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -46,8 +49,15 @@ public class WorkerApplicationController {
     @PreAuthorize("hasRole('ADMIN') and hasAuthority('ADMIN_APPLICATION_REVIEW')")
     @GetMapping("/admin")
     @Operation(summary = "管理员查看所有资质申请")
-    public ApiResponse<List<WorkerApplicationDto>> listAll() {
-        return ApiResponse.ok(workerApplicationService.listAll());
+    public ApiResponse<PageResult<WorkerApplicationDto>> listAll(PageQuery pageQuery,
+                                                                 @RequestParam(required = false) String status,
+                                                                 @RequestParam(required = false) String keyword) {
+        return ApiResponse.ok(workerApplicationService.pageAll(
+                pageQuery.safeCurrent(),
+                pageQuery.safeSize(),
+                status,
+                keyword
+        ));
     }
 
     @PreAuthorize("hasRole('ADMIN') and hasAuthority('ADMIN_APPLICATION_REVIEW')")

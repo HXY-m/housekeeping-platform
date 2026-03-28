@@ -4,6 +4,8 @@ import com.housekeeping.admin.dto.AdminUserDto;
 import com.housekeeping.admin.dto.AdminUserSaveRequest;
 import com.housekeeping.admin.service.AdminUserService;
 import com.housekeeping.common.ApiResponse;
+import com.housekeeping.common.PageQuery;
+import com.housekeeping.common.PageResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -17,8 +19,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/users")
@@ -34,11 +34,19 @@ public class AdminUserController {
 
     @GetMapping
     @Operation(summary = "获取用户列表")
-    public ApiResponse<List<AdminUserDto>> users(@RequestParam(required = false) String roleCode,
-                                                 @RequestParam(required = false) String realName,
-                                                 @RequestParam(required = false) String phone,
-                                                 @RequestParam(required = false) String status) {
-        return ApiResponse.ok(adminUserService.listUsers(roleCode, realName, phone, status));
+    public ApiResponse<PageResult<AdminUserDto>> users(PageQuery pageQuery,
+                                                       @RequestParam(required = false) String roleCode,
+                                                       @RequestParam(required = false) String realName,
+                                                       @RequestParam(required = false) String phone,
+                                                       @RequestParam(required = false) String status) {
+        return ApiResponse.ok(adminUserService.pageUsers(
+                pageQuery.safeCurrent(),
+                pageQuery.safeSize(),
+                roleCode,
+                realName,
+                phone,
+                status
+        ));
     }
 
     @PostMapping

@@ -1,6 +1,8 @@
 package com.housekeeping.order;
 
 import com.housekeeping.common.ApiResponse;
+import com.housekeeping.common.PageQuery;
+import com.housekeeping.common.PageResult;
 import com.housekeeping.order.dto.OrderDto;
 import com.housekeeping.order.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -8,9 +10,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/orders")
@@ -26,7 +27,18 @@ public class AdminOrderController {
 
     @GetMapping
     @Operation(summary = "获取平台订单总览")
-    public ApiResponse<List<OrderDto>> orders() {
-        return ApiResponse.ok(orderService.listAllOrders());
+    public ApiResponse<PageResult<OrderDto>> orders(PageQuery pageQuery,
+                                                    @RequestParam(required = false) String status,
+                                                    @RequestParam(required = false) String keyword,
+                                                    @RequestParam(required = false) String dateFrom,
+                                                    @RequestParam(required = false) String dateTo) {
+        return ApiResponse.ok(orderService.pageAllOrders(
+                pageQuery.safeCurrent(),
+                pageQuery.safeSize(),
+                status,
+                keyword,
+                dateFrom,
+                dateTo
+        ));
     }
 }

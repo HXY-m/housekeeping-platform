@@ -57,24 +57,25 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { fetchFavoriteWorkers, unfavoriteWorker } from '../../api'
 import ListPagination from '../../components/common/ListPagination.vue'
-import { useClientPagination } from '../../composables/useClientPagination'
+import { useServerPagination } from '../../composables/useServerPagination'
 import { formatCurrency } from '../../utils/format'
 
 const router = useRouter()
 const favorites = ref([])
 const loading = ref(false)
-const { currentPage, pageSize, pageSizes, total, pagedItems: pagedFavorites, resetPage } = useClientPagination(favorites, 6)
+const { currentPage, pageSize, pageSizes, total, buildParams, applyPageResult } = useServerPagination(6)
+const pagedFavorites = favorites
 
 async function loadFavorites() {
   loading.value = true
   try {
-    favorites.value = await fetchFavoriteWorkers()
-    resetPage()
+    const result = await fetchFavoriteWorkers(buildParams())
+    favorites.value = applyPageResult(result)
   } catch (error) {
     ElMessage.error(error.message || '获取收藏列表失败')
   } finally {
@@ -91,6 +92,10 @@ async function handleRemove(workerId) {
     ElMessage.error(error.message || '取消收藏失败')
   }
 }
+
+watch([currentPage, pageSize], () => {
+  loadFavorites()
+})
 
 onMounted(loadFavorites)
 </script>

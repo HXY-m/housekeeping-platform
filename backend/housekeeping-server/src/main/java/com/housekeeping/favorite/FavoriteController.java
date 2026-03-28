@@ -1,6 +1,8 @@
 package com.housekeeping.favorite;
 
 import com.housekeeping.common.ApiResponse;
+import com.housekeeping.common.PageQuery;
+import com.housekeeping.common.PageResult;
 import com.housekeeping.favorite.service.FavoriteWorkerService;
 import com.housekeeping.home.dto.WorkerCardDto;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,8 +31,8 @@ public class FavoriteController {
 
     @GetMapping
     @Operation(summary = "获取收藏的服务人员列表")
-    public ApiResponse<List<WorkerCardDto>> workers() {
-        return ApiResponse.ok(favoriteWorkerService.listFavoriteWorkers());
+    public ApiResponse<PageResult<WorkerCardDto>> workers(PageQuery pageQuery) {
+        return ApiResponse.ok(favoriteWorkerService.pageFavoriteWorkers(pageQuery.safeCurrent(), pageQuery.safeSize()));
     }
 
     @GetMapping("/ids")

@@ -1,5 +1,16 @@
 import { request } from './http'
 
+function buildQuery(params = {}) {
+  const search = new URLSearchParams()
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== '' && value !== null && value !== undefined) {
+      search.set(key, value)
+    }
+  })
+  const query = search.toString()
+  return query ? `?${query}` : ''
+}
+
 export function fetchMyAfterSales() {
   return request('/api/after-sales/my')
 }
@@ -21,8 +32,8 @@ export function uploadAfterSaleAttachment(id, file) {
   })
 }
 
-export function fetchAdminAfterSales() {
-  return request('/api/admin/after-sales')
+export function fetchAdminAfterSales(params = {}) {
+  return request(`/api/admin/after-sales${buildQuery(params)}`)
 }
 
 export function handleAdminAfterSale(id, payload) {
