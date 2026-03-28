@@ -28,26 +28,29 @@ public final class PermissionCodes {
     public static final String ADMIN_PERMISSION_MANAGE = "ADMIN_PERMISSION_MANAGE";
 
     private static final List<PermissionDefinition> DEFINITIONS = List.of(
-            new PermissionDefinition(USER_DASHBOARD_VIEW, "User dashboard", "user-experience", "User Experience", "Access the user dashboard."),
-            new PermissionDefinition(USER_PROFILE_MANAGE, "Profile and address book", "user-experience", "User Experience", "Maintain personal profile and address book."),
-            new PermissionDefinition(USER_FAVORITE_MANAGE, "Favorite workers", "user-experience", "User Experience", "Favorite and unfavorite service workers."),
-            new PermissionDefinition(USER_ORDER_USE, "Order workflow", "user-experience", "User Experience", "Create, confirm and review service orders."),
-            new PermissionDefinition(USER_AFTER_SALE_USE, "After-sales requests", "user-experience", "User Experience", "Submit and track after-sales requests."),
-            new PermissionDefinition(USER_MESSAGE_USE, "Message center", "user-experience", "User Experience", "Read notifications and send order messages."),
-            new PermissionDefinition(WORKER_DASHBOARD_VIEW, "Worker dashboard", "worker-console", "Worker Console", "Access the worker dashboard."),
-            new PermissionDefinition(WORKER_ORDER_HANDLE, "Order fulfillment", "worker-console", "Worker Console", "Accept, start and complete orders."),
-            new PermissionDefinition(WORKER_QUALIFICATION_SUBMIT, "Qualification application", "worker-console", "Worker Console", "Submit worker qualification materials."),
-            new PermissionDefinition(WORKER_MESSAGE_USE, "Worker message center", "worker-console", "Worker Console", "Read worker notifications and order conversations."),
-            new PermissionDefinition(ADMIN_DASHBOARD_VIEW, "Admin dashboard", "admin-console", "Admin Console", "Access the admin dashboard."),
-            new PermissionDefinition(ADMIN_MESSAGE_VIEW, "Admin message center", "admin-console", "Admin Console", "Read admin notifications."),
-            new PermissionDefinition(ADMIN_ORDER_MANAGE, "Order governance", "admin-console", "Admin Console", "View and govern all platform orders."),
-            new PermissionDefinition(ADMIN_USER_MANAGE, "User governance", "admin-console", "Admin Console", "Manage platform users and role bindings."),
-            new PermissionDefinition(ADMIN_SERVICE_MANAGE, "Service governance", "admin-console", "Admin Console", "Maintain service categories."),
-            new PermissionDefinition(ADMIN_APPLICATION_REVIEW, "Qualification review", "admin-console", "Admin Console", "Review worker qualification applications."),
-            new PermissionDefinition(ADMIN_AFTER_SALE_MANAGE, "After-sales governance", "admin-console", "Admin Console", "Handle after-sales cases."),
-            new PermissionDefinition(ADMIN_OPERATION_LOG_VIEW, "Operation logs", "admin-governance", "Admin Governance", "Inspect platform operation logs."),
-            new PermissionDefinition(ADMIN_REPORT_EXPORT, "Report export", "admin-governance", "Admin Governance", "Export analytics and governance reports."),
-            new PermissionDefinition(ADMIN_PERMISSION_MANAGE, "Role permission config", "admin-governance", "Admin Governance", "Configure role to permission bindings.")
+            new PermissionDefinition(USER_DASHBOARD_VIEW, "用户看板", "user-experience", "用户端", "查看用户中心首页"),
+            new PermissionDefinition(USER_PROFILE_MANAGE, "资料与地址", "user-experience", "用户端", "维护个人资料和地址簿"),
+            new PermissionDefinition(USER_FAVORITE_MANAGE, "收藏服务人员", "user-experience", "用户端", "收藏或取消收藏服务人员"),
+            new PermissionDefinition(USER_ORDER_USE, "下单与订单", "user-experience", "用户端", "预约、确认、评价订单"),
+            new PermissionDefinition(USER_AFTER_SALE_USE, "售后服务", "user-experience", "用户端", "提交并跟踪售后工单"),
+            new PermissionDefinition(USER_MESSAGE_USE, "消息中心", "user-experience", "用户端", "查看通知和订单沟通"),
+
+            new PermissionDefinition(WORKER_DASHBOARD_VIEW, "服务人员看板", "worker-console", "服务人员端", "查看服务人员工作台"),
+            new PermissionDefinition(WORKER_ORDER_HANDLE, "履约处理", "worker-console", "服务人员端", "接单、开工、完工和上传记录"),
+            new PermissionDefinition(WORKER_QUALIFICATION_SUBMIT, "资质申请", "worker-console", "服务人员端", "提交资质审核材料"),
+            new PermissionDefinition(WORKER_MESSAGE_USE, "服务人员消息", "worker-console", "服务人员端", "查看通知和订单沟通"),
+
+            new PermissionDefinition(ADMIN_DASHBOARD_VIEW, "运营看板", "admin-console", "后台核心", "查看平台运营看板"),
+            new PermissionDefinition(ADMIN_MESSAGE_VIEW, "后台消息", "admin-console", "后台核心", "查看后台通知"),
+            new PermissionDefinition(ADMIN_ORDER_MANAGE, "订单监管", "admin-console", "后台核心", "查看和治理平台订单"),
+            new PermissionDefinition(ADMIN_USER_MANAGE, "用户管理", "admin-console", "后台核心", "管理平台用户和角色"),
+            new PermissionDefinition(ADMIN_SERVICE_MANAGE, "服务项目管理", "admin-console", "后台核心", "维护服务项目和展示内容"),
+            new PermissionDefinition(ADMIN_APPLICATION_REVIEW, "资质审核", "admin-console", "后台核心", "审核服务人员资质申请"),
+            new PermissionDefinition(ADMIN_AFTER_SALE_MANAGE, "售后处理", "admin-console", "后台核心", "处理售后工单"),
+
+            new PermissionDefinition(ADMIN_OPERATION_LOG_VIEW, "操作日志", "admin-governance", "治理与配置", "查看关键操作日志"),
+            new PermissionDefinition(ADMIN_REPORT_EXPORT, "报表导出", "admin-governance", "治理与配置", "导出运营和治理报表"),
+            new PermissionDefinition(ADMIN_PERMISSION_MANAGE, "权限配置", "admin-governance", "治理与配置", "配置角色与权限绑定")
     );
 
     private PermissionCodes() {

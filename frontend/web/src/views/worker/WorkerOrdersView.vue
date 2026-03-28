@@ -249,6 +249,7 @@ import { useServerPagination } from '../../composables/useServerPagination'
 import {
   acceptWorkerOrder,
   completeWorkerOrder,
+  fetchWorkerOrderSummary,
   fetchWorkerOrders,
   startWorkerOrder,
   uploadWorkerServiceRecord
@@ -261,6 +262,13 @@ const statusFilter = ref('ALL')
 const orders = ref([])
 const loading = ref(false)
 const orderSteps = getOrderSteps()
+const summary = ref({
+  total: 0,
+  pending: 0,
+  accepted: 0,
+  confirmed: 0,
+  waitingCompletion: 0
+})
 
 const recordDialogVisible = ref(false)
 const submittingRecord = ref(false)
@@ -278,14 +286,6 @@ const stageOptions = {
   SERVICE_PROOF: '服务过程',
   FINISH_PROOF: '完工凭证'
 }
-
-const summary = computed(() => ({
-  total: total.value,
-  pending: orders.value.filter((item) => normalizeOrderStatus(item.status) === 'PENDING').length,
-  accepted: orders.value.filter((item) => normalizeOrderStatus(item.status) === 'ACCEPTED').length,
-  confirmed: orders.value.filter((item) => normalizeOrderStatus(item.status) === 'CONFIRMED').length,
-  waitingCompletion: orders.value.filter((item) => normalizeOrderStatus(item.status) === 'WAITING_USER_CONFIRMATION').length
-}))
 
 const filteredOrders = computed(() => {
   const sorted = [...orders.value].sort((left, right) => {
@@ -341,10 +341,23 @@ function goToMessageCenter(orderId) {
 async function loadOrders() {
   loading.value = true
   try {
-    const result = await fetchWorkerOrders(buildParams({
+    const params = buildParams({
       status: statusFilter.value === 'ALL' ? '' : statusFilter.value
-    }))
+    })
+    const [result, summaryResult] = await Promise.all([
+      fetchWorkerOrders(params),
+      fetchWorkerOrderSummary({
+        status: statusFilter.value === 'ALL' ? '' : statusFilter.value
+      })
+    ])
     orders.value = applyPageResult(result)
+    summary.value = {
+      total: Number(summaryResult?.total || 0),
+      pending: Number(summaryResult?.pending || 0),
+      accepted: Number(summaryResult?.accepted || 0),
+      confirmed: Number(summaryResult?.confirmed || 0),
+      waitingCompletion: Number(summaryResult?.waitingUserConfirmation || 0)
+    }
   } catch (error) {
     ElMessage.error(error.message || '获取服务订单失败')
   } finally {

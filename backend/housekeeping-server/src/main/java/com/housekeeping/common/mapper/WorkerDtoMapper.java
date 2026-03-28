@@ -23,7 +23,8 @@ public class WorkerDtoMapper {
                 worker.getCity(),
                 worker.getIntro(),
                 split(worker.getTags()),
-                worker.getNextAvailable()
+                worker.getNextAvailable(),
+                worker.getAvatarUrl()
         );
     }
 
@@ -39,6 +40,7 @@ public class WorkerDtoMapper {
                 worker.getIntro(),
                 split(worker.getTags()),
                 worker.getNextAvailable(),
+                worker.getAvatarUrl(),
                 worker.getYearsOfExperience(),
                 split(worker.getCertificates()),
                 split(worker.getServiceAreas()),
@@ -50,7 +52,7 @@ public class WorkerDtoMapper {
         if (raw == null || raw.isBlank()) {
             return Collections.emptyList();
         }
-        return Stream.of(raw.split("\\s*[,，、;；]\\s*"))
+        return Stream.of(raw.split("\\s*[,，、；;\\n]\\s*"))
                 .filter(value -> !value.isBlank())
                 .toList();
     }

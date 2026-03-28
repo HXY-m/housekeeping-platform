@@ -15,8 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.util.Objects;
-
 @Service
 @Transactional(readOnly = true)
 public class WorkerProfileService {
@@ -94,6 +92,7 @@ public class WorkerProfileService {
         worker.setCertificates(safeValue(command.certificates(), safeValue(worker.getCertificates(), "")));
         worker.setServiceAreas(safeValue(command.serviceAreas(), safeValue(worker.getServiceAreas(), "")));
         worker.setServiceCases(safeValue(command.serviceCases(), safeValue(worker.getServiceCases(), "等待补充服务案例")));
+        worker.setAvatarUrl(safeValue(command.avatarUrl(), safeValue(worker.getAvatarUrl(), "")));
         worker.setQualificationStatus(safeValue(
                 command.qualificationStatus(),
                 safeValue(worker.getQualificationStatus(), WorkerQualificationStatus.UNSUBMITTED)
@@ -142,6 +141,7 @@ public class WorkerProfileService {
                 safeValue(worker.getCertificates(), ""),
                 safeValue(worker.getServiceAreas(), ""),
                 safeValue(worker.getIntro(), ""),
+                safeValue(worker.getAvatarUrl(), ""),
                 safeValue(worker.getQualificationStatus(), WorkerQualificationStatus.UNSUBMITTED)
         );
     }

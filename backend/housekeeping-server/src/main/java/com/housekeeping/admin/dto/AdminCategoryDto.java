@@ -10,6 +10,7 @@ public record AdminCategoryDto(
         String serviceArea,
         String serviceScene,
         String extraServices,
+        String imageUrl,
         boolean enabled
 ) {
 }

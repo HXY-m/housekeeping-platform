@@ -187,6 +187,19 @@ public class AdminUserService {
         return PageResult.from(page, dtos);
     }
 
+    public Map<String, Long> summarizeUsers(String roleCode,
+                                            String realName,
+                                            String phone,
+                                            String status) {
+        List<AdminUserDto> users = listUsers(roleCode, realName, phone, status);
+        Map<String, Long> summary = new LinkedHashMap<>();
+        summary.put("total", (long) users.size());
+        summary.put("active", users.stream().filter(item -> "ACTIVE".equals(item.status())).count());
+        summary.put("workers", users.stream().filter(item -> item.roleCodes().contains(RoleCodes.WORKER)).count());
+        summary.put("admins", users.stream().filter(item -> item.roleCodes().contains(RoleCodes.ADMIN)).count());
+        return summary;
+    }
+
     @Transactional
     public AdminUserDto createUser(AdminUserSaveRequest request) {
         String rawPassword = safeValue(request.password());
@@ -364,6 +377,7 @@ public class AdminUserService {
                     "待补充资质信息",
                     "待补充服务区域",
                     "管理员创建的服务人员档案，待完善详细资料。",
+                    "",
                     WorkerQualificationStatus.APPROVED,
                     "平台创建服务人员",
                     "待补充服务案例"

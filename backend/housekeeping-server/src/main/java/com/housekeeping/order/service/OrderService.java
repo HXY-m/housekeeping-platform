@@ -2,6 +2,8 @@ package com.housekeeping.order.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.housekeeping.aftersale.entity.AfterSaleEntity;
+import com.housekeeping.aftersale.mapper.AfterSaleMapper;
 import com.housekeeping.audit.OperationLogActions;
 import com.housekeeping.audit.service.OperationLogService;
 import com.housekeeping.auth.support.CurrentUserContext;
@@ -63,6 +65,7 @@ public class OrderService {
     private final WorkerProfileService workerProfileService;
     private final WorkerDtoMapper workerDtoMapper;
     private final OrderDtoMapper orderDtoMapper;
+    private final AfterSaleMapper afterSaleMapper;
     private final OrderServiceRecordService orderServiceRecordService;
     private final OperationLogService operationLogService;
     private final OrderAccessService orderAccessService;
@@ -75,6 +78,7 @@ public class OrderService {
                         WorkerProfileService workerProfileService,
                         WorkerDtoMapper workerDtoMapper,
                         OrderDtoMapper orderDtoMapper,
+                        AfterSaleMapper afterSaleMapper,
                         OrderServiceRecordService orderServiceRecordService,
                         OperationLogService operationLogService,
                         OrderAccessService orderAccessService,
@@ -86,6 +90,7 @@ public class OrderService {
         this.workerProfileService = workerProfileService;
         this.workerDtoMapper = workerDtoMapper;
         this.orderDtoMapper = orderDtoMapper;
+        this.afterSaleMapper = afterSaleMapper;
         this.orderServiceRecordService = orderServiceRecordService;
         this.operationLogService = operationLogService;
         this.orderAccessService = orderAccessService;
@@ -100,10 +105,7 @@ public class OrderService {
         SessionUser currentUser = orderAccessService.requireCurrentUser();
         Page<OrderEntity> page = orderMapper.selectPage(
                 new Page<>(current, size),
-                new LambdaQueryWrapper<OrderEntity>()
-                        .eq(OrderEntity::getUserId, currentUser.userId())
-                        .eq(hasText(status), OrderEntity::getStatus, status)
-                        .orderByDesc(OrderEntity::getId)
+                buildCurrentUserOrderWrapper(currentUser.userId(), status)
         );
         return PageResult.from(page, buildOrderDtos(page.getRecords()));
     }
@@ -117,10 +119,7 @@ public class OrderService {
         WorkerEntity worker = workerProfileService.requireWorkerByUserId(currentUser.userId());
         Page<OrderEntity> page = orderMapper.selectPage(
                 new Page<>(current, size),
-                new LambdaQueryWrapper<OrderEntity>()
-                        .eq(OrderEntity::getWorkerId, worker.getId())
-                        .eq(hasText(status), OrderEntity::getStatus, status)
-                        .orderByDesc(OrderEntity::getId)
+                buildCurrentWorkerOrderWrapper(worker.getId(), status)
         );
         return PageResult.from(page, buildOrderDtos(page.getRecords()));
     }
@@ -137,27 +136,58 @@ public class OrderService {
                                               String keyword,
                                               String dateFrom,
                                               String dateTo) {
-        LambdaQueryWrapper<OrderEntity> wrapper = new LambdaQueryWrapper<OrderEntity>()
-                .eq(hasText(status), OrderEntity::getStatus, status)
-                .ge(hasText(dateFrom), OrderEntity::getBookingDate, dateFrom)
-                .le(hasText(dateTo), OrderEntity::getBookingDate, dateTo)
-                .orderByDesc(OrderEntity::getId);
-
-        if (hasText(keyword)) {
-            List<Long> workerIds = findWorkerIdsByKeyword(keyword);
-            wrapper.and(query -> query
-                    .like(OrderEntity::getServiceName, keyword)
-                    .or()
-                    .like(OrderEntity::getCustomerName, keyword)
-                    .or()
-                    .like(OrderEntity::getContactPhone, keyword)
-                    .or()
-                    .like(OrderEntity::getServiceAddress, keyword)
-                    .or(!workerIds.isEmpty(), nested -> nested.in(OrderEntity::getWorkerId, workerIds)));
-        }
-
-        Page<OrderEntity> page = orderMapper.selectPage(new Page<>(current, size), wrapper);
+        Page<OrderEntity> page = orderMapper.selectPage(
+                new Page<>(current, size),
+                buildAdminOrderWrapper(status, keyword, dateFrom, dateTo)
+        );
         return PageResult.from(page, buildOrderDtos(page.getRecords()));
+    }
+
+    public Map<String, Long> summarizeCurrentUserOrders(String status) {
+        SessionUser currentUser = orderAccessService.requireCurrentUser();
+        List<OrderEntity> orders = orderMapper.selectList(buildCurrentUserOrderWrapper(currentUser.userId(), status));
+        List<Long> orderIds = orders.stream().map(OrderEntity::getId).toList();
+        long afterSales = orderIds.isEmpty()
+                ? 0
+                : afterSaleMapper.selectCount(new LambdaQueryWrapper<AfterSaleEntity>()
+                .eq(AfterSaleEntity::getUserId, currentUser.userId())
+                .in(AfterSaleEntity::getOrderId, orderIds));
+
+        Map<String, Long> summary = new LinkedHashMap<>();
+        summary.put("total", (long) orders.size());
+        summary.put("active", orders.stream().filter(item -> !OrderStatus.COMPLETED.matches(item.getStatus())).count());
+        summary.put("needUserAction", orders.stream().filter(item ->
+                OrderStatus.ACCEPTED.matches(item.getStatus())
+                        || OrderStatus.WAITING_USER_CONFIRMATION.matches(item.getStatus())
+        ).count());
+        summary.put("afterSales", afterSales);
+        return summary;
+    }
+
+    public Map<String, Long> summarizeCurrentWorkerOrders(String status) {
+        SessionUser currentUser = orderAccessService.requireCurrentUser();
+        WorkerEntity worker = workerProfileService.requireWorkerByUserId(currentUser.userId());
+        List<OrderEntity> orders = orderMapper.selectList(buildCurrentWorkerOrderWrapper(worker.getId(), status));
+        Map<String, Long> summary = new LinkedHashMap<>();
+        summary.put("total", (long) orders.size());
+        summary.put("pending", orders.stream().filter(item -> OrderStatus.PENDING.matches(item.getStatus())).count());
+        summary.put("accepted", orders.stream().filter(item -> OrderStatus.ACCEPTED.matches(item.getStatus())).count());
+        summary.put("confirmed", orders.stream().filter(item -> OrderStatus.CONFIRMED.matches(item.getStatus())).count());
+        summary.put("waitingUserConfirmation", orders.stream().filter(item -> OrderStatus.WAITING_USER_CONFIRMATION.matches(item.getStatus())).count());
+        return summary;
+    }
+
+    public Map<String, Long> summarizeAllOrders(String status,
+                                                String keyword,
+                                                String dateFrom,
+                                                String dateTo) {
+        List<OrderEntity> orders = orderMapper.selectList(buildAdminOrderWrapper(status, keyword, dateFrom, dateTo));
+        Map<String, Long> summary = new LinkedHashMap<>();
+        summary.put("total", (long) orders.size());
+        summary.put("pending", orders.stream().filter(item -> OrderStatus.PENDING.matches(item.getStatus())).count());
+        summary.put("inService", orders.stream().filter(item -> OrderStatus.IN_SERVICE.matches(item.getStatus())).count());
+        summary.put("completed", orders.stream().filter(item -> OrderStatus.COMPLETED.matches(item.getStatus())).count());
+        return summary;
     }
 
     public BookingAvailabilityDto getBookingAvailability(Long workerId, String bookingDate) {
@@ -540,6 +570,45 @@ public class OrderService {
                 .orElse(worker.getRating() == null ? 5.0 : worker.getRating());
         worker.setRating(Math.round(average * 100.0) / 100.0);
         workerMapper.updateById(worker);
+    }
+
+    private LambdaQueryWrapper<OrderEntity> buildCurrentUserOrderWrapper(Long userId, String status) {
+        return new LambdaQueryWrapper<OrderEntity>()
+                .eq(OrderEntity::getUserId, userId)
+                .eq(hasText(status), OrderEntity::getStatus, status)
+                .orderByDesc(OrderEntity::getId);
+    }
+
+    private LambdaQueryWrapper<OrderEntity> buildCurrentWorkerOrderWrapper(Long workerId, String status) {
+        return new LambdaQueryWrapper<OrderEntity>()
+                .eq(OrderEntity::getWorkerId, workerId)
+                .eq(hasText(status), OrderEntity::getStatus, status)
+                .orderByDesc(OrderEntity::getId);
+    }
+
+    private LambdaQueryWrapper<OrderEntity> buildAdminOrderWrapper(String status,
+                                                                   String keyword,
+                                                                   String dateFrom,
+                                                                   String dateTo) {
+        LambdaQueryWrapper<OrderEntity> wrapper = new LambdaQueryWrapper<OrderEntity>()
+                .eq(hasText(status), OrderEntity::getStatus, status)
+                .ge(hasText(dateFrom), OrderEntity::getBookingDate, dateFrom)
+                .le(hasText(dateTo), OrderEntity::getBookingDate, dateTo)
+                .orderByDesc(OrderEntity::getId);
+
+        if (hasText(keyword)) {
+            List<Long> workerIds = findWorkerIdsByKeyword(keyword);
+            wrapper.and(query -> query
+                    .like(OrderEntity::getServiceName, keyword)
+                    .or()
+                    .like(OrderEntity::getCustomerName, keyword)
+                    .or()
+                    .like(OrderEntity::getContactPhone, keyword)
+                    .or()
+                    .like(OrderEntity::getServiceAddress, keyword)
+                    .or(!workerIds.isEmpty(), nested -> nested.in(OrderEntity::getWorkerId, workerIds)));
+        }
+        return wrapper;
     }
 
     private List<Long> findWorkerIdsByKeyword(String keyword) {

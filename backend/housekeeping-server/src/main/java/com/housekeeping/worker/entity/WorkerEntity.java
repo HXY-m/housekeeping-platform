@@ -23,14 +23,28 @@ public class WorkerEntity {
     private String certificates;
     private String serviceAreas;
     private String serviceCases;
+    private String avatarUrl;
     private String qualificationStatus;
 
     public WorkerEntity() {
     }
 
-    public WorkerEntity(Long userId, String name, String roleLabel, Double rating, Integer completedOrders, Integer hourlyPrice,
-                        String city, String intro, String tags, String nextAvailable, Integer yearsOfExperience,
-                        String certificates, String serviceAreas, String serviceCases, String qualificationStatus) {
+    public WorkerEntity(Long userId,
+                        String name,
+                        String roleLabel,
+                        Double rating,
+                        Integer completedOrders,
+                        Integer hourlyPrice,
+                        String city,
+                        String intro,
+                        String tags,
+                        String nextAvailable,
+                        Integer yearsOfExperience,
+                        String certificates,
+                        String serviceAreas,
+                        String serviceCases,
+                        String avatarUrl,
+                        String qualificationStatus) {
         this.userId = userId;
         this.name = name;
         this.roleLabel = roleLabel;
@@ -45,7 +59,43 @@ public class WorkerEntity {
         this.certificates = certificates;
         this.serviceAreas = serviceAreas;
         this.serviceCases = serviceCases;
+        this.avatarUrl = avatarUrl;
         this.qualificationStatus = qualificationStatus;
+    }
+
+    public WorkerEntity(Long userId,
+                        String name,
+                        String roleLabel,
+                        Double rating,
+                        Integer completedOrders,
+                        Integer hourlyPrice,
+                        String city,
+                        String intro,
+                        String tags,
+                        String nextAvailable,
+                        Integer yearsOfExperience,
+                        String certificates,
+                        String serviceAreas,
+                        String serviceCases,
+                        String qualificationStatus) {
+        this(
+                userId,
+                name,
+                roleLabel,
+                rating,
+                completedOrders,
+                hourlyPrice,
+                city,
+                intro,
+                tags,
+                nextAvailable,
+                yearsOfExperience,
+                certificates,
+                serviceAreas,
+                serviceCases,
+                "",
+                qualificationStatus
+        );
     }
 
     public Long getId() {
@@ -166,6 +216,14 @@ public class WorkerEntity {
 
     public void setServiceCases(String serviceCases) {
         this.serviceCases = serviceCases;
+    }
+
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
     }
 
     public String getQualificationStatus() {

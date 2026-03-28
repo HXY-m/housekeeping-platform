@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/admin/after-sales")
 @PreAuthorize("hasRole('ADMIN') and hasAuthority('ADMIN_AFTER_SALE_MANAGE')")
@@ -41,6 +43,13 @@ public class AdminAfterSaleController {
                 status,
                 keyword
         ));
+    }
+
+    @GetMapping("/summary")
+    @Operation(summary = "获取售后工单摘要统计")
+    public ApiResponse<Map<String, Long>> summary(@RequestParam(required = false) String status,
+                                                  @RequestParam(required = false) String keyword) {
+        return ApiResponse.ok(afterSaleService.summarizeAll(status, keyword));
     }
 
     @PostMapping("/{id}/handle")

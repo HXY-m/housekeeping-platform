@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Size;
 
 import java.util.List;
 
@@ -16,6 +17,7 @@ public record WorkerApplicationSubmitRequest(
         @NotBlank(message = "服务区域不能为空") String serviceAreas,
         @NotBlank(message = "服务时段不能为空") String availableSchedule,
         @NotBlank(message = "个人简介不能为空") String intro,
+        @Size(max = 500, message = "头像地址长度不能超过 500 个字符") String avatarUrl,
         @Valid @NotEmpty(message = "请至少上传 1 份资质附件") List<WorkerApplicationAttachmentRequest> attachments
 ) {
 }

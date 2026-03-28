@@ -12,6 +12,7 @@ public record WorkerCardDto(
         String city,
         String intro,
         List<String> tags,
-        String nextAvailable
+        String nextAvailable,
+        String avatarUrl
 ) {
 }

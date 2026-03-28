@@ -15,7 +15,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Transactional(readOnly = true)
@@ -31,38 +33,37 @@ public class AdminCategoryService {
     }
 
     public List<AdminCategoryDto> listCategories(String keyword, Integer enabled) {
-        LambdaQueryWrapper<ServiceCategoryEntity> wrapper = new LambdaQueryWrapper<>();
-        if (StringUtils.hasText(keyword)) {
-            wrapper.and(item -> item
-                    .like(ServiceCategoryEntity::getName, keyword.trim())
-                    .or()
-                    .like(ServiceCategoryEntity::getDescription, keyword.trim()));
-        }
-        if (enabled != null) {
-            wrapper.eq(ServiceCategoryEntity::getEnabled, enabled);
-        }
-        wrapper.orderByAsc(ServiceCategoryEntity::getId);
-        return serviceCategoryMapper.selectList(wrapper)
+        return serviceCategoryMapper.selectList(buildCategoryWrapper(keyword, enabled))
                 .stream()
                 .map(this::toDto)
                 .toList();
     }
 
     public PageResult<AdminCategoryDto> pageCategories(long current, long size, String keyword, Integer enabled) {
-        LambdaQueryWrapper<ServiceCategoryEntity> wrapper = new LambdaQueryWrapper<>();
-        if (StringUtils.hasText(keyword)) {
-            wrapper.and(item -> item
-                    .like(ServiceCategoryEntity::getName, keyword.trim())
-                    .or()
-                    .like(ServiceCategoryEntity::getDescription, keyword.trim()));
-        }
-        if (enabled != null) {
-            wrapper.eq(ServiceCategoryEntity::getEnabled, enabled);
-        }
-        wrapper.orderByAsc(ServiceCategoryEntity::getId);
-
-        Page<ServiceCategoryEntity> page = serviceCategoryMapper.selectPage(new Page<>(current, size), wrapper);
+        Page<ServiceCategoryEntity> page = serviceCategoryMapper.selectPage(
+                new Page<>(current, size),
+                buildCategoryWrapper(keyword, enabled)
+        );
         return PageResult.from(page, page.getRecords().stream().map(this::toDto).toList());
+    }
+
+    public Map<String, Long> summarizeCategories(String keyword, Integer enabled) {
+        List<ServiceCategoryEntity> categories = serviceCategoryMapper.selectList(buildCategoryWrapper(keyword, enabled));
+        long total = categories.size();
+        long enabledCount = categories.stream().filter(item -> item.getEnabled() == null || item.getEnabled() == 1).count();
+        long disabledCount = total - enabledCount;
+        long richInfoCount = categories.stream()
+                .filter(item -> StringUtils.hasText(item.getServiceDuration())
+                        || StringUtils.hasText(item.getServiceArea())
+                        || StringUtils.hasText(item.getServiceScene())
+                        || StringUtils.hasText(item.getImageUrl()))
+                .count();
+        Map<String, Long> summary = new LinkedHashMap<>();
+        summary.put("total", total);
+        summary.put("enabled", enabledCount);
+        summary.put("disabled", disabledCount);
+        summary.put("richInfo", richInfoCount);
+        return summary;
     }
 
     @Transactional
@@ -132,6 +133,7 @@ public class AdminCategoryService {
         entity.setServiceArea(safeValue(request.serviceArea()));
         entity.setServiceScene(safeValue(request.serviceScene()));
         entity.setExtraServices(safeValue(request.extraServices()));
+        entity.setImageUrl(safeValue(request.imageUrl()));
         entity.setEnabled(Boolean.TRUE.equals(request.enabled()) ? 1 : 0);
     }
 
@@ -157,7 +159,22 @@ public class AdminCategoryService {
                 entity.getServiceArea(),
                 entity.getServiceScene(),
                 entity.getExtraServices(),
+                entity.getImageUrl(),
                 entity.getEnabled() == null || entity.getEnabled() == 1
         );
+    }
+
+    private LambdaQueryWrapper<ServiceCategoryEntity> buildCategoryWrapper(String keyword, Integer enabled) {
+        LambdaQueryWrapper<ServiceCategoryEntity> wrapper = new LambdaQueryWrapper<>();
+        if (StringUtils.hasText(keyword)) {
+            wrapper.and(item -> item
+                    .like(ServiceCategoryEntity::getName, keyword.trim())
+                    .or()
+                    .like(ServiceCategoryEntity::getDescription, keyword.trim()));
+        }
+        if (enabled != null) {
+            wrapper.eq(ServiceCategoryEntity::getEnabled, enabled);
+        }
+        return wrapper.orderByAsc(ServiceCategoryEntity::getId);
     }
 }

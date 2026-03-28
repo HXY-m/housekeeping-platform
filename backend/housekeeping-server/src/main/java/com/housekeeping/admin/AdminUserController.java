@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/admin/users")
 @PreAuthorize("hasRole('ADMIN') and hasAuthority('ADMIN_USER_MANAGE')")
@@ -47,6 +49,15 @@ public class AdminUserController {
                 phone,
                 status
         ));
+    }
+
+    @GetMapping("/summary")
+    @Operation(summary = "获取用户摘要统计")
+    public ApiResponse<Map<String, Long>> summary(@RequestParam(required = false) String roleCode,
+                                                  @RequestParam(required = false) String realName,
+                                                  @RequestParam(required = false) String phone,
+                                                  @RequestParam(required = false) String status) {
+        return ApiResponse.ok(adminUserService.summarizeUsers(roleCode, realName, phone, status));
     }
 
     @PostMapping

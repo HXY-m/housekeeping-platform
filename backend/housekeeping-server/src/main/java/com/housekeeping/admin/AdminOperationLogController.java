@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/admin/operation-logs")
 @PreAuthorize("hasRole('ADMIN') and hasAuthority('ADMIN_OPERATION_LOG_VIEW')")
@@ -42,5 +44,15 @@ public class AdminOperationLogController {
                 dateFrom,
                 dateTo
         ));
+    }
+
+    @GetMapping("/summary")
+    @Operation(summary = "获取操作日志统计摘要")
+    public ApiResponse<Map<String, Long>> summary(@RequestParam(required = false) String operatorName,
+                                                  @RequestParam(required = false) String roleCode,
+                                                  @RequestParam(required = false) String actionType,
+                                                  @RequestParam(required = false) String dateFrom,
+                                                  @RequestParam(required = false) String dateTo) {
+        return ApiResponse.ok(operationLogService.summarize(operatorName, roleCode, actionType, dateFrom, dateTo));
     }
 }

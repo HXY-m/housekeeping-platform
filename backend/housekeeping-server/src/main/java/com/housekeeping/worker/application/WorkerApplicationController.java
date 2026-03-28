@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/worker-applications")
@@ -58,6 +59,14 @@ public class WorkerApplicationController {
                 status,
                 keyword
         ));
+    }
+
+    @PreAuthorize("hasRole('ADMIN') and hasAuthority('ADMIN_APPLICATION_REVIEW')")
+    @GetMapping("/admin/summary")
+    @Operation(summary = "管理员获取资质申请摘要统计")
+    public ApiResponse<Map<String, Long>> summary(@RequestParam(required = false) String status,
+                                                  @RequestParam(required = false) String keyword) {
+        return ApiResponse.ok(workerApplicationService.summarizeAll(status, keyword));
     }
 
     @PreAuthorize("hasRole('ADMIN') and hasAuthority('ADMIN_APPLICATION_REVIEW')")

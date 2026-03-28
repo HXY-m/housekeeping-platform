@@ -18,3 +18,7 @@ export function fetchWorkers(params = {}) {
 export function fetchWorker(id) {
   return request(`/api/workers/${id}`)
 }
+
+export function fetchCurrentWorkerProfile() {
+  return request('/api/worker/profile/me')
+}

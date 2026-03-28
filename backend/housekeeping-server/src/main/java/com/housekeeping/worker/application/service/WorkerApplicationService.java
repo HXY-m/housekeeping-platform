@@ -107,6 +107,7 @@ public class WorkerApplicationService {
                 request.certificates(),
                 request.serviceAreas(),
                 request.intro(),
+                request.avatarUrl(),
                 WorkerQualificationStatus.PENDING,
                 "待资质审核服务人员",
                 null
@@ -137,34 +138,22 @@ public class WorkerApplicationService {
         ));
     }
 
-    public List<WorkerApplicationDto> listAll() {
-        return toDtos(workerApplicationMapper.selectList(
-                new LambdaQueryWrapper<WorkerApplicationEntity>()
-                        .orderByAsc(WorkerApplicationEntity::getStatus)
-                        .orderByDesc(WorkerApplicationEntity::getId)
-        ));
-    }
-
     public PageResult<WorkerApplicationDto> pageAll(long current, long size, String status, String keyword) {
-        LambdaQueryWrapper<WorkerApplicationEntity> wrapper = new LambdaQueryWrapper<WorkerApplicationEntity>()
-                .eq(hasText(status), WorkerApplicationEntity::getStatus, status)
-                .orderByAsc(WorkerApplicationEntity::getStatus)
-                .orderByDesc(WorkerApplicationEntity::getId);
-        if (hasText(keyword)) {
-            wrapper.and(query -> query
-                    .like(WorkerApplicationEntity::getRealName, keyword)
-                    .or()
-                    .like(WorkerApplicationEntity::getPhone, keyword)
-                    .or()
-                    .like(WorkerApplicationEntity::getServiceTypes, keyword)
-                    .or()
-                    .like(WorkerApplicationEntity::getServiceAreas, keyword));
-        }
         Page<WorkerApplicationEntity> page = workerApplicationMapper.selectPage(
                 new Page<>(current, size),
-                wrapper
+                buildAdminApplicationWrapper(status, keyword)
         );
         return PageResult.from(page, toDtos(page.getRecords()));
+    }
+
+    public Map<String, Long> summarizeAll(String status, String keyword) {
+        List<WorkerApplicationEntity> rows = workerApplicationMapper.selectList(buildAdminApplicationWrapper(status, keyword));
+        Map<String, Long> summary = new LinkedHashMap<>();
+        summary.put("total", (long) rows.size());
+        summary.put("pending", rows.stream().filter(item -> "PENDING".equalsIgnoreCase(item.getStatus())).count());
+        summary.put("approved", rows.stream().filter(item -> "APPROVED".equalsIgnoreCase(item.getStatus())).count());
+        summary.put("rejected", rows.stream().filter(item -> "REJECTED".equalsIgnoreCase(item.getStatus())).count());
+        return summary;
     }
 
     @Transactional
@@ -196,6 +185,7 @@ public class WorkerApplicationService {
                     entity.getCertificates(),
                     entity.getServiceAreas(),
                     entity.getIntro(),
+                    null,
                     WorkerQualificationStatus.APPROVED,
                     "平台认证服务人员",
                     null
@@ -323,5 +313,23 @@ public class WorkerApplicationService {
 
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private LambdaQueryWrapper<WorkerApplicationEntity> buildAdminApplicationWrapper(String status, String keyword) {
+        LambdaQueryWrapper<WorkerApplicationEntity> wrapper = new LambdaQueryWrapper<WorkerApplicationEntity>()
+                .eq(hasText(status), WorkerApplicationEntity::getStatus, status)
+                .orderByAsc(WorkerApplicationEntity::getStatus)
+                .orderByDesc(WorkerApplicationEntity::getId);
+        if (hasText(keyword)) {
+            wrapper.and(query -> query
+                    .like(WorkerApplicationEntity::getRealName, keyword)
+                    .or()
+                    .like(WorkerApplicationEntity::getPhone, keyword)
+                    .or()
+                    .like(WorkerApplicationEntity::getServiceTypes, keyword)
+                    .or()
+                    .like(WorkerApplicationEntity::getServiceAreas, keyword));
+        }
+        return wrapper;
     }
 }

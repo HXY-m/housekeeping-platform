@@ -13,7 +13,8 @@ public class CategoryMapper {
                 category.getName(),
                 category.getDescription(),
                 category.getPriceLabel(),
-                category.getSlug()
+                category.getSlug(),
+                category.getImageUrl()
         );
     }
 }

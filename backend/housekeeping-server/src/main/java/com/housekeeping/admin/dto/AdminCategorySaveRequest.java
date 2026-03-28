@@ -32,6 +32,9 @@ public record AdminCategorySaveRequest(
         @Size(max = 255, message = "增值服务长度不能超过 255 个字符")
         String extraServices,
 
+        @Size(max = 500, message = "展示图片地址长度不能超过 500 个字符")
+        String imageUrl,
+
         @NotNull(message = "请指定是否启用")
         Boolean enabled
 ) {

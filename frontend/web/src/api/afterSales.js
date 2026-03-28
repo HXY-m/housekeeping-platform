@@ -36,6 +36,10 @@ export function fetchAdminAfterSales(params = {}) {
   return request(`/api/admin/after-sales${buildQuery(params)}`)
 }
 
+export function fetchAdminAfterSaleSummary(params = {}) {
+  return request(`/api/admin/after-sales/summary${buildQuery(params)}`)
+}
+
 export function handleAdminAfterSale(id, payload) {
   return request(`/api/admin/after-sales/${id}/handle`, {
     method: 'POST',

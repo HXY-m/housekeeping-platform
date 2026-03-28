@@ -27,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -60,46 +61,39 @@ public class AfterSaleService {
 
     public List<AfterSaleDto> listCurrentUserAfterSales() {
         SessionUser currentUser = requireCurrentUser();
-        List<AfterSaleEntity> records = afterSaleMapper.selectList(
+        return buildDtos(afterSaleMapper.selectList(
                 new LambdaQueryWrapper<AfterSaleEntity>()
                         .eq(AfterSaleEntity::getUserId, currentUser.userId())
                         .orderByAsc(AfterSaleEntity::getStatus)
                         .orderByDesc(AfterSaleEntity::getId)
-        );
-        return buildDtos(records);
+        ));
     }
 
     public List<AfterSaleDto> listAll() {
-        List<AfterSaleEntity> records = afterSaleMapper.selectList(
+        return buildDtos(afterSaleMapper.selectList(
                 new LambdaQueryWrapper<AfterSaleEntity>()
                         .orderByAsc(AfterSaleEntity::getStatus)
                         .orderByDesc(AfterSaleEntity::getId)
-        );
-        return buildDtos(records);
+        ));
     }
 
     public PageResult<AfterSaleDto> pageAll(long current, long size, String status, String keyword) {
-        LambdaQueryWrapper<AfterSaleEntity> wrapper = new LambdaQueryWrapper<AfterSaleEntity>()
-                .eq(hasText(status), AfterSaleEntity::getStatus, status)
-                .orderByAsc(AfterSaleEntity::getStatus)
-                .orderByDesc(AfterSaleEntity::getId);
-        if (hasText(keyword)) {
-            List<Long> orderIds = findOrderIdsByKeyword(keyword);
-            List<Long> workerIds = findWorkerIdsByKeyword(keyword);
-            wrapper.and(query -> query
-                    .like(AfterSaleEntity::getIssueType, keyword)
-                    .or()
-                    .like(AfterSaleEntity::getContent, keyword)
-                    .or()
-                    .like(AfterSaleEntity::getContactPhone, keyword)
-                    .or(!orderIds.isEmpty(), nested -> nested.in(AfterSaleEntity::getOrderId, orderIds))
-                    .or(!workerIds.isEmpty(), nested -> nested.in(AfterSaleEntity::getWorkerId, workerIds)));
-        }
         Page<AfterSaleEntity> page = afterSaleMapper.selectPage(
                 new Page<>(current, size),
-                wrapper
+                buildAdminAfterSaleWrapper(status, keyword)
         );
         return PageResult.from(page, buildDtos(page.getRecords()));
+    }
+
+    public Map<String, Long> summarizeAll(String status, String keyword) {
+        List<AfterSaleEntity> rows = afterSaleMapper.selectList(buildAdminAfterSaleWrapper(status, keyword));
+        Map<String, Long> summary = new LinkedHashMap<>();
+        summary.put("total", (long) rows.size());
+        summary.put("pending", rows.stream().filter(item -> AfterSaleStatus.PENDING.name().equalsIgnoreCase(item.getStatus())).count());
+        summary.put("processing", rows.stream().filter(item -> AfterSaleStatus.PROCESSING.name().equalsIgnoreCase(item.getStatus())).count());
+        summary.put("resolved", rows.stream().filter(item -> AfterSaleStatus.RESOLVED.name().equalsIgnoreCase(item.getStatus())).count());
+        summary.put("rejected", rows.stream().filter(item -> AfterSaleStatus.REJECTED.name().equalsIgnoreCase(item.getStatus())).count());
+        return summary;
     }
 
     @Transactional
@@ -312,5 +306,25 @@ public class AfterSaleService {
 
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private LambdaQueryWrapper<AfterSaleEntity> buildAdminAfterSaleWrapper(String status, String keyword) {
+        LambdaQueryWrapper<AfterSaleEntity> wrapper = new LambdaQueryWrapper<AfterSaleEntity>()
+                .eq(hasText(status), AfterSaleEntity::getStatus, status)
+                .orderByAsc(AfterSaleEntity::getStatus)
+                .orderByDesc(AfterSaleEntity::getId);
+        if (hasText(keyword)) {
+            List<Long> orderIds = findOrderIdsByKeyword(keyword);
+            List<Long> workerIds = findWorkerIdsByKeyword(keyword);
+            wrapper.and(query -> query
+                    .like(AfterSaleEntity::getIssueType, keyword)
+                    .or()
+                    .like(AfterSaleEntity::getContent, keyword)
+                    .or()
+                    .like(AfterSaleEntity::getContactPhone, keyword)
+                    .or(!orderIds.isEmpty(), nested -> nested.in(AfterSaleEntity::getOrderId, orderIds))
+                    .or(!workerIds.isEmpty(), nested -> nested.in(AfterSaleEntity::getWorkerId, workerIds)));
+        }
+        return wrapper;
     }
 }

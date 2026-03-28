@@ -13,48 +13,51 @@
 
     <div class="summary-grid">
       <el-card shadow="never" class="summary-card">
-        <el-statistic title="日志总量" :value="logs.length" />
+        <el-statistic title="日志总量" :value="summary.total" />
       </el-card>
       <el-card shadow="never" class="summary-card">
-        <el-statistic title="创建类操作" :value="createCount" />
+        <el-statistic title="创建类操作" :value="summary.createCount" />
       </el-card>
       <el-card shadow="never" class="summary-card">
-        <el-statistic title="审核类操作" :value="reviewCount" />
+        <el-statistic title="审核类操作" :value="summary.reviewCount" />
       </el-card>
       <el-card shadow="never" class="summary-card">
-        <el-statistic title="今日日志" :value="todayCount" />
+        <el-statistic title="今日日志" :value="summary.todayCount" />
       </el-card>
     </div>
 
     <el-card shadow="never">
-      <div class="filter-row">
-        <el-input v-model="filters.operatorName" clearable placeholder="操作人姓名" style="width: 180px" />
-        <el-select v-model="filters.roleCode" clearable placeholder="角色" style="width: 160px">
-          <el-option label="普通用户" value="USER" />
-          <el-option label="服务人员" value="WORKER" />
-          <el-option label="管理员" value="ADMIN" />
-        </el-select>
-        <el-select v-model="filters.actionType" clearable placeholder="动作类型" style="width: 220px">
-          <el-option
-            v-for="item in actionOptions"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
+      <div class="table-toolbar">
+        <div class="table-toolbar__filters">
+          <el-input v-model="filters.operatorName" clearable placeholder="操作人姓名" style="width: 180px" />
+          <el-select v-model="filters.roleCode" clearable placeholder="角色" style="width: 160px">
+            <el-option label="普通用户" value="USER" />
+            <el-option label="服务人员" value="WORKER" />
+            <el-option label="管理员" value="ADMIN" />
+          </el-select>
+          <el-select v-model="filters.actionType" clearable placeholder="动作类型" style="width: 220px">
+            <el-option
+              v-for="item in actionOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+          <el-date-picker
+            v-model="dateRange"
+            type="daterange"
+            value-format="YYYY-MM-DD"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
           />
-        </el-select>
-        <el-date-picker
-          v-model="dateRange"
-          type="daterange"
-          value-format="YYYY-MM-DD"
-          range-separator="至"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
-        />
-        <el-button type="primary" @click="loadLogs">查询</el-button>
-        <el-button @click="resetFilters">重置</el-button>
+          <el-button type="primary" @click="loadLogs">查询</el-button>
+          <el-button @click="resetFilters">重置</el-button>
+        </div>
+        <span class="section-caption">日志卡片与表格均按当前筛选条件实时统计</span>
       </div>
 
-      <el-table :data="pagedLogs" v-loading="loading" stripe>
+      <el-table :data="logs" v-loading="loading" stripe style="margin-top: 16px">
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="createdAt" label="时间" width="170">
           <template #default="{ row }">
@@ -75,7 +78,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="targetType" label="目标类型" width="140" />
-        <el-table-column prop="targetId" label="目标ID" width="100" />
+        <el-table-column prop="targetId" label="目标 ID" width="100" />
         <el-table-column prop="content" label="操作内容" min-width="260" show-overflow-tooltip />
         <el-table-column prop="ipAddress" label="IP 地址" width="140" />
       </el-table>
@@ -91,9 +94,9 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { fetchAdminOperationLogs } from '../../api'
+import { fetchAdminOperationLogSummary, fetchAdminOperationLogs } from '../../api'
 import ListPagination from '../../components/common/ListPagination.vue'
 import { useServerPagination } from '../../composables/useServerPagination'
 import { formatDateTime } from '../../utils/format'
@@ -133,6 +136,12 @@ const actionOptions = Object.entries(actionLabelMap).map(([value, label]) => ({ 
 const loading = ref(false)
 const logs = ref([])
 const dateRange = ref([])
+const summary = ref({
+  total: 0,
+  createCount: 0,
+  reviewCount: 0,
+  todayCount: 0
+})
 
 const filters = reactive({
   operatorName: '',
@@ -141,18 +150,6 @@ const filters = reactive({
 })
 
 const { currentPage, pageSize, pageSizes, total, buildParams, applyPageResult, resetPage } = useServerPagination(10)
-const pagedLogs = logs
-
-const createCount = computed(() =>
-  logs.value.filter((item) => String(item.actionType || '').includes('CREATE')).length
-)
-const reviewCount = computed(() =>
-  logs.value.filter((item) => String(item.actionType || '').includes('REVIEW')).length
-)
-const todayCount = computed(() => {
-  const today = new Date().toISOString().slice(0, 10)
-  return logs.value.filter((item) => String(item.createdAt || '').slice(0, 10) === today).length
-})
 
 function resetFilters() {
   filters.operatorName = ''
@@ -169,14 +166,24 @@ function resetFilters() {
 async function loadLogs() {
   loading.value = true
   try {
-    const result = await fetchAdminOperationLogs(buildParams({
-      operatorName: filters.operatorName,
+    const params = {
+      operatorName: filters.operatorName.trim(),
       roleCode: filters.roleCode,
       actionType: filters.actionType,
       dateFrom: dateRange.value?.[0] || '',
       dateTo: dateRange.value?.[1] || ''
-    }))
+    }
+    const [result, summaryResult] = await Promise.all([
+      fetchAdminOperationLogs(buildParams(params)),
+      fetchAdminOperationLogSummary(params)
+    ])
     logs.value = applyPageResult(result)
+    summary.value = {
+      total: Number(summaryResult?.total || 0),
+      createCount: Number(summaryResult?.createCount || 0),
+      reviewCount: Number(summaryResult?.reviewCount || 0),
+      todayCount: Number(summaryResult?.todayCount || 0)
+    }
   } catch (error) {
     ElMessage.error(error.message || '获取操作日志失败')
   } finally {

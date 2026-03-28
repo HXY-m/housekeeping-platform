@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/orders")
 @PreAuthorize("hasRole('USER') and hasAuthority('USER_ORDER_USE')")
@@ -41,6 +43,12 @@ public class OrderController {
                 pageQuery.safeSize(),
                 status
         ));
+    }
+
+    @GetMapping("/summary")
+    @Operation(summary = "获取当前用户订单摘要")
+    public ApiResponse<Map<String, Long>> summary(@RequestParam(required = false) String status) {
+        return ApiResponse.ok(orderService.summarizeCurrentUserOrders(status));
     }
 
     @GetMapping("/availability")

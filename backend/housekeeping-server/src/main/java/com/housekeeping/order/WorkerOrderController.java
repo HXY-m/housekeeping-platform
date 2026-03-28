@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/worker/orders")
 @PreAuthorize("hasRole('WORKER') and hasAuthority('WORKER_ORDER_HANDLE')")
@@ -40,6 +42,12 @@ public class WorkerOrderController {
                 pageQuery.safeSize(),
                 status
         ));
+    }
+
+    @GetMapping("/summary")
+    @Operation(summary = "获取当前服务人员订单摘要")
+    public ApiResponse<Map<String, Long>> summary(@RequestParam(required = false) String status) {
+        return ApiResponse.ok(orderService.summarizeCurrentWorkerOrders(status));
     }
 
     @PostMapping("/{id}/accept")

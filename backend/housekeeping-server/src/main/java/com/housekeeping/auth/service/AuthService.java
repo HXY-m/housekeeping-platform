@@ -85,6 +85,7 @@ public class AuthService {
                     request.certificates().trim(),
                     request.serviceAreas().trim(),
                     request.intro().trim(),
+                    "",
                     WorkerQualificationStatus.UNSUBMITTED,
                     "Qualification not submitted",
                     "New worker account created. Public listing remains hidden until qualification review passes."

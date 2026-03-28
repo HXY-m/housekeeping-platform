@@ -22,6 +22,10 @@ export function fetchAdminOrders(params) {
   return request(`/api/admin/orders${buildQuery(params)}`)
 }
 
+export function fetchAdminOrderSummary(params = {}) {
+  return request(`/api/admin/orders/summary${buildQuery(params)}`)
+}
+
 export function fetchAdminPermissionCatalog() {
   return request('/api/admin/permissions/catalog')
 }
@@ -35,6 +39,10 @@ export function updateAdminRolePermissions(roleCode, payload) {
 
 export function fetchAdminUsers(params = {}) {
   return request(`/api/admin/users${buildQuery(params)}`)
+}
+
+export function fetchAdminUserSummary(params = {}) {
+  return request(`/api/admin/users/summary${buildQuery(params)}`)
 }
 
 export function createAdminUser(payload) {
@@ -61,6 +69,10 @@ export function fetchAdminCategories(params = {}) {
   return request(`/api/admin/categories${buildQuery(params)}`)
 }
 
+export function fetchAdminCategorySummary(params = {}) {
+  return request(`/api/admin/categories/summary${buildQuery(params)}`)
+}
+
 export function createAdminCategory(payload) {
   return request('/api/admin/categories', {
     method: 'POST',
@@ -83,6 +95,10 @@ export function deleteAdminCategory(id) {
 
 export function fetchAdminOperationLogs(params = {}) {
   return request(`/api/admin/operation-logs${buildQuery(params)}`)
+}
+
+export function fetchAdminOperationLogSummary(params = {}) {
+  return request(`/api/admin/operation-logs/summary${buildQuery(params)}`)
 }
 
 export function exportAdminDashboardReport() {

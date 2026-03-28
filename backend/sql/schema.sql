@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS service_category (
   service_area VARCHAR(255) NOT NULL DEFAULT '',
   service_scene VARCHAR(255) NOT NULL DEFAULT '',
   extra_services VARCHAR(255) NOT NULL DEFAULT '',
+  image_url VARCHAR(500) NOT NULL DEFAULT '',
   enabled TINYINT(1) NOT NULL DEFAULT 1
 ) COMMENT='service categories';
 
@@ -99,6 +100,7 @@ CREATE TABLE IF NOT EXISTS worker_profile (
   certificates VARCHAR(500) NOT NULL,
   service_areas VARCHAR(500) NOT NULL,
   service_cases VARCHAR(500) NOT NULL,
+  avatar_url VARCHAR(500) NOT NULL DEFAULT '',
   qualification_status VARCHAR(20) NOT NULL DEFAULT 'APPROVED'
 ) COMMENT='worker profiles';
 

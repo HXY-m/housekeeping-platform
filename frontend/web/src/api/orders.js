@@ -18,6 +18,10 @@ export function fetchOrders(params) {
   return request(`/api/orders${buildQuery(params)}`)
 }
 
+export function fetchOrderSummary(params = {}) {
+  return request(`/api/orders/summary${buildQuery(params)}`)
+}
+
 export function createOrder(payload) {
   return request('/api/orders', {
     method: 'POST',
@@ -57,6 +61,10 @@ export function fetchWorkerOrders(params) {
     return request(`/api/worker/orders${buildQuery({ current: 1, size: 100 })}`).then((result) => result?.records || [])
   }
   return request(`/api/worker/orders${buildQuery(params)}`)
+}
+
+export function fetchWorkerOrderSummary(params = {}) {
+  return request(`/api/worker/orders/summary${buildQuery(params)}`)
 }
 
 export function acceptWorkerOrder(id) {

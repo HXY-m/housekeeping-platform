@@ -4,7 +4,7 @@
       <div>
         <el-tag type="danger" round>用户治理</el-tag>
         <h1>平台用户管理</h1>
-        <p>统一管理普通用户、服务人员与管理员账号，支持筛选、建档、编辑与逻辑删除。</p>
+        <p>统一管理普通用户、服务人员与管理员账号，支持筛选、创建、编辑与逻辑删除。</p>
       </div>
       <div class="hero-actions">
         <el-button type="primary" @click="openCreate">新增用户</el-button>
@@ -13,38 +13,41 @@
 
     <div class="summary-grid">
       <el-card shadow="never" class="summary-card">
-        <el-statistic title="账号总数" :value="users.length" />
+        <el-statistic title="账号总数" :value="summary.total" />
       </el-card>
       <el-card shadow="never" class="summary-card">
-        <el-statistic title="启用账号" :value="activeCount" />
+        <el-statistic title="启用账号" :value="summary.active" />
       </el-card>
       <el-card shadow="never" class="summary-card">
-        <el-statistic title="服务人员账号" :value="workerCount" />
+        <el-statistic title="服务人员账号" :value="summary.workers" />
       </el-card>
       <el-card shadow="never" class="summary-card">
-        <el-statistic title="管理员账号" :value="adminCount" />
+        <el-statistic title="管理员账号" :value="summary.admins" />
       </el-card>
     </div>
 
     <el-card shadow="never">
-      <div class="filter-row">
-        <el-input v-model="filters.realName" clearable placeholder="姓名" style="width: 180px" />
-        <el-input v-model="filters.phone" clearable placeholder="手机号" style="width: 180px" />
-        <el-select v-model="filters.roleCode" clearable placeholder="角色" style="width: 160px">
-          <el-option label="普通用户" value="USER" />
-          <el-option label="服务人员" value="WORKER" />
-          <el-option label="管理员" value="ADMIN" />
-        </el-select>
-        <el-select v-model="filters.status" clearable placeholder="状态" style="width: 160px">
-          <el-option label="启用" value="ACTIVE" />
-          <el-option label="禁用" value="DISABLED" />
-          <el-option label="已删除" value="DELETED" />
-        </el-select>
-        <el-button type="primary" @click="loadUsers">查询</el-button>
-        <el-button @click="resetFilters">重置</el-button>
+      <div class="table-toolbar">
+        <div class="table-toolbar__filters">
+          <el-input v-model="filters.realName" clearable placeholder="姓名" style="width: 180px" />
+          <el-input v-model="filters.phone" clearable placeholder="手机号" style="width: 180px" />
+          <el-select v-model="filters.roleCode" clearable placeholder="角色" style="width: 160px">
+            <el-option label="普通用户" value="USER" />
+            <el-option label="服务人员" value="WORKER" />
+            <el-option label="管理员" value="ADMIN" />
+          </el-select>
+          <el-select v-model="filters.status" clearable placeholder="状态" style="width: 160px">
+            <el-option label="启用" value="ACTIVE" />
+            <el-option label="禁用" value="DISABLED" />
+            <el-option label="已删除" value="DELETED" />
+          </el-select>
+          <el-button type="primary" @click="loadUsers">查询</el-button>
+          <el-button @click="resetFilters">重置</el-button>
+        </div>
+        <span class="section-caption">统计卡片将随筛选条件同步更新</span>
       </div>
 
-      <el-table :data="pagedUsers" v-loading="loading" stripe>
+      <el-table :data="users" v-loading="loading" stripe style="margin-top: 16px">
         <el-table-column prop="id" label="ID" width="90" />
         <el-table-column prop="realName" label="姓名" width="140" />
         <el-table-column prop="phone" label="手机号" width="160" />
@@ -142,16 +145,17 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   createAdminUser,
   deleteAdminUser,
+  fetchAdminUserSummary,
   fetchAdminUsers,
   updateAdminUser
 } from '../../api'
-import { useServerPagination } from '../../composables/useServerPagination'
 import ListPagination from '../../components/common/ListPagination.vue'
+import { useServerPagination } from '../../composables/useServerPagination'
 
 const roleLabelMap = {
   USER: '普通用户',
@@ -182,6 +186,12 @@ const users = ref([])
 const dialogVisible = ref(false)
 const dialogMode = ref('create')
 const editingId = ref(null)
+const summary = ref({
+  total: 0,
+  active: 0,
+  workers: 0,
+  admins: 0
+})
 
 const filters = reactive({
   roleCode: '',
@@ -199,11 +209,6 @@ const form = reactive({
 })
 
 const { currentPage, pageSize, pageSizes, total, buildParams, applyPageResult, resetPage } = useServerPagination(10)
-const pagedUsers = users
-
-const activeCount = computed(() => users.value.filter((item) => item.status === 'ACTIVE').length)
-const workerCount = computed(() => users.value.filter((item) => item.roleCodes.includes('WORKER')).length)
-const adminCount = computed(() => users.value.filter((item) => item.roleCodes.includes('ADMIN')).length)
 
 function resetForm() {
   form.realName = ''
@@ -246,8 +251,23 @@ function resetFilters() {
 async function loadUsers() {
   loading.value = true
   try {
-    const result = await fetchAdminUsers(buildParams(filters))
+    const params = {
+      roleCode: filters.roleCode,
+      realName: filters.realName.trim(),
+      phone: filters.phone.trim(),
+      status: filters.status
+    }
+    const [result, summaryResult] = await Promise.all([
+      fetchAdminUsers(buildParams(params)),
+      fetchAdminUserSummary(params)
+    ])
     users.value = applyPageResult(result)
+    summary.value = {
+      total: Number(summaryResult?.total || 0),
+      active: Number(summaryResult?.active || 0),
+      workers: Number(summaryResult?.workers || 0),
+      admins: Number(summaryResult?.admins || 0)
+    }
   } catch (error) {
     ElMessage.error(error.message || '获取用户列表失败')
   } finally {

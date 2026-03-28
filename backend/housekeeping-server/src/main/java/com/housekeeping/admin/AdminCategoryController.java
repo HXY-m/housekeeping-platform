@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/admin/categories")
 @PreAuthorize("hasRole('ADMIN') and hasAuthority('ADMIN_SERVICE_MANAGE')")
@@ -43,6 +45,13 @@ public class AdminCategoryController {
                 keyword,
                 enabled
         ));
+    }
+
+    @GetMapping("/summary")
+    @Operation(summary = "获取服务项目摘要统计")
+    public ApiResponse<Map<String, Long>> summary(@RequestParam(required = false) String keyword,
+                                                  @RequestParam(required = false) Integer enabled) {
+        return ApiResponse.ok(adminCategoryService.summarizeCategories(keyword, enabled));
     }
 
     @PostMapping

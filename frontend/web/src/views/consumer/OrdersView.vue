@@ -278,6 +278,7 @@ import {
   confirmUserOrderCompletion,
   createAfterSale,
   fetchMyAfterSales,
+  fetchOrderSummary,
   fetchOrders,
   submitOrderReview,
   uploadAfterSaleAttachment
@@ -295,6 +296,12 @@ const afterSales = ref([])
 const loading = ref(false)
 const submittingAfterSale = ref(false)
 const statusFilter = ref('ALL')
+const orderSummary = ref({
+  total: 0,
+  active: 0,
+  needUserAction: 0,
+  afterSales: 0
+})
 
 const reviewDialogVisible = ref(false)
 const reviewOrderId = ref(null)
@@ -343,16 +350,6 @@ watch(statusFilter, () => {
   }
   loadData()
 })
-
-const orderSummary = computed(() => ({
-  total: total.value,
-  active: orderRows.value.filter((item) => normalizeOrderStatus(item.status) !== 'COMPLETED').length,
-  needUserAction: orderRows.value.filter((item) => {
-    const status = normalizeOrderStatus(item.status)
-    return status === 'ACCEPTED' || status === 'WAITING_USER_CONFIRMATION'
-  }).length,
-  afterSales: orderRows.value.filter((item) => item.afterSale).length
-}))
 
 const draftAttachmentPreviewList = computed(() => draftAttachments.value.map((item) => item.url))
 
@@ -467,14 +464,24 @@ function formatFileSize(size) {
 async function loadData() {
   loading.value = true
   try {
-    const [orderResult, afterSaleResult] = await Promise.all([
-      fetchOrders(buildParams({
+    const params = buildParams({
+      status: statusFilter.value === 'ALL' ? '' : statusFilter.value
+    })
+    const [orderResult, afterSaleResult, summaryResult] = await Promise.all([
+      fetchOrders(params),
+      fetchMyAfterSales(),
+      fetchOrderSummary({
         status: statusFilter.value === 'ALL' ? '' : statusFilter.value
-      })),
-      fetchMyAfterSales()
+      })
     ])
     orders.value = applyPageResult(orderResult)
     afterSales.value = afterSaleResult
+    orderSummary.value = {
+      total: Number(summaryResult?.total || 0),
+      active: Number(summaryResult?.active || 0),
+      needUserAction: Number(summaryResult?.needUserAction || 0),
+      afterSales: Number(summaryResult?.afterSales || 0)
+    }
   } catch (error) {
     ElMessage.error(error.message || '获取订单数据失败')
   } finally {

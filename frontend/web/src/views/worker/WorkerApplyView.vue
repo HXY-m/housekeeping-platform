@@ -3,9 +3,9 @@
     <el-card shadow="never" class="page-panel">
       <div class="page-panel__header">
         <div>
-          <h1 class="page-panel__title">服务人员资质材料</h1>
+          <h1 class="page-panel__title">服务人员资质申请</h1>
           <p class="page-panel__desc">
-            资质申请现在必须同时提交服务能力说明和证明文件。材料提交后会进入管理员审核，审核通过后才会公开展示并开放接单。
+            请同时提交服务介绍、服务范围、可接单时段与资质文件。审核通过后，资料才会出现在前台并开放接单。
           </p>
         </div>
         <div class="filter-actions">
@@ -39,12 +39,24 @@
         <template #header>
           <div class="card-header-between">
             <div>
-              <strong>资质申请表单</strong>
-              <p class="muted-line">先准备证明文件，再填写服务经验、区域和可接单时段。</p>
+              <strong>申请表单</strong>
+              <p class="muted-line">展示头像将用于前台推荐服务人员卡片，可与资质文件一并提交。</p>
             </div>
             <el-tag type="warning">服务人员端</el-tag>
           </div>
         </template>
+
+        <div class="profile-avatar-panel worker-avatar-panel">
+          <el-avatar :src="avatarPreview" :size="88" />
+          <div class="worker-avatar-panel__meta">
+            <strong>展示头像</strong>
+            <span class="muted-line">建议上传清晰的半身照或职业照，大小不超过 5MB。</span>
+            <div class="hero-actions">
+              <el-button plain :loading="uploadingAvatar" @click="openAvatarPicker">上传头像</el-button>
+              <el-button text @click="clearAvatar">恢复默认</el-button>
+            </div>
+          </div>
+        </div>
 
         <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
           <el-row :gutter="16">
@@ -172,26 +184,28 @@
             <el-button @click="resetFormFromLatest">恢复最近一次资料</el-button>
           </div>
         </el-form>
+
+        <input
+          ref="avatarInputRef"
+          type="file"
+          accept="image/*"
+          class="visually-hidden-input"
+          @change="handleAvatarChange"
+        />
       </el-card>
 
       <div class="page-stack">
         <el-card shadow="never">
           <template #header><strong>当前审核状态</strong></template>
-          <el-empty v-if="!latestApplication" description="还没有资质提交记录" />
+          <el-empty v-if="!latestApplication" description="还没有资质申请记录" />
           <div v-else class="status-panel">
             <el-tag size="large" :type="statusType(latestApplication.status)">
               {{ statusLabel(latestApplication.status) }}
             </el-tag>
             <el-descriptions :column="1" border>
-              <el-descriptions-item label="最近提交时间">
-                {{ latestApplication.createdAt || '--' }}
-              </el-descriptions-item>
-              <el-descriptions-item label="服务类型">
-                {{ latestApplication.serviceTypes || '--' }}
-              </el-descriptions-item>
-              <el-descriptions-item label="服务区域">
-                {{ latestApplication.serviceAreas || '--' }}
-              </el-descriptions-item>
+              <el-descriptions-item label="最近提交时间">{{ latestApplication.createdAt || '--' }}</el-descriptions-item>
+              <el-descriptions-item label="服务类型">{{ latestApplication.serviceTypes || '--' }}</el-descriptions-item>
+              <el-descriptions-item label="服务区域">{{ latestApplication.serviceAreas || '--' }}</el-descriptions-item>
               <el-descriptions-item label="资质标签">
                 {{ latestCertificateLabels.length ? latestCertificateLabels.join('、') : '未填写' }}
               </el-descriptions-item>
@@ -232,8 +246,15 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import FileAttachmentList from '../../components/common/FileAttachmentList.vue'
-import { fetchMyWorkerApplications, submitWorkerApplication, uploadAttachment } from '../../api'
+import {
+  fetchCurrentWorkerProfile,
+  fetchMyWorkerApplications,
+  submitWorkerApplication,
+  uploadAttachment,
+  uploadImage
+} from '../../api'
 import { authStore } from '../../stores/auth'
+import { getWorkerImage } from '../../utils/displayAssets'
 import {
   formatWorkerCertificateSummary,
   getWorkerCertificateLabels,
@@ -250,8 +271,10 @@ const areaOptions = ['浦东新区', '闵行区', '徐汇区', '静安区', '黄
 const scheduleOptions = ['工作日白天', '工作日晚间', '周末白天', '周末晚间', '节假日可接单']
 
 const formRef = ref(null)
+const avatarInputRef = ref(null)
 const applications = ref([])
 const proofFileList = ref([])
+const uploadingAvatar = ref(false)
 
 const form = reactive({
   realName: authStore.state.user?.realName || '',
@@ -261,7 +284,8 @@ const form = reactive({
   certificateLabels: [],
   serviceAreas: [],
   availableSchedule: [],
-  intro: ''
+  intro: '',
+  avatarUrl: ''
 })
 
 const rules = {
@@ -288,6 +312,14 @@ const normalizedProofFiles = computed(() =>
     }))
     .filter((item) => item.url)
 )
+const avatarPreview = computed(() =>
+  getWorkerImage({
+    id: authStore.state.user?.id,
+    name: form.realName || authStore.state.user?.realName || '服务人员',
+    city: '服务人员',
+    avatarUrl: form.avatarUrl
+  })
+)
 
 function statusType(status) {
   if (status === 'APPROVED') return 'success'
@@ -303,7 +335,7 @@ function statusLabel(status) {
 
 function splitValues(value) {
   return String(value || '')
-    .split(/[、,，/\n]/)
+    .split(/[、,，;\n]/)
     .map((item) => item.trim())
     .filter(Boolean)
 }
@@ -332,6 +364,20 @@ function syncForm(application) {
   form.availableSchedule = splitValues(application.availableSchedule)
   form.intro = application.intro || ''
   proofFileList.value = buildRemoteProofFiles(getWorkerQualificationAttachments(application))
+}
+
+async function loadWorkerProfile() {
+  try {
+    const profile = await fetchCurrentWorkerProfile()
+    if (profile?.avatarUrl && !form.avatarUrl) {
+      form.avatarUrl = profile.avatarUrl
+    }
+    if (profile?.name && !form.realName) {
+      form.realName = profile.name
+    }
+  } catch {
+    // ignore
+  }
 }
 
 function resetFormFromLatest() {
@@ -417,6 +463,46 @@ function handleProofExceed() {
   ElMessage.warning(`最多上传 ${maxProofCount} 份资质文件`)
 }
 
+function openAvatarPicker() {
+  avatarInputRef.value?.click()
+}
+
+function clearAvatar() {
+  form.avatarUrl = ''
+  if (avatarInputRef.value) {
+    avatarInputRef.value.value = ''
+  }
+}
+
+async function handleAvatarChange(event) {
+  const file = event.target.files?.[0]
+  if (!file) {
+    return
+  }
+  if (!file.type.startsWith('image/')) {
+    ElMessage.warning('请选择图片格式的头像文件')
+    event.target.value = ''
+    return
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    ElMessage.warning('头像图片不能超过 5MB')
+    event.target.value = ''
+    return
+  }
+
+  uploadingAvatar.value = true
+  try {
+    const uploaded = await uploadImage(file)
+    form.avatarUrl = uploaded.url
+    ElMessage.success('展示头像上传成功')
+  } catch (error) {
+    ElMessage.error(error.message || '上传展示头像失败')
+  } finally {
+    uploadingAvatar.value = false
+    event.target.value = ''
+  }
+}
+
 async function uploadProofAttachments() {
   const attachments = []
   for (const file of proofFileList.value) {
@@ -446,6 +532,7 @@ async function uploadProofAttachments() {
 }
 
 async function loadApplications() {
+  await loadWorkerProfile()
   applications.value = await fetchMyWorkerApplications().catch(() => [])
   if (applications.value.length) {
     syncForm(applications.value[0])
@@ -469,6 +556,7 @@ async function submitApplication() {
       serviceAreas: form.serviceAreas.join('、'),
       availableSchedule: form.availableSchedule.join('、'),
       intro: form.intro,
+      avatarUrl: form.avatarUrl,
       attachments: uploadedAttachments
     })
     ElMessage.success('资质资料已提交')
@@ -480,3 +568,17 @@ async function submitApplication() {
 
 onMounted(loadApplications)
 </script>
+
+<style scoped>
+.worker-avatar-panel {
+  padding: 16px 18px;
+  border-radius: 22px;
+  background: rgba(250, 245, 238, 0.92);
+  border: 1px solid rgba(145, 117, 87, 0.12);
+}
+
+.worker-avatar-panel__meta {
+  display: grid;
+  gap: 8px;
+}
+</style>

@@ -13,6 +13,7 @@ public record WorkerDetailDto(
         String intro,
         List<String> tags,
         String nextAvailable,
+        String avatarUrl,
         int yearsOfExperience,
         List<String> certificates,
         List<String> serviceAreas,

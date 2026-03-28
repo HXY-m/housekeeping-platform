@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/admin/orders")
 @PreAuthorize("hasRole('ADMIN') and hasAuthority('ADMIN_ORDER_MANAGE')")
@@ -40,5 +42,14 @@ public class AdminOrderController {
                 dateFrom,
                 dateTo
         ));
+    }
+
+    @GetMapping("/summary")
+    @Operation(summary = "获取平台订单摘要统计")
+    public ApiResponse<Map<String, Long>> summary(@RequestParam(required = false) String status,
+                                                  @RequestParam(required = false) String keyword,
+                                                  @RequestParam(required = false) String dateFrom,
+                                                  @RequestParam(required = false) String dateTo) {
+        return ApiResponse.ok(orderService.summarizeAllOrders(status, keyword, dateFrom, dateTo));
     }
 }

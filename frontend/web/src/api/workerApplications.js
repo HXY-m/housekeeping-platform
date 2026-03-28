@@ -26,6 +26,10 @@ export function fetchAdminWorkerApplications(params = {}) {
   return request(`/api/worker-applications/admin${buildQuery(params)}`)
 }
 
+export function fetchAdminWorkerApplicationSummary(params = {}) {
+  return request(`/api/worker-applications/admin/summary${buildQuery(params)}`)
+}
+
 export function reviewWorkerApplication(id, payload) {
   return request(`/api/worker-applications/admin/${id}/review`, {
     method: 'POST',

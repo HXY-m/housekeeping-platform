@@ -5,7 +5,7 @@
         <div>
           <h1 class="page-panel__title">服务人员资质审核</h1>
           <p class="page-panel__desc">
-            审核服务人员提交的能力说明、服务区域和证明文件，所有材料集中展示在详情抽屉中，方便一次性核验。
+            集中审核服务人员提交的能力说明、服务范围与资质文件，支持快速查看与跟进处理。
           </p>
         </div>
         <div class="filter-actions">
@@ -22,19 +22,19 @@
       <div class="metric-strip">
         <div class="metric-chip">
           <span class="metric-chip__label">申请总数</span>
-          <strong>{{ applications.length }}</strong>
+          <strong>{{ summary.total }}</strong>
         </div>
         <div class="metric-chip">
           <span class="metric-chip__label">待审核</span>
-          <strong>{{ pendingCount }}</strong>
+          <strong>{{ summary.pending }}</strong>
         </div>
         <div class="metric-chip">
           <span class="metric-chip__label">已通过</span>
-          <strong>{{ approvedCount }}</strong>
+          <strong>{{ summary.approved }}</strong>
         </div>
         <div class="metric-chip">
           <span class="metric-chip__label">已驳回</span>
-          <strong>{{ rejectedCount }}</strong>
+          <strong>{{ summary.rejected }}</strong>
         </div>
       </div>
     </el-card>
@@ -49,10 +49,10 @@
             style="width: 280px"
           />
         </div>
-        <span class="section-caption">只有待审核记录保留操作按钮，已处理记录以结果追溯为主</span>
+        <span class="section-caption">摘要卡片会随筛选条件实时同步</span>
       </div>
 
-      <el-table :data="pagedApplications" v-loading="loading" stripe style="margin-top: 16px">
+      <el-table :data="applications" v-loading="loading" stripe style="margin-top: 16px">
         <el-table-column label="申请人" min-width="180">
           <template #default="{ row }">
             <div class="table-cell-primary">
@@ -71,7 +71,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="serviceAreas" label="服务区域" min-width="180" show-overflow-tooltip />
-        <el-table-column prop="availableSchedule" label="可接单时间" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="availableSchedule" label="可接单时段" min-width="180" show-overflow-tooltip />
         <el-table-column label="状态" width="110">
           <template #default="{ row }">
             <el-tag :type="statusType(row.status)">{{ statusLabel(row.status) }}</el-tag>
@@ -125,7 +125,7 @@
           <el-descriptions-item label="服务类型">{{ selectedApplication.serviceTypes || '--' }}</el-descriptions-item>
           <el-descriptions-item label="从业年限">{{ selectedApplication.yearsOfExperience || 0 }} 年</el-descriptions-item>
           <el-descriptions-item label="服务区域">{{ selectedApplication.serviceAreas || '--' }}</el-descriptions-item>
-          <el-descriptions-item label="可接单时间">{{ selectedApplication.availableSchedule || '--' }}</el-descriptions-item>
+          <el-descriptions-item label="可接单时段">{{ selectedApplication.availableSchedule || '--' }}</el-descriptions-item>
           <el-descriptions-item label="个人介绍">{{ selectedApplication.intro || '--' }}</el-descriptions-item>
           <el-descriptions-item label="提交时间">{{ selectedApplication.createdAt || '--' }}</el-descriptions-item>
           <el-descriptions-item label="审核备注">{{ selectedApplication.adminRemark || '暂无' }}</el-descriptions-item>
@@ -182,7 +182,7 @@ import { ElMessage } from 'element-plus'
 import FileAttachmentList from '../../components/common/FileAttachmentList.vue'
 import ListPagination from '../../components/common/ListPagination.vue'
 import { useServerPagination } from '../../composables/useServerPagination'
-import { fetchAdminWorkerApplications, reviewWorkerApplication } from '../../api'
+import { fetchAdminWorkerApplicationSummary, fetchAdminWorkerApplications, reviewWorkerApplication } from '../../api'
 import {
   formatWorkerCertificateSummary,
   getWorkerCertificateLabels,
@@ -199,27 +199,14 @@ const selectedId = ref(null)
 const selectedApplication = ref(null)
 const reviewAction = ref('APPROVE')
 const reviewRemark = ref('')
-
-const filteredApplications = computed(() => {
-  const normalizedKeyword = keyword.value.trim().toLowerCase()
-
-  return applications.value.filter((item) => {
-    if (statusFilter.value !== 'ALL' && item.status !== statusFilter.value) {
-      return false
-    }
-
-    if (!normalizedKeyword) {
-      return true
-    }
-
-    return [item.realName, item.phone, item.serviceTypes, item.serviceAreas]
-      .filter(Boolean)
-      .some((value) => String(value).toLowerCase().includes(normalizedKeyword))
-  })
+const summary = ref({
+  total: 0,
+  pending: 0,
+  approved: 0,
+  rejected: 0
 })
 
 const { currentPage, pageSize, pageSizes, total, buildParams, applyPageResult, resetPage } = useServerPagination(8)
-const pagedApplications = applications
 
 watch([keyword, statusFilter], () => {
   if (currentPage.value !== 1) {
@@ -229,9 +216,6 @@ watch([keyword, statusFilter], () => {
   loadApplications()
 })
 
-const pendingCount = computed(() => applications.value.filter((item) => item.status === 'PENDING').length)
-const approvedCount = computed(() => applications.value.filter((item) => item.status === 'APPROVED').length)
-const rejectedCount = computed(() => applications.value.filter((item) => item.status === 'REJECTED').length)
 const selectedLabels = computed(() => getWorkerCertificateLabels(selectedApplication.value?.certificates))
 const selectedAttachments = computed(() => getWorkerQualificationAttachments(selectedApplication.value))
 
@@ -263,11 +247,21 @@ function openReview(row, action) {
 async function loadApplications() {
   loading.value = true
   try {
-    const result = await fetchAdminWorkerApplications(buildParams({
+    const params = {
       status: statusFilter.value === 'ALL' ? '' : statusFilter.value,
       keyword: keyword.value.trim()
-    }))
+    }
+    const [result, summaryResult] = await Promise.all([
+      fetchAdminWorkerApplications(buildParams(params)),
+      fetchAdminWorkerApplicationSummary(params)
+    ])
     applications.value = applyPageResult(result)
+    summary.value = {
+      total: Number(summaryResult?.total || 0),
+      pending: Number(summaryResult?.pending || 0),
+      approved: Number(summaryResult?.approved || 0),
+      rejected: Number(summaryResult?.rejected || 0)
+    }
   } catch (error) {
     ElMessage.error(error.message || '获取资质申请失败')
   } finally {

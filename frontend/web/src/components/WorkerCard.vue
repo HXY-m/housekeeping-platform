@@ -1,6 +1,11 @@
 <template>
   <el-card shadow="hover" class="worker-card worker-card--rich">
-    <el-image :src="coverImage" :alt="worker.name" fit="cover" class="worker-card__image" />
+    <div class="worker-card__media">
+      <el-image :src="coverImage" :alt="worker.name" fit="cover" class="worker-card__image" />
+      <div class="worker-card__overlay">
+        <span class="worker-card__eyebrow">平台甄选</span>
+      </div>
+    </div>
 
     <div class="worker-card__body">
       <div class="worker-card__top">
@@ -8,7 +13,7 @@
           <div class="worker-card__name">{{ worker.name }}</div>
           <div class="worker-card__meta">{{ worker.roleLabel }} · {{ worker.city }}</div>
         </div>
-        <el-tag type="success">{{ formatCurrency(worker.hourlyPrice) }}/小时</el-tag>
+        <el-tag type="success" effect="light">{{ formatCurrency(worker.hourlyPrice) }}/小时</el-tag>
       </div>
 
       <div class="worker-card__stats">
@@ -48,15 +53,46 @@ const coverImage = computed(() => getWorkerImage(props.worker))
 .worker-card--rich {
   overflow: hidden;
   border: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(251, 247, 241, 0.94));
+}
+
+.worker-card__media {
+  position: relative;
+}
+
+.worker-card__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 18px;
+  background: linear-gradient(180deg, rgba(38, 28, 18, 0.2), transparent 46%);
+}
+
+.worker-card__eyebrow {
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff8f1;
+  font-size: 12px;
+  letter-spacing: 0.08em;
 }
 
 .worker-card__image {
   width: 100%;
-  height: 220px;
+  height: 228px;
   display: block;
 }
 
 .worker-card__body {
-  padding-top: 18px;
+  padding-top: 20px;
+  display: grid;
+  gap: 14px;
+}
+
+.worker-card__intro {
+  margin: 0;
+  line-height: 1.8;
 }
 </style>

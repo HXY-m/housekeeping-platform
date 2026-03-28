@@ -17,13 +17,14 @@ public class ServiceCategoryEntity {
     private String serviceArea;
     private String serviceScene;
     private String extraServices;
+    private String imageUrl;
     private Integer enabled;
 
     public ServiceCategoryEntity() {
     }
 
     public ServiceCategoryEntity(String name, String description, String priceLabel, String slug) {
-        this(name, description, priceLabel, slug, "2小时", "平台服务区域", "家庭日常场景", "", 1);
+        this(name, description, priceLabel, slug, "2小时", "平台服务区域", "家庭日常场景", "", "", 1);
     }
 
     public ServiceCategoryEntity(String name,
@@ -34,6 +35,7 @@ public class ServiceCategoryEntity {
                                  String serviceArea,
                                  String serviceScene,
                                  String extraServices,
+                                 String imageUrl,
                                  Integer enabled) {
         this.name = name;
         this.description = description;
@@ -43,6 +45,7 @@ public class ServiceCategoryEntity {
         this.serviceArea = serviceArea;
         this.serviceScene = serviceScene;
         this.extraServices = extraServices;
+        this.imageUrl = imageUrl;
         this.enabled = enabled;
     }
 
@@ -116,6 +119,14 @@ public class ServiceCategoryEntity {
 
     public void setExtraServices(String extraServices) {
         this.extraServices = extraServices;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
     public Integer getEnabled() {

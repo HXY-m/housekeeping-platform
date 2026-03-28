@@ -192,7 +192,7 @@ import { ElMessage } from 'element-plus'
 import AttachmentGallery from '../../components/common/AttachmentGallery.vue'
 import ListPagination from '../../components/common/ListPagination.vue'
 import { useServerPagination } from '../../composables/useServerPagination'
-import { fetchAdminAfterSales, handleAdminAfterSale } from '../../api'
+import { fetchAdminAfterSaleSummary, fetchAdminAfterSales, handleAdminAfterSale } from '../../api'
 import { getAfterSaleStatusLabel, getAfterSaleStatusTagType } from '../../utils/afterSale'
 import { getOrderStatusLabel, getOrderStatusTagType } from '../../utils/order'
 
@@ -204,6 +204,12 @@ const selectedId = ref(null)
 const selectedAfterSale = ref(null)
 const statusFilter = ref('ALL')
 const keyword = ref('')
+const afterSaleStats = ref({
+  total: 0,
+  pending: 0,
+  processing: 0,
+  resolved: 0
+})
 const handleForm = reactive({
   status: 'PROCESSING',
   adminRemark: ''
@@ -238,13 +244,6 @@ watch([keyword, statusFilter], () => {
   loadAfterSales()
 })
 
-const afterSaleStats = computed(() => ({
-  total: afterSales.value.length,
-  pending: afterSales.value.filter((item) => item.status === 'PENDING').length,
-  processing: afterSales.value.filter((item) => item.status === 'PROCESSING').length,
-  resolved: afterSales.value.filter((item) => item.status === 'RESOLVED').length
-}))
-
 function canHandle(row) {
   return row.status !== 'RESOLVED' && row.status !== 'REJECTED'
 }
@@ -265,11 +264,21 @@ function openHandle(row, status) {
 async function loadAfterSales() {
   loading.value = true
   try {
-    const result = await fetchAdminAfterSales(buildParams({
+    const params = {
       status: statusFilter.value === 'ALL' ? '' : statusFilter.value,
       keyword: keyword.value.trim()
-    }))
+    }
+    const [result, summaryResult] = await Promise.all([
+      fetchAdminAfterSales(buildParams(params)),
+      fetchAdminAfterSaleSummary(params)
+    ])
     afterSales.value = applyPageResult(result)
+    afterSaleStats.value = {
+      total: Number(summaryResult?.total || 0),
+      pending: Number(summaryResult?.pending || 0),
+      processing: Number(summaryResult?.processing || 0),
+      resolved: Number(summaryResult?.resolved || 0)
+    }
   } catch (error) {
     ElMessage.error(error.message || '获取售后列表失败')
   } finally {

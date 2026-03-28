@@ -125,7 +125,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { fetchAdminOrders } from '../../api'
+import { fetchAdminOrders, fetchAdminOrderSummary } from '../../api'
 import ListPagination from '../../components/common/ListPagination.vue'
 import { useServerPagination } from '../../composables/useServerPagination'
 import { getUserOrderFlowMeta } from '../../utils/orderFlow'
@@ -142,18 +142,17 @@ const statusOptions = [
 
 const loading = ref(false)
 const orders = ref([])
+const summary = ref({
+  total: 0,
+  pending: 0,
+  inService: 0,
+  completed: 0
+})
 const filters = reactive({
   keyword: '',
   status: '',
   dateRange: []
 })
-
-const summary = computed(() => ({
-  total: orders.value.length,
-  pending: orders.value.filter((item) => normalizeOrderStatus(item.status) === 'PENDING').length,
-  inService: orders.value.filter((item) => normalizeOrderStatus(item.status) === 'IN_SERVICE').length,
-  completed: orders.value.filter((item) => normalizeOrderStatus(item.status) === 'COMPLETED').length
-}))
 
 const filteredOrders = computed(() =>
   orders.value.filter((item) => {
@@ -196,13 +195,23 @@ watch(
 async function loadOrders() {
   loading.value = true
   try {
-    const result = await fetchAdminOrders(buildParams({
+    const params = {
       keyword: filters.keyword.trim(),
       status: filters.status,
       dateFrom: filters.dateRange?.[0] || '',
       dateTo: filters.dateRange?.[1] || ''
-    }))
+    }
+    const [result, summaryResult] = await Promise.all([
+      fetchAdminOrders(buildParams(params)),
+      fetchAdminOrderSummary(params)
+    ])
     orders.value = applyPageResult(result)
+    summary.value = {
+      total: Number(summaryResult?.total || 0),
+      pending: Number(summaryResult?.pending || 0),
+      inService: Number(summaryResult?.inService || 0),
+      completed: Number(summaryResult?.completed || 0)
+    }
   } catch (error) {
     ElMessage.error(error.message || '获取平台订单失败')
   } finally {

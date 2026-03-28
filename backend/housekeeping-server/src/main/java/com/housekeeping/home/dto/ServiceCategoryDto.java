@@ -5,6 +5,7 @@ public record ServiceCategoryDto(
         String name,
         String description,
         String priceLabel,
-        String slug
+        String slug,
+        String imageUrl
 ) {
 }

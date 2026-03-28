@@ -13,6 +13,7 @@ public record WorkerProfileDto(
         String certificates,
         String serviceAreas,
         String intro,
+        String avatarUrl,
         String qualificationStatus
 ) {
 }

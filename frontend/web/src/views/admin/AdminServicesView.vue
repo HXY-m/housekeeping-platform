@@ -4,7 +4,7 @@
       <div>
         <el-tag type="danger" round>服务治理</el-tag>
         <h1>服务项目管理</h1>
-        <p>维护前台展示的家政服务分类，控制启停状态，并补充时长、范围、场景与增值服务信息。</p>
+        <p>维护首页与列表页展示的服务项目信息，支持启停、扩展说明与自定义展示图片。</p>
       </div>
       <div class="hero-actions">
         <el-button type="primary" @click="openCreate">新增项目</el-button>
@@ -13,43 +13,58 @@
 
     <div class="summary-grid">
       <el-card shadow="never" class="summary-card">
-        <el-statistic title="项目总数" :value="categories.length" />
+        <el-statistic title="项目总数" :value="summary.total" />
       </el-card>
       <el-card shadow="never" class="summary-card">
-        <el-statistic title="启用项目" :value="enabledCount" />
+        <el-statistic title="启用项目" :value="summary.enabled" />
       </el-card>
       <el-card shadow="never" class="summary-card">
-        <el-statistic title="停用项目" :value="disabledCount" />
+        <el-statistic title="停用项目" :value="summary.disabled" />
       </el-card>
       <el-card shadow="never" class="summary-card">
-        <el-statistic title="扩展信息完整" :value="richInfoCount" />
+        <el-statistic title="资料较完整" :value="summary.richInfo" />
       </el-card>
     </div>
 
     <el-card shadow="never">
-      <div class="filter-row">
-        <el-input v-model="filters.keyword" clearable placeholder="搜索项目名称或描述" style="width: 280px" />
-        <el-select v-model="filters.enabled" clearable placeholder="启用状态" style="width: 180px">
-          <el-option label="启用" :value="1" />
-          <el-option label="停用" :value="0" />
-        </el-select>
-        <el-button type="primary" @click="loadCategories">查询</el-button>
-        <el-button @click="resetFilters">重置</el-button>
+      <div class="table-toolbar">
+        <div class="table-toolbar__filters">
+          <el-input
+            v-model="filters.keyword"
+            clearable
+            placeholder="搜索项目名称或描述"
+            style="width: 280px"
+          />
+          <el-select v-model="filters.enabled" clearable placeholder="启用状态" style="width: 180px">
+            <el-option label="启用" :value="1" />
+            <el-option label="停用" :value="0" />
+          </el-select>
+          <el-button type="primary" @click="loadCategories">查询</el-button>
+          <el-button @click="resetFilters">重置</el-button>
+        </div>
+        <span class="section-caption">摘要卡片与表格数据均来自后端汇总接口</span>
       </div>
 
-      <el-table :data="pagedCategories" v-loading="loading" stripe>
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="name" label="项目名称" min-width="140" />
+      <el-table :data="categories" v-loading="loading" stripe style="margin-top: 16px">
+        <el-table-column label="展示图" width="110">
+          <template #default="{ row }">
+            <el-image
+              :src="getServiceImage(row)"
+              :preview-src-list="[getServiceImage(row)]"
+              fit="cover"
+              preview-teleported
+              class="table-cover"
+            />
+          </template>
+        </el-table-column>
+        <el-table-column prop="name" label="项目名称" min-width="150" />
         <el-table-column prop="priceLabel" label="价格标签" width="140" />
         <el-table-column prop="serviceDuration" label="服务时长" width="140" />
         <el-table-column prop="serviceArea" label="服务范围" min-width="180" show-overflow-tooltip />
         <el-table-column prop="serviceScene" label="适用场景" min-width="180" show-overflow-tooltip />
-        <el-table-column prop="extraServices" label="增值服务" min-width="180" show-overflow-tooltip />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.enabled ? 'success' : 'info'">
-              {{ row.enabled ? '启用' : '停用' }}
-            </el-tag>
+            <el-tag :type="row.enabled ? 'success' : 'info'">{{ row.enabled ? '启用' : '停用' }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="slug" label="标识" width="160" />
@@ -72,8 +87,22 @@
       />
     </el-card>
 
-    <el-dialog v-model="dialogVisible" :title="dialogMode === 'create' ? '新增服务项目' : '编辑服务项目'" width="720px">
+    <el-dialog v-model="dialogVisible" :title="dialogMode === 'create' ? '新增服务项目' : '编辑服务项目'" width="760px">
       <el-form label-position="top">
+        <div class="media-upload-panel">
+          <div class="media-upload-panel__preview">
+            <el-image :src="previewImage" fit="cover" class="media-upload-panel__image" preview-teleported />
+          </div>
+          <div class="media-upload-panel__meta">
+            <strong>展示图片</strong>
+            <span class="muted-line">若未上传，前台会自动使用雅致风格的默认插画。</span>
+            <div class="hero-actions">
+              <el-button plain :loading="uploadingImage" @click="openImagePicker">上传图片</el-button>
+              <el-button text @click="clearImage">恢复默认图</el-button>
+            </div>
+          </div>
+        </div>
+
         <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item label="项目名称">
@@ -82,10 +111,11 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="价格标签">
-              <el-input v-model="form.priceLabel" maxlength="50" placeholder="例如：128元起 / 2小时起" />
+              <el-input v-model="form.priceLabel" maxlength="50" placeholder="例如：128 元起 / 2 小时起" />
             </el-form-item>
           </el-col>
         </el-row>
+
         <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item label="标识">
@@ -94,10 +124,11 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="服务时长">
-              <el-input v-model="form.serviceDuration" maxlength="100" placeholder="例如：2小时 / 4小时" />
+              <el-input v-model="form.serviceDuration" maxlength="100" placeholder="例如：2 小时 / 4 小时" />
             </el-form-item>
           </el-col>
         </el-row>
+
         <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item label="服务范围">
@@ -110,16 +141,27 @@
             </el-form-item>
           </el-col>
         </el-row>
+
         <el-form-item label="增值服务">
           <el-input v-model="form.extraServices" maxlength="255" />
         </el-form-item>
+
         <el-form-item label="项目描述">
           <el-input v-model="form.description" type="textarea" :rows="4" maxlength="300" show-word-limit />
         </el-form-item>
+
         <el-form-item label="是否启用">
           <el-switch v-model="form.enabled" />
         </el-form-item>
       </el-form>
+
+      <input
+        ref="imageInputRef"
+        type="file"
+        accept="image/*"
+        class="visually-hidden-input"
+        @change="handleImageChange"
+      />
 
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -136,16 +178,27 @@ import {
   createAdminCategory,
   deleteAdminCategory,
   fetchAdminCategories,
-  updateAdminCategory
+  fetchAdminCategorySummary,
+  updateAdminCategory,
+  uploadImage
 } from '../../api'
-import { useServerPagination } from '../../composables/useServerPagination'
 import ListPagination from '../../components/common/ListPagination.vue'
+import { useServerPagination } from '../../composables/useServerPagination'
+import { getServiceImage } from '../../utils/displayAssets'
 
 const loading = ref(false)
+const uploadingImage = ref(false)
 const categories = ref([])
 const dialogVisible = ref(false)
 const dialogMode = ref('create')
 const editingId = ref(null)
+const imageInputRef = ref(null)
+const summary = ref({
+  total: 0,
+  enabled: 0,
+  disabled: 0,
+  richInfo: 0
+})
 
 const filters = reactive({
   keyword: '',
@@ -161,16 +214,17 @@ const form = reactive({
   serviceArea: '',
   serviceScene: '',
   extraServices: '',
+  imageUrl: '',
   enabled: true
 })
 
 const { currentPage, pageSize, pageSizes, total, buildParams, applyPageResult, resetPage } = useServerPagination(10)
-const pagedCategories = categories
 
-const enabledCount = computed(() => categories.value.filter((item) => item.enabled).length)
-const disabledCount = computed(() => categories.value.filter((item) => !item.enabled).length)
-const richInfoCount = computed(() =>
-  categories.value.filter((item) => item.serviceDuration || item.serviceArea || item.serviceScene).length
+const previewImage = computed(() =>
+  getServiceImage({
+    ...form,
+    imageUrl: form.imageUrl
+  })
 )
 
 function resetForm() {
@@ -182,6 +236,7 @@ function resetForm() {
   form.serviceArea = ''
   form.serviceScene = ''
   form.extraServices = ''
+  form.imageUrl = ''
   form.enabled = true
   editingId.value = null
 }
@@ -203,6 +258,7 @@ function openEdit(row) {
   form.serviceArea = row.serviceArea || ''
   form.serviceScene = row.serviceScene || ''
   form.extraServices = row.extraServices || ''
+  form.imageUrl = row.imageUrl || ''
   form.enabled = row.enabled
   dialogVisible.value = true
 }
@@ -217,11 +273,64 @@ function resetFilters() {
   loadCategories()
 }
 
+function openImagePicker() {
+  imageInputRef.value?.click()
+}
+
+function clearImage() {
+  form.imageUrl = ''
+  if (imageInputRef.value) {
+    imageInputRef.value.value = ''
+  }
+}
+
+async function handleImageChange(event) {
+  const file = event.target.files?.[0]
+  if (!file) {
+    return
+  }
+  if (!file.type.startsWith('image/')) {
+    ElMessage.warning('请选择图片格式的服务展示图')
+    event.target.value = ''
+    return
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    ElMessage.warning('服务展示图不能超过 5MB')
+    event.target.value = ''
+    return
+  }
+
+  uploadingImage.value = true
+  try {
+    const uploaded = await uploadImage(file)
+    form.imageUrl = uploaded.url
+    ElMessage.success('服务展示图上传成功')
+  } catch (error) {
+    ElMessage.error(error.message || '上传服务展示图失败')
+  } finally {
+    uploadingImage.value = false
+    event.target.value = ''
+  }
+}
+
 async function loadCategories() {
   loading.value = true
   try {
-    const result = await fetchAdminCategories(buildParams(filters))
+    const params = {
+      keyword: filters.keyword.trim(),
+      enabled: filters.enabled
+    }
+    const [result, summaryResult] = await Promise.all([
+      fetchAdminCategories(buildParams(params)),
+      fetchAdminCategorySummary(params)
+    ])
     categories.value = applyPageResult(result)
+    summary.value = {
+      total: Number(summaryResult?.total || 0),
+      enabled: Number(summaryResult?.enabled || 0),
+      disabled: Number(summaryResult?.disabled || 0),
+      richInfo: Number(summaryResult?.richInfo || 0)
+    }
   } catch (error) {
     ElMessage.error(error.message || '获取服务项目失败')
   } finally {
@@ -231,7 +340,7 @@ async function loadCategories() {
 
 async function submitForm() {
   if (!form.name.trim() || !form.description.trim() || !form.priceLabel.trim()) {
-    ElMessage.warning('请先补全项目名称、描述和价格标签')
+    ElMessage.warning('请先完善项目名称、描述和价格标签')
     return
   }
 
@@ -244,6 +353,7 @@ async function submitForm() {
     serviceArea: form.serviceArea.trim(),
     serviceScene: form.serviceScene.trim(),
     extraServices: form.extraServices.trim(),
+    imageUrl: form.imageUrl.trim(),
     enabled: form.enabled
   }
 
@@ -283,3 +393,42 @@ watch([currentPage, pageSize], () => {
 
 onMounted(loadCategories)
 </script>
+
+<style scoped>
+.table-cover {
+  width: 68px;
+  height: 52px;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.media-upload-panel {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 18px;
+  padding: 16px;
+  border-radius: 22px;
+  background: rgba(250, 245, 238, 0.9);
+  border: 1px solid rgba(145, 117, 87, 0.12);
+  margin-bottom: 18px;
+}
+
+.media-upload-panel__image {
+  width: 100%;
+  height: 126px;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.media-upload-panel__meta {
+  display: grid;
+  align-content: center;
+  gap: 10px;
+}
+
+@media (max-width: 768px) {
+  .media-upload-panel {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
