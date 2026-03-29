@@ -4,36 +4,60 @@
       <div>
         <el-tag type="success" round>资料中心</el-tag>
         <h1>个人资料与地址簿</h1>
-        <p>维护联系人、头像、城市信息和常用上门地址，后续下单可直接复用默认地址。</p>
+        <p>维护预约联系人、头像和常用地址，下单时会优先带出默认地址。</p>
       </div>
       <div class="hero-actions">
-        <el-button type="primary" @click="saveProfile" :loading="savingProfile">保存资料</el-button>
+        <el-button type="primary" :loading="savingProfile" @click="saveProfile">保存资料</el-button>
       </div>
     </div>
 
-    <el-row :gutter="16" v-loading="loading">
-      <el-col :xs="24" :xl="10">
-        <el-card shadow="never">
-          <template #header>
-            <div class="card-header-between">
-              <strong>基本资料</strong>
-              <span class="muted-line">同步展示在用户中心和预约流程中</span>
-            </div>
-          </template>
+    <div class="metric-strip">
+      <div class="metric-chip">
+        <span class="metric-chip__label">资料完整度</span>
+        <strong>{{ profileCompletion }}%</strong>
+      </div>
+      <div class="metric-chip">
+        <span class="metric-chip__label">常用地址</span>
+        <strong>{{ addresses.length }}</strong>
+      </div>
+      <div class="metric-chip">
+        <span class="metric-chip__label">默认地址</span>
+        <strong>{{ defaultAddressLabel }}</strong>
+      </div>
+    </div>
 
-          <div class="profile-avatar-panel">
-            <el-avatar :size="84" :src="profileForm.avatarUrl || undefined">
-              {{ profileForm.realName?.slice(0, 1) || 'U' }}
+    <el-row :gutter="18" v-loading="loading">
+      <el-col :xs="24" :xl="10">
+        <el-card shadow="never" class="page-panel profile-card">
+          <div class="card-header-between">
+            <div>
+              <strong>基本资料</strong>
+              <p class="section-caption">建议填写完整，预约时联系人信息会自动带入。</p>
+            </div>
+          </div>
+
+          <div class="profile-identity">
+            <el-avatar :size="92" :src="profileForm.avatarUrl || undefined" class="profile-identity__avatar">
+              {{ profileForm.realName?.slice(0, 1) || '用' }}
             </el-avatar>
-            <div class="page-stack">
-              <el-button plain :loading="uploadingAvatar" @click="openAvatarPicker">上传头像</el-button>
-              <span class="muted-line">支持 jpg/png/webp，建议 1:1 比例。</span>
+            <div class="profile-identity__content">
+              <div class="profile-identity__title">
+                <strong>{{ profileForm.realName || '未设置姓名' }}</strong>
+                <span>{{ profileForm.phone || '未绑定手机号' }}</span>
+              </div>
+              <div class="tag-group">
+                <el-tag effect="plain" type="success">{{ profileForm.city || '未设置城市' }}</el-tag>
+                <el-tag effect="plain">{{ profileForm.gender || '未设置性别' }}</el-tag>
+              </div>
+              <div class="hero-actions">
+                <el-button plain :loading="uploadingAvatar" @click="openAvatarPicker">上传头像</el-button>
+              </div>
             </div>
           </div>
 
           <el-form label-position="top" class="profile-form">
             <el-form-item label="姓名">
-              <el-input v-model="profileForm.realName" />
+              <el-input v-model="profileForm.realName" maxlength="50" placeholder="请输入联系人姓名" />
             </el-form-item>
             <el-form-item label="手机号">
               <el-input :model-value="profileForm.phone" disabled />
@@ -50,7 +74,7 @@
               </el-col>
               <el-col :xs="24" :md="12">
                 <el-form-item label="所在城市">
-                  <el-input v-model="profileForm.city" placeholder="例如：上海市" />
+                  <el-input v-model="profileForm.city" maxlength="30" placeholder="例如：上海市" />
                 </el-form-item>
               </el-col>
             </el-row>
@@ -61,7 +85,7 @@
                 :rows="5"
                 maxlength="500"
                 show-word-limit
-                placeholder="例如：对家庭保洁、钟点服务、母婴护理有哪些偏好与关注点。"
+                placeholder="简单说明你的家庭服务偏好、时间偏好或特殊提醒。"
               />
             </el-form-item>
           </el-form>
@@ -69,43 +93,37 @@
       </el-col>
 
       <el-col :xs="24" :xl="14">
-        <el-card shadow="never">
-          <template #header>
-            <div class="card-header-between">
+        <el-card shadow="never" class="page-panel">
+          <div class="card-header-between">
+            <div>
               <strong>常用地址簿</strong>
-              <el-button type="primary" plain @click="openAddressDialog()">新增地址</el-button>
+              <p class="section-caption">默认地址会优先出现在预约表单中。</p>
             </div>
-          </template>
+            <el-button type="primary" plain @click="openAddressDialog()">新增地址</el-button>
+          </div>
 
-          <el-table :data="addresses" stripe>
-            <el-table-column label="联系人" min-width="120">
-              <template #default="{ row }">
-                <div class="stack-cell">
-                  <strong>{{ row.contactName }}</strong>
-                  <span class="muted-line">{{ row.contactPhone }}</span>
-                </div>
-              </template>
-            </el-table-column>
-            <el-table-column label="地址信息" min-width="260">
-              <template #default="{ row }">
-                <div class="stack-cell">
-                  <span>{{ row.city }} {{ row.detailAddress }}</span>
+          <div v-if="addresses.length" class="address-list">
+            <div v-for="address in addresses" :key="address.id" class="address-card">
+              <div class="address-card__main">
+                <div class="address-card__title-row">
+                  <strong>{{ address.contactName }}</strong>
                   <div class="tag-group">
-                    <el-tag size="small" effect="plain">{{ row.addressTag || '常用地址' }}</el-tag>
-                    <el-tag v-if="row.defaultAddress" size="small" type="success">默认地址</el-tag>
+                    <el-tag size="small" effect="plain">{{ address.addressTag || '常用地址' }}</el-tag>
+                    <el-tag v-if="address.defaultAddress" size="small" type="success">默认</el-tag>
                   </div>
                 </div>
-              </template>
-            </el-table-column>
-            <el-table-column label="操作" width="180" fixed="right">
-              <template #default="{ row }">
-                <el-space>
-                  <el-button size="small" @click="openAddressDialog(row)">编辑</el-button>
-                  <el-button size="small" type="danger" plain @click="confirmDeleteAddress(row)">删除</el-button>
-                </el-space>
-              </template>
-            </el-table-column>
-          </el-table>
+                <div class="stack-cell">
+                  <span>{{ address.contactPhone }}</span>
+                  <span class="muted-line">{{ address.city }} {{ address.detailAddress }}</span>
+                </div>
+              </div>
+              <div class="hero-actions">
+                <el-button size="small" @click="openAddressDialog(address)">编辑</el-button>
+                <el-button size="small" type="danger" plain @click="confirmDeleteAddress(address)">删除</el-button>
+              </div>
+            </div>
+          </div>
+          <el-empty v-else description="还没有常用地址，新增一个后下单会更快。" class="empty-surface" />
         </el-card>
       </el-col>
     </el-row>
@@ -127,46 +145,45 @@
         <el-row :gutter="16">
           <el-col :xs="24" :md="12">
             <el-form-item label="联系人">
-              <el-input v-model="addressForm.contactName" />
+              <el-input v-model="addressForm.contactName" maxlength="30" />
             </el-form-item>
           </el-col>
           <el-col :xs="24" :md="12">
             <el-form-item label="联系电话">
-              <el-input v-model="addressForm.contactPhone" />
+              <el-input v-model="addressForm.contactPhone" maxlength="20" />
             </el-form-item>
           </el-col>
         </el-row>
         <el-row :gutter="16">
           <el-col :xs="24" :md="12">
             <el-form-item label="所在城市">
-              <el-input v-model="addressForm.city" />
+              <el-input v-model="addressForm.city" maxlength="30" />
             </el-form-item>
           </el-col>
           <el-col :xs="24" :md="12">
             <el-form-item label="地址标签">
-              <el-input v-model="addressForm.addressTag" placeholder="例如：家庭 / 父母家 / 公司" />
+              <el-input v-model="addressForm.addressTag" maxlength="20" placeholder="例如：家 / 公司 / 父母家" />
             </el-form-item>
           </el-col>
         </el-row>
         <el-form-item label="详细地址">
-          <el-input v-model="addressForm.detailAddress" type="textarea" :rows="3" />
+          <el-input v-model="addressForm.detailAddress" type="textarea" :rows="3" maxlength="200" show-word-limit />
         </el-form-item>
         <el-form-item>
           <el-switch v-model="addressForm.defaultAddress" active-text="设为默认地址" />
         </el-form-item>
       </el-form>
+
       <template #footer>
         <el-button @click="addressDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="savingAddress" @click="submitAddress">
-          保存地址
-        </el-button>
+        <el-button type="primary" :loading="savingAddress" @click="submitAddress">保存地址</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   createUserAddress,
@@ -184,6 +201,10 @@ const savingProfile = ref(false)
 const savingAddress = ref(false)
 const uploadingAvatar = ref(false)
 const avatarInputRef = ref(null)
+const addresses = ref([])
+const addressDialogVisible = ref(false)
+const addressDialogMode = ref('create')
+const editingAddressId = ref(null)
 
 const profileForm = reactive({
   realName: '',
@@ -194,10 +215,6 @@ const profileForm = reactive({
   avatarUrl: ''
 })
 
-const addresses = ref([])
-const addressDialogVisible = ref(false)
-const addressDialogMode = ref('create')
-const editingAddressId = ref(null)
 const addressForm = reactive({
   contactName: '',
   contactPhone: '',
@@ -207,17 +224,39 @@ const addressForm = reactive({
   defaultAddress: false
 })
 
+const profileCompletion = computed(() => {
+  const fields = [
+    profileForm.realName,
+    profileForm.phone,
+    profileForm.gender,
+    profileForm.city,
+    profileForm.bio,
+    profileForm.avatarUrl
+  ]
+  const completed = fields.filter((value) => String(value || '').trim()).length
+  return Math.round((completed / fields.length) * 100)
+})
+
+const defaultAddressLabel = computed(() => {
+  const defaultAddress = addresses.value.find((item) => item.defaultAddress)
+  return defaultAddress ? '已设置' : '未设置'
+})
+
 async function loadData() {
   loading.value = true
   try {
-    const [profile, addressRows] = await Promise.all([
-      fetchUserProfile(),
-      fetchUserAddresses()
-    ])
-    Object.assign(profileForm, profile)
-    addresses.value = addressRows
+    const [profile, addressRows] = await Promise.all([fetchUserProfile(), fetchUserAddresses()])
+    Object.assign(profileForm, {
+      realName: profile?.realName || '',
+      phone: profile?.phone || '',
+      gender: profile?.gender || '',
+      city: profile?.city || '',
+      bio: profile?.bio || '',
+      avatarUrl: profile?.avatarUrl || ''
+    })
+    addresses.value = Array.isArray(addressRows) ? addressRows : []
   } catch (error) {
-    ElMessage.error(error.message || '获取用户资料失败')
+    ElMessage.error(error.message || '获取资料失败')
   } finally {
     loading.value = false
   }
@@ -260,7 +299,7 @@ async function handleAvatarChange(event) {
   uploadingAvatar.value = true
   try {
     const result = await uploadImage(file)
-    profileForm.avatarUrl = result.url
+    profileForm.avatarUrl = result?.url || ''
     ElMessage.success('头像上传成功')
   } catch (error) {
     ElMessage.error(error.message || '头像上传失败')
@@ -274,7 +313,14 @@ function openAddressDialog(address = null) {
   if (address) {
     addressDialogMode.value = 'edit'
     editingAddressId.value = address.id
-    Object.assign(addressForm, address)
+    Object.assign(addressForm, {
+      contactName: address.contactName || '',
+      contactPhone: address.contactPhone || '',
+      city: address.city || '',
+      detailAddress: address.detailAddress || '',
+      addressTag: address.addressTag || '',
+      defaultAddress: Boolean(address.defaultAddress)
+    })
     addressDialogVisible.value = true
     return
   }
@@ -327,11 +373,9 @@ async function submitAddress() {
 
 async function confirmDeleteAddress(address) {
   try {
-    await ElMessageBox.confirm(
-      `确认删除地址“${address.city} ${address.detailAddress}”吗？`,
-      '删除地址',
-      { type: 'warning' }
-    )
+    await ElMessageBox.confirm(`确认删除地址“${address.city} ${address.detailAddress}”吗？`, '删除地址', {
+      type: 'warning'
+    })
     await deleteUserAddress(address.id)
     ElMessage.success('地址已删除')
     await loadData()

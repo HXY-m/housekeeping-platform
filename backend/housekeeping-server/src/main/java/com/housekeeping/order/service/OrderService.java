@@ -173,7 +173,12 @@ public class OrderService {
         summary.put("pending", orders.stream().filter(item -> OrderStatus.PENDING.matches(item.getStatus())).count());
         summary.put("accepted", orders.stream().filter(item -> OrderStatus.ACCEPTED.matches(item.getStatus())).count());
         summary.put("confirmed", orders.stream().filter(item -> OrderStatus.CONFIRMED.matches(item.getStatus())).count());
+        summary.put("inService", orders.stream().filter(item -> OrderStatus.IN_SERVICE.matches(item.getStatus())).count());
         summary.put("waitingUserConfirmation", orders.stream().filter(item -> OrderStatus.WAITING_USER_CONFIRMATION.matches(item.getStatus())).count());
+        summary.put(
+                "todo",
+                summary.get("pending") + summary.get("confirmed") + summary.get("inService")
+        );
         return summary;
     }
 
@@ -258,6 +263,7 @@ public class OrderService {
 
     @Transactional
     public OrderDto acceptOrder(Long orderId) {
+        ensureCurrentWorkerQualified();
         OrderEntity order = orderAccessService.requireCurrentWorkerOrder(orderId);
         requireStatus(order, OrderStatus.PENDING, "只有待接单订单才能接单");
         updateOrderStatus(order, OrderStatus.ACCEPTED, "服务人员已接单，等待用户确认预约安排");
@@ -290,6 +296,7 @@ public class OrderService {
 
     @Transactional
     public OrderDto startOrder(Long orderId) {
+        ensureCurrentWorkerQualified();
         OrderEntity order = orderAccessService.requireCurrentWorkerOrder(orderId);
         requireStatus(order, OrderStatus.CONFIRMED, "用户确认预约后才能开始服务");
         updateOrderStatus(order, OrderStatus.IN_SERVICE, "服务已开始，服务人员正在上门处理");
@@ -306,6 +313,7 @@ public class OrderService {
 
     @Transactional
     public OrderDto submitCompletionByWorker(Long orderId) {
+        ensureCurrentWorkerQualified();
         OrderEntity order = orderAccessService.requireCurrentWorkerOrder(orderId);
         requireStatus(order, OrderStatus.IN_SERVICE, "只有服务中的订单才能提交完工");
         if (!orderServiceRecordService.hasStage(orderId, OrderServiceRecordStage.FINISH_PROOF)) {
@@ -348,6 +356,7 @@ public class OrderService {
                                                            String stage,
                                                            String description,
                                                            MultipartFile file) {
+        ensureCurrentWorkerQualified();
         OrderEntity order = orderAccessService.requireCurrentWorkerOrder(orderId);
 
         OrderServiceRecordStage recordStage = OrderServiceRecordStage.from(stage);
@@ -634,5 +643,10 @@ public class OrderService {
             throw new BusinessException("请先登录");
         }
         return currentUser;
+    }
+
+    private void ensureCurrentWorkerQualified() {
+        SessionUser currentUser = requireCurrentUser();
+        workerProfileService.requireApprovedWorkerByUserId(currentUser.userId());
     }
 }

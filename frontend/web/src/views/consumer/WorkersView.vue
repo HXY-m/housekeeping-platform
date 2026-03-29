@@ -4,6 +4,7 @@
       <div class="page-panel__header">
         <div>
           <h1 class="page-panel__title">找服务人员</h1>
+          <p class="page-panel__desc">按服务类型筛选，优先查看真实头像、评分与完单量。</p>
         </div>
         <div class="filter-actions">
           <el-button plain @click="openFavorites">查看收藏</el-button>
@@ -26,32 +27,33 @@
       </div>
     </el-card>
 
-    <el-row :gutter="16" v-loading="loading">
-      <el-col v-for="worker in workers" :key="worker.id" :xs="24" :md="12" :xl="8">
-        <el-card shadow="hover" class="worker-browser-card">
-          <el-image :src="getWorkerImage(worker)" :alt="worker.name" fit="cover" class="worker-browser-card__image" />
-
-          <div class="worker-browser-card__body">
-            <div class="card-header-between">
-              <div>
-                <strong>{{ worker.name }}</strong>
-                <p class="muted-line">{{ worker.city }}</p>
+    <el-row v-if="loading" :gutter="16">
+      <el-col v-for="item in pageSize" :key="`worker-loading-${item}`" :xs="24" :md="12" :xl="8">
+        <el-card shadow="never" class="worker-browser-card worker-browser-card--skeleton">
+          <el-skeleton animated>
+            <template #template>
+              <div class="worker-browser-card__skeleton-top">
+                <el-skeleton-item variant="circle" class="worker-browser-card__skeleton-avatar" />
+                <div class="worker-browser-card__skeleton-meta">
+                  <el-skeleton-item variant="h3" style="width: 68%" />
+                  <el-skeleton-item variant="text" style="width: 42%" />
+                </div>
               </div>
-              <el-tag type="success" effect="plain">{{ formatCurrency(worker.hourlyPrice) }}/小时</el-tag>
-            </div>
+              <div class="worker-browser-card__skeleton-body">
+                <el-skeleton-item variant="text" style="width: 100%" />
+                <el-skeleton-item variant="text" style="width: 88%" />
+                <el-skeleton-item variant="text" style="width: 72%" />
+              </div>
+            </template>
+          </el-skeleton>
+        </el-card>
+      </el-col>
+    </el-row>
 
-            <div class="worker-browser-card__trust">
-              <span>评分 {{ worker.rating }}</span>
-              <span>完成 {{ worker.completedOrders }} 单</span>
-              <span>{{ worker.nextAvailable }}</span>
-            </div>
-
-            <p class="worker-browser-card__intro">{{ worker.intro }}</p>
-
-            <div class="tag-wrap">
-              <el-tag v-for="tag in worker.tags" :key="tag" size="small" effect="plain">{{ tag }}</el-tag>
-            </div>
-
+    <el-row v-else :gutter="16">
+      <el-col v-for="worker in workers" :key="worker.id" :xs="24" :md="12" :xl="8">
+        <WorkerCard :worker="worker">
+          <template #actions>
             <div class="action-row worker-browser-card__actions">
               <el-button @click="router.push(`/workers/${worker.id}`)">查看详情</el-button>
               <el-button type="primary" @click="router.push(`/booking/${worker.id}`)">立即预约</el-button>
@@ -63,8 +65,8 @@
                 {{ favoriteIds.includes(Number(worker.id)) ? '已收藏' : '收藏' }}
               </el-button>
             </div>
-          </div>
-        </el-card>
+          </template>
+        </WorkerCard>
       </el-col>
     </el-row>
 
@@ -84,9 +86,8 @@ import { ElMessage } from 'element-plus'
 import { favoriteWorker, fetchFavoriteWorkerIds, fetchHome, fetchWorkers, unfavoriteWorker } from '../../api'
 import { authStore } from '../../stores/auth'
 import { useServerPagination } from '../../composables/useServerPagination'
-import { formatCurrency } from '../../utils/format'
-import { getWorkerImage } from '../../utils/displayAssets'
 import ListPagination from '../../components/common/ListPagination.vue'
+import WorkerCard from '../../components/WorkerCard.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -192,41 +193,37 @@ onMounted(async () => {
 
 <style scoped>
 .worker-browser-card {
-  overflow: hidden;
-  border: 1px solid rgba(16, 24, 40, 0.08);
+  border: 1px solid #e4e7ec;
 }
 
-.worker-browser-card__image {
-  width: 100%;
-  height: 220px;
-  display: block;
+.worker-browser-card--skeleton {
+  min-height: 274px;
 }
 
-.worker-browser-card__body {
-  padding-top: 18px;
-}
-
-.worker-browser-card__trust {
+.worker-browser-card__skeleton-top {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.worker-browser-card__skeleton-avatar {
+  width: 76px;
+  height: 76px;
+}
+
+.worker-browser-card__skeleton-meta {
+  flex: 1;
+  display: grid;
   gap: 10px;
-  margin: 14px 0;
 }
 
-.worker-browser-card__trust span {
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: #f5f7fa;
-  color: #475467;
-  font-size: 12px;
-}
-
-.worker-browser-card__intro {
-  line-height: 1.75;
-  min-height: 72px;
+.worker-browser-card__skeleton-body {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
 }
 
 .worker-browser-card__actions {
-  margin-top: 16px;
+  width: 100%;
 }
 </style>

@@ -2,32 +2,43 @@
   <div class="page-stack">
     <div class="console-overview console-overview--admin">
       <div>
-        <el-tag type="danger" round>用户治理</el-tag>
-        <h1>平台用户管理</h1>
-        <p>统一管理普通用户、服务人员与管理员账号，支持筛选、创建、编辑与逻辑删除。</p>
+        <el-tag type="danger" round>用户管理</el-tag>
+        <h1>平台账号管理</h1>
+        <p>统一维护普通用户、服务人员和管理员账号，重点关注状态、角色和服务档案绑定情况。</p>
       </div>
       <div class="hero-actions">
         <el-button type="primary" @click="openCreate">新增用户</el-button>
       </div>
     </div>
 
-    <div class="summary-grid">
-      <el-card shadow="never" class="summary-card">
-        <el-statistic title="账号总数" :value="summary.total" />
-      </el-card>
-      <el-card shadow="never" class="summary-card">
-        <el-statistic title="启用账号" :value="summary.active" />
-      </el-card>
-      <el-card shadow="never" class="summary-card">
-        <el-statistic title="服务人员账号" :value="summary.workers" />
-      </el-card>
-      <el-card shadow="never" class="summary-card">
-        <el-statistic title="管理员账号" :value="summary.admins" />
-      </el-card>
+    <div class="metric-strip">
+      <div class="metric-chip">
+        <span class="metric-chip__label">账号总数</span>
+        <strong>{{ summary.total }}</strong>
+      </div>
+      <div class="metric-chip">
+        <span class="metric-chip__label">启用账号</span>
+        <strong>{{ summary.active }}</strong>
+      </div>
+      <div class="metric-chip">
+        <span class="metric-chip__label">服务人员账号</span>
+        <strong>{{ summary.workers }}</strong>
+      </div>
+      <div class="metric-chip">
+        <span class="metric-chip__label">管理员账号</span>
+        <strong>{{ summary.admins }}</strong>
+      </div>
     </div>
 
-    <el-card shadow="never">
-      <div class="table-toolbar">
+    <el-card shadow="never" class="page-panel">
+      <div class="card-header-between">
+        <div>
+          <strong>筛选与列表</strong>
+          <p class="section-caption">按姓名、手机号、角色和状态快速定位账号。</p>
+        </div>
+      </div>
+
+      <div class="table-toolbar table-toolbar--dense">
         <div class="table-toolbar__filters">
           <el-input v-model="filters.realName" clearable placeholder="姓名" style="width: 180px" />
           <el-input v-model="filters.phone" clearable placeholder="手机号" style="width: 180px" />
@@ -41,27 +52,32 @@
             <el-option label="禁用" value="DISABLED" />
             <el-option label="已删除" value="DELETED" />
           </el-select>
-          <el-button type="primary" @click="loadUsers">查询</el-button>
+          <el-button type="primary" @click="handleSearch">查询</el-button>
           <el-button @click="resetFilters">重置</el-button>
         </div>
-        <span class="section-caption">统计卡片将随筛选条件同步更新</span>
       </div>
 
       <el-table :data="users" v-loading="loading" stripe style="margin-top: 16px">
-        <el-table-column prop="id" label="ID" width="90" />
-        <el-table-column prop="realName" label="姓名" width="140" />
-        <el-table-column prop="phone" label="手机号" width="160" />
+        <el-table-column label="用户信息" min-width="220">
+          <template #default="{ row }">
+            <div class="table-cell-primary">
+              <strong>{{ row.realName || '未命名用户' }}</strong>
+              <span class="table-cell-secondary">{{ row.phone || '未绑定手机号' }}</span>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column label="角色" min-width="180">
           <template #default="{ row }">
-            <el-space wrap>
+            <div class="tag-group">
               <el-tag
-                v-for="roleCode in row.roleCodes"
+                v-for="roleCode in row.roleCodes || []"
                 :key="roleCode"
                 :type="roleTagTypeMap[roleCode] || 'info'"
+                effect="plain"
               >
                 {{ roleLabelMap[roleCode] || roleCode }}
               </el-tag>
-            </el-space>
+            </div>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="120">
@@ -71,15 +87,15 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="city" label="城市" width="120" />
-        <el-table-column label="服务档案" width="120">
+        <el-table-column prop="city" label="所在城市" width="140" />
+        <el-table-column label="服务档案" width="140">
           <template #default="{ row }">
-            <el-tag :type="row.workerProfileBound ? 'success' : 'info'">
+            <el-tag :type="row.workerProfileBound ? 'success' : 'info'" effect="plain">
               {{ row.workerProfileBound ? '已绑定' : '未绑定' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="180" fixed="right">
+        <el-table-column label="操作" width="170" fixed="right">
           <template #default="{ row }">
             <el-space>
               <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
@@ -228,19 +244,24 @@ function openCreate() {
 function openEdit(row) {
   dialogMode.value = 'edit'
   editingId.value = row.id
-  form.realName = row.realName
-  form.phone = row.phone
+  form.realName = row.realName || ''
+  form.phone = row.phone || ''
   form.password = ''
-  form.status = row.status
-  form.roleCodes = [...row.roleCodes]
+  form.status = row.status || 'ACTIVE'
+  form.roleCodes = Array.isArray(row.roleCodes) && row.roleCodes.length ? [...row.roleCodes] : ['USER']
   dialogVisible.value = true
 }
 
-function resetFilters() {
-  filters.roleCode = ''
-  filters.realName = ''
-  filters.phone = ''
-  filters.status = ''
+function buildFilters() {
+  return {
+    roleCode: filters.roleCode,
+    realName: filters.realName.trim(),
+    phone: filters.phone.trim(),
+    status: filters.status
+  }
+}
+
+function handleSearch() {
   if (currentPage.value !== 1) {
     resetPage()
     return
@@ -248,15 +269,18 @@ function resetFilters() {
   loadUsers()
 }
 
+function resetFilters() {
+  filters.roleCode = ''
+  filters.realName = ''
+  filters.phone = ''
+  filters.status = ''
+  handleSearch()
+}
+
 async function loadUsers() {
   loading.value = true
   try {
-    const params = {
-      roleCode: filters.roleCode,
-      realName: filters.realName.trim(),
-      phone: filters.phone.trim(),
-      status: filters.status
-    }
+    const params = buildFilters()
     const [result, summaryResult] = await Promise.all([
       fetchAdminUsers(buildParams(params)),
       fetchAdminUserSummary(params)
@@ -294,7 +318,7 @@ async function submitForm() {
     phone: form.phone.trim(),
     password: form.password.trim(),
     status: form.status,
-    roleCodes: form.roleCodes
+    roleCodes: [...form.roleCodes]
   }
 
   try {
@@ -314,7 +338,7 @@ async function submitForm() {
 
 async function handleDelete(row) {
   try {
-    await ElMessageBox.confirm(`确认删除用户“${row.realName}”吗？`, '删除提示', {
+    await ElMessageBox.confirm(`确认删除用户“${row.realName || row.phone}”吗？`, '删除提示', {
       type: 'warning'
     })
     await deleteAdminUser(row.id)

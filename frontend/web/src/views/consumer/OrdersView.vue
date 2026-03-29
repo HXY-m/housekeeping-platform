@@ -1,174 +1,222 @@
 <template>
   <div class="page-stack">
-    <el-card shadow="never" class="page-panel">
-      <div class="page-panel__header">
-        <div>
-          <h1 class="page-panel__title">我的订单</h1>
-          <p class="page-panel__desc">
-            订单现在由用户和服务人员共同推进。页面会明确显示当前由谁处理，以及你下一步还能执行什么操作。
-          </p>
-        </div>
-        <el-button @click="loadData">刷新</el-button>
+    <div class="console-overview">
+      <div>
+        <el-tag type="success" round>我的订单</el-tag>
+        <h1>订单进度与履约记录</h1>
+        <p>订单由你和服务人员共同推进。页面会明确标记当前责任方、下一步操作和关键凭证。</p>
       </div>
-
-      <div class="metric-strip">
-        <div class="metric-chip">
-          <span class="metric-chip__label">订单总数</span>
-          <strong>{{ orderSummary.total }}</strong>
-        </div>
-        <div class="metric-chip">
-          <span class="metric-chip__label">处理中</span>
-          <strong>{{ orderSummary.active }}</strong>
-        </div>
-        <div class="metric-chip">
-          <span class="metric-chip__label">待我确认</span>
-          <strong>{{ orderSummary.needUserAction }}</strong>
-        </div>
-        <div class="metric-chip">
-          <span class="metric-chip__label">售后工单</span>
-          <strong>{{ orderSummary.afterSales }}</strong>
-        </div>
+      <div class="hero-actions">
+        <el-button plain @click="router.push('/workers')">继续预约服务</el-button>
+        <el-button type="primary" @click="loadData">刷新订单</el-button>
       </div>
-
-      <div class="filter-row">
-        <el-radio-group v-model="statusFilter" size="small">
-          <el-radio-button label="ALL">全部</el-radio-button>
-          <el-radio-button label="PENDING">待接单</el-radio-button>
-          <el-radio-button label="ACCEPTED">待我确认</el-radio-button>
-          <el-radio-button label="CONFIRMED">待上门</el-radio-button>
-          <el-radio-button label="IN_SERVICE">服务中</el-radio-button>
-          <el-radio-button label="WAITING_USER_CONFIRMATION">待确认完工</el-radio-button>
-          <el-radio-button label="COMPLETED">已完成</el-radio-button>
-        </el-radio-group>
-      </div>
-    </el-card>
-
-    <el-empty v-if="!filteredOrders.length && !loading" description="当前没有匹配的订单" />
-
-    <div v-else class="order-card-grid" v-loading="loading">
-      <el-card v-for="row in pagedOrders" :key="row.id" shadow="never" class="order-card">
-        <div class="order-card__header">
-          <div>
-            <div class="order-card__title">{{ row.serviceName }}</div>
-            <div class="order-card__subtitle">订单号 #{{ row.id }} · 服务人员 {{ row.workerName }}</div>
-          </div>
-          <div class="order-card__header-tags">
-            <el-tag :type="getOrderStatusTagType(row.status)">{{ getOrderStatusLabel(row.status) }}</el-tag>
-            <el-tag :type="getUserOrderFlowMeta(row).ownerType" effect="plain">
-              当前由{{ getUserOrderFlowMeta(row).owner }}推进
-            </el-tag>
-          </div>
-        </div>
-
-        <div class="order-card__meta-grid">
-          <div class="order-meta-item">
-            <span class="order-meta-item__label">预约时间</span>
-            <strong>{{ row.bookingDate }} {{ row.bookingSlot }}</strong>
-          </div>
-          <div class="order-meta-item">
-            <span class="order-meta-item__label">联系人</span>
-            <strong>{{ row.customerName }} · {{ row.contactPhone }}</strong>
-          </div>
-          <div class="order-meta-item order-meta-item--wide">
-            <span class="order-meta-item__label">服务地址</span>
-            <strong>{{ row.serviceAddress }}</strong>
-          </div>
-        </div>
-
-        <el-steps :active="getOrderStepProgress(row.status)" finish-status="success" simple class="order-steps">
-          <el-step v-for="step in orderSteps" :key="step.key" :title="step.title" />
-        </el-steps>
-
-        <div class="order-stage-callout">
-          <div>
-            <div class="order-stage-callout__title">{{ getUserOrderFlowMeta(row).title }}</div>
-            <div class="order-stage-callout__desc">{{ getUserOrderFlowMeta(row).description }}</div>
-            <div class="order-stage-callout__hint">{{ getUserOrderFlowMeta(row).hint }}</div>
-          </div>
-          <div class="order-stage-callout__progress">
-            <span class="muted-line">当前进度</span>
-            <strong>{{ row.progressNote }}</strong>
-          </div>
-        </div>
-
-        <el-card v-if="row.serviceRecords?.length" shadow="never" class="order-inline-card">
-          <template #header>
-            <div class="card-header-between">
-              <strong>服务过程时间线</strong>
-              <span class="muted-line">服务人员上传的打卡和过程凭证</span>
-            </div>
-          </template>
-          <OrderServiceRecordTimeline :records="row.serviceRecords" />
-        </el-card>
-
-        <div v-if="row.reviewed || row.afterSale || row.remark" class="order-card__extra-grid">
-          <div v-if="row.reviewed" class="info-panel">
-            <span class="info-panel__label">我的评价</span>
-            <el-rate :model-value="row.reviewRating" disabled />
-            <span class="muted-line">{{ row.reviewContent }}</span>
-          </div>
-          <div v-if="row.afterSale" class="info-panel">
-            <span class="info-panel__label">售后进度</span>
-            <el-tag :type="getAfterSaleStatusTagType(row.afterSale.status)">
-              {{ getAfterSaleStatusLabel(row.afterSale.status) }}
-            </el-tag>
-            <span class="muted-line">{{ row.afterSale.issueType }}</span>
-            <AttachmentGallery
-              :attachments="row.afterSale.attachments"
-              compact
-              empty-text="未上传凭证"
-            />
-            <span v-if="row.afterSale.adminRemark" class="muted-line">处理备注：{{ row.afterSale.adminRemark }}</span>
-          </div>
-          <div v-if="row.remark" class="info-panel">
-            <span class="info-panel__label">下单备注</span>
-            <span class="muted-line">{{ row.remark }}</span>
-          </div>
-        </div>
-
-        <div class="order-card__actions">
-          <el-button plain @click="goToMessageCenter(row.id)">订单沟通</el-button>
-          <el-button
-            v-if="normalizeOrderStatus(row.status) === 'ACCEPTED'"
-            type="primary"
-            @click="handleUserAction(row.id, 'confirm')"
-          >
-            确认预约安排
-          </el-button>
-          <el-button
-            v-if="normalizeOrderStatus(row.status) === 'WAITING_USER_CONFIRMATION'"
-            type="success"
-            @click="handleUserAction(row.id, 'complete')"
-          >
-            确认完工
-          </el-button>
-          <el-button
-            v-if="canReview(row)"
-            type="primary"
-            plain
-            @click="openReview(row)"
-          >
-            提交评价
-          </el-button>
-          <el-button
-            v-if="canCreateAfterSale(row)"
-            plain
-            @click="openAfterSale(row)"
-          >
-            申请售后
-          </el-button>
-          <span v-if="!hasPrimaryAction(row)" class="muted-line">当前暂无可执行操作</span>
-        </div>
-      </el-card>
     </div>
 
-    <ListPagination
-      v-if="filteredOrders.length"
-      v-model:current-page="currentPage"
-      v-model:page-size="pageSize"
-      :page-sizes="pageSizes"
-      :total="total"
-    />
+    <div class="metric-strip">
+      <div class="metric-chip">
+        <span class="metric-chip__label">订单总数</span>
+        <strong>{{ orderSummary.total }}</strong>
+      </div>
+      <div class="metric-chip">
+        <span class="metric-chip__label">处理中</span>
+        <strong>{{ orderSummary.active }}</strong>
+      </div>
+      <div class="metric-chip">
+        <span class="metric-chip__label">待我确认</span>
+        <strong>{{ orderSummary.needUserAction }}</strong>
+      </div>
+      <div class="metric-chip">
+        <span class="metric-chip__label">售后工单</span>
+        <strong>{{ orderSummary.afterSales }}</strong>
+      </div>
+    </div>
+
+    <div class="page-grid--sidebar order-console-grid">
+      <div class="page-stack">
+        <el-card shadow="never" class="page-panel">
+          <div class="card-header-between">
+            <div>
+              <strong>订单筛选</strong>
+              <p class="section-caption">按履约阶段切换列表，优先处理等待你确认的订单。</p>
+            </div>
+          </div>
+
+          <div class="order-filter-pills">
+            <el-radio-group v-model="statusFilter" size="small" class="order-filter-pills__group">
+              <el-radio-button label="ALL">全部</el-radio-button>
+              <el-radio-button label="PENDING">待接单</el-radio-button>
+              <el-radio-button label="ACCEPTED">待我确认</el-radio-button>
+              <el-radio-button label="CONFIRMED">待上门</el-radio-button>
+              <el-radio-button label="IN_SERVICE">服务中</el-radio-button>
+              <el-radio-button label="WAITING_USER_CONFIRMATION">待确认完工</el-radio-button>
+              <el-radio-button label="COMPLETED">已完成</el-radio-button>
+            </el-radio-group>
+          </div>
+        </el-card>
+
+        <div v-if="loading && !pagedOrders.length" class="order-skeleton-list">
+          <el-skeleton v-for="index in 3" :key="index" animated class="order-skeleton-card">
+            <template #template>
+              <el-skeleton-item variant="rect" style="width: 100%; height: 280px; border-radius: 24px;" />
+            </template>
+          </el-skeleton>
+        </div>
+
+        <el-empty v-else-if="!filteredOrders.length" description="当前没有匹配的订单" class="empty-surface" />
+
+        <div v-else class="order-card-grid">
+          <el-card v-for="row in pagedOrders" :key="row.id" shadow="never" class="order-card order-card--immersive">
+            <div class="order-card__header">
+              <div class="order-card__identity">
+                <el-avatar :size="54" class="order-card__avatar">
+                  {{ row.workerName?.slice(0, 1) || '师' }}
+                </el-avatar>
+                <div>
+                  <div class="order-card__title">{{ row.serviceName }}</div>
+                  <div class="order-card__subtitle">
+                    订单号 #{{ row.id }} · 服务人员 {{ row.workerName || '待分配' }}
+                  </div>
+                </div>
+              </div>
+              <div class="order-card__header-tags">
+                <el-tag :type="getOrderStatusTagType(row.status)">{{ getOrderStatusLabel(row.status) }}</el-tag>
+                <el-tag :type="getUserOrderFlowMeta(row).ownerType" effect="plain">
+                  当前由{{ getUserOrderFlowMeta(row).owner }}推进
+                </el-tag>
+              </div>
+            </div>
+
+            <div class="order-card__meta-grid">
+              <div class="order-meta-item">
+                <span class="order-meta-item__label">预约时间</span>
+                <strong>{{ row.bookingDate }} {{ row.bookingSlot }}</strong>
+              </div>
+              <div class="order-meta-item">
+                <span class="order-meta-item__label">联系人</span>
+                <strong>{{ row.customerName }} · {{ row.contactPhone }}</strong>
+              </div>
+              <div class="order-meta-item order-meta-item--wide">
+                <span class="order-meta-item__label">服务地址</span>
+                <strong>{{ row.serviceAddress }}</strong>
+              </div>
+            </div>
+
+            <el-steps :active="getOrderStepProgress(row.status)" finish-status="success" simple class="order-steps">
+              <el-step v-for="step in orderSteps" :key="step.key" :title="step.title" />
+            </el-steps>
+
+            <div class="order-stage-callout order-stage-callout--glass">
+              <div>
+                <div class="order-stage-callout__title">{{ getUserOrderFlowMeta(row).title }}</div>
+                <div class="order-stage-callout__desc">{{ getUserOrderFlowMeta(row).description }}</div>
+                <div class="order-stage-callout__hint">{{ getUserOrderFlowMeta(row).hint }}</div>
+              </div>
+              <div class="order-stage-callout__progress">
+                <span class="muted-line">当前进度</span>
+                <strong>{{ row.progressNote || '等待系统同步最新进度' }}</strong>
+              </div>
+            </div>
+
+            <el-card v-if="row.serviceRecords?.length" shadow="never" class="order-inline-card">
+              <template #header>
+                <div class="card-header-between">
+                  <strong>服务过程时间线</strong>
+                  <span class="muted-line">服务人员上传的打卡、过程凭证和完工记录</span>
+                </div>
+              </template>
+              <OrderServiceRecordTimeline :records="row.serviceRecords" />
+            </el-card>
+
+            <div v-if="row.reviewed || row.afterSale || row.remark" class="order-card__extra-grid">
+              <div v-if="row.reviewed" class="info-panel">
+                <span class="info-panel__label">我的评价</span>
+                <el-rate :model-value="row.reviewRating" disabled />
+                <span class="muted-line">{{ row.reviewContent }}</span>
+              </div>
+              <div v-if="row.afterSale" class="info-panel">
+                <span class="info-panel__label">售后进度</span>
+                <el-tag :type="getAfterSaleStatusTagType(row.afterSale.status)">
+                  {{ getAfterSaleStatusLabel(row.afterSale.status) }}
+                </el-tag>
+                <span class="muted-line">{{ row.afterSale.issueType }}</span>
+                <AttachmentGallery
+                  :attachments="row.afterSale.attachments"
+                  compact
+                  empty-text="未上传凭证"
+                />
+                <span v-if="row.afterSale.adminRemark" class="muted-line">处理备注：{{ row.afterSale.adminRemark }}</span>
+              </div>
+              <div v-if="row.remark" class="info-panel">
+                <span class="info-panel__label">下单备注</span>
+                <span class="muted-line">{{ row.remark }}</span>
+              </div>
+            </div>
+
+            <div class="order-card__actions">
+              <el-button plain @click="goToMessageCenter(row.id)">订单沟通</el-button>
+              <el-button
+                v-if="normalizeOrderStatus(row.status) === 'ACCEPTED'"
+                type="primary"
+                @click="handleUserAction(row.id, 'confirm')"
+              >
+                确认预约安排
+              </el-button>
+              <el-button
+                v-if="normalizeOrderStatus(row.status) === 'WAITING_USER_CONFIRMATION'"
+                type="success"
+                @click="handleUserAction(row.id, 'complete')"
+              >
+                确认完工
+              </el-button>
+              <el-button
+                v-if="canReview(row)"
+                type="primary"
+                plain
+                @click="openReview(row)"
+              >
+                提交评价
+              </el-button>
+              <el-button
+                v-if="canCreateAfterSale(row)"
+                plain
+                @click="openAfterSale(row)"
+              >
+                申请售后
+              </el-button>
+              <span v-if="!hasPrimaryAction(row)" class="muted-line">当前暂无可执行操作</span>
+            </div>
+          </el-card>
+        </div>
+
+        <ListPagination
+          v-if="filteredOrders.length"
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :page-sizes="pageSizes"
+          :total="total"
+        />
+      </div>
+
+      <div class="page-stack">
+        <el-card shadow="never" class="page-panel order-helper-panel">
+          <div class="card-header-between">
+            <strong>当前视图</strong>
+            <el-tag effect="plain" type="success">{{ activeFilterLabel }}</el-tag>
+          </div>
+          <div class="info-stack">
+            <div class="info-panel">
+              <span class="info-panel__label">优先处理</span>
+              <strong>{{ priorityHint.title }}</strong>
+              <span class="muted-line">{{ priorityHint.description }}</span>
+            </div>
+            <div class="info-panel">
+              <span class="info-panel__label">温馨提示</span>
+              <span class="muted-line">关键节点需要你和服务人员共同确认，异常情况可先保留凭证，再走售后流程。</span>
+            </div>
+          </div>
+        </el-card>
+      </div>
+    </div>
 
     <el-dialog v-model="reviewDialogVisible" title="提交订单评价" width="520px">
       <el-form label-position="top">
@@ -243,7 +291,7 @@
                 <el-button link type="danger" @click="removeDraftAttachment(item.uid)">移除</el-button>
               </div>
             </div>
-            <span v-else class="muted-line">未选择图片，系统仍会先创建售后工单。</span>
+            <span v-else class="muted-line">未选择图片也可以先创建售后工单。</span>
           </div>
         </el-form-item>
       </el-form>
@@ -342,6 +390,38 @@ const filteredOrders = computed(() => {
 
 const { currentPage, pageSize, pageSizes, total, buildParams, applyPageResult, resetPage } = useServerPagination(6)
 const pagedOrders = filteredOrders
+
+const activeFilterLabel = computed(() => {
+  const labelMap = {
+    ALL: '全部订单',
+    PENDING: '待接单',
+    ACCEPTED: '待我确认',
+    CONFIRMED: '待上门',
+    IN_SERVICE: '服务中',
+    WAITING_USER_CONFIRMATION: '待确认完工',
+    COMPLETED: '已完成'
+  }
+  return labelMap[statusFilter.value] || '全部订单'
+})
+
+const priorityHint = computed(() => {
+  if (statusFilter.value === 'ACCEPTED' || orderSummary.value.needUserAction > 0) {
+    return {
+      title: '优先确认预约或完工',
+      description: '这类订单需要你推进，确认后才能进入下一步流程。'
+    }
+  }
+  if (statusFilter.value === 'IN_SERVICE') {
+    return {
+      title: '关注过程记录',
+      description: '服务进行中时，建议留意服务人员上传的过程凭证。'
+    }
+  }
+  return {
+    title: '按阶段有序处理',
+    description: '可以先看待我确认和售后相关订单，再统一查看已完成记录。'
+  }
+})
 
 watch(statusFilter, () => {
   if (currentPage.value !== 1) {

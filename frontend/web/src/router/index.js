@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { fetchCurrentWorkerProfile } from '../api'
 import { authStore } from '../stores/auth'
 
 const PublicLayout = () => import('../layouts/PublicLayout.vue')
@@ -103,6 +104,30 @@ function getRequiredPermissions(meta) {
   return []
 }
 
+async function ensureWorkerCanAccessRoute(to) {
+  const requiresApprovedQualification = to.path === '/worker/orders'
+  if (!requiresApprovedQualification) {
+    return true
+  }
+
+  try {
+    const profile = await fetchCurrentWorkerProfile()
+    if (profile?.qualificationStatus === 'APPROVED') {
+      return true
+    }
+  } catch {
+    // ignore and fall through to redirect
+  }
+
+  return {
+    path: '/worker/qualification',
+    query: {
+      redirect: to.fullPath,
+      reason: 'qualification_required'
+    }
+  }
+}
+
 router.beforeEach(async (to) => {
   await authStore.ensureLoaded()
 
@@ -127,6 +152,13 @@ router.beforeEach(async (to) => {
     const hasAccess = requiredPermissions.some((permissionCode) => authStore.hasPermission(permissionCode))
     if (!hasAccess) {
       return { path: '/login', query: { redirect: to.fullPath, error: 'no_permission' } }
+    }
+  }
+
+  if (to.meta.role === 'WORKER') {
+    const accessResult = await ensureWorkerCanAccessRoute(to)
+    if (accessResult !== true) {
+      return accessResult
     }
   }
 

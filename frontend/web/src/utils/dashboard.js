@@ -1,4 +1,13 @@
-import { normalizeOrderStatus } from './order'
+import { getOrderStatusLabel, normalizeOrderStatus } from './order'
+
+const ORDER_STATUS_SEQUENCE = [
+  'PENDING',
+  'ACCEPTED',
+  'CONFIRMED',
+  'IN_SERVICE',
+  'WAITING_USER_CONFIRMATION',
+  'COMPLETED'
+]
 
 export function buildOrderStatusMap(orders = []) {
   return orders.reduce((accumulator, item) => {
@@ -6,6 +15,14 @@ export function buildOrderStatusMap(orders = []) {
     accumulator[key] = (accumulator[key] || 0) + 1
     return accumulator
   }, {})
+}
+
+export function buildOrderStatusSeriesData(orders = []) {
+  const record = buildOrderStatusMap(orders)
+  return ORDER_STATUS_SEQUENCE.filter((key) => record[key]).map((key) => ({
+    name: getOrderStatusLabel(key),
+    value: record[key]
+  }))
 }
 
 export function buildServiceMap(orders = []) {

@@ -17,7 +17,6 @@ import com.housekeeping.worker.dto.WorkerProfileUpsertCommand;
 import com.housekeeping.worker.service.WorkerProfileService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.util.List;
 
@@ -47,10 +46,10 @@ public class AuthService {
         SysUserEntity user = authAccountService.requireActiveUserByPhone(request.phone());
 
         if (!PasswordUtil.matches(request.password(), user.getPassword())) {
-            throw new BusinessException("Incorrect password.");
+            throw new BusinessException("密码错误");
         }
         if (!authAccountService.userHasRole(user.getId(), roleCode)) {
-            throw new BusinessException("The selected role is not assigned to this account.");
+            throw new BusinessException("当前账号未绑定所选身份");
         }
 
         return buildLoginResponse(user, roleCode);
@@ -60,7 +59,7 @@ public class AuthService {
     public LoginResponse register(RegisterRequest request) {
         String roleCode = normalizeRoleCode(request.roleCode());
         if (RoleCodes.ADMIN.equals(roleCode)) {
-            throw new BusinessException("Admin accounts can only be created from the management console.");
+            throw new BusinessException("管理员账号只能在后台创建");
         }
 
         authAccountService.ensurePhoneAvailable(request.phone());
@@ -73,22 +72,20 @@ public class AuthService {
         userProfileService.ensureProfileExists(user.getId());
 
         if (RoleCodes.WORKER.equals(roleCode)) {
-            validateWorkerRegistration(request);
             workerProfileService.upsertProfile(new WorkerProfileUpsertCommand(
                     user.getId(),
                     request.realName().trim(),
-                    trimOrEmpty(request.city()),
-                    request.hourlyPrice(),
-                    request.serviceTypes().trim(),
-                    request.availableSchedule().trim(),
-                    request.yearsOfExperience(),
-                    request.certificates().trim(),
-                    request.serviceAreas().trim(),
-                    request.intro().trim(),
+                    "",
+                    null,
+                    "",
+                    "",
+                    0,
+                    "",
+                    "",
                     "",
                     WorkerQualificationStatus.UNSUBMITTED,
-                    "Qualification not submitted",
-                    "New worker account created. Public listing remains hidden until qualification review passes."
+                    "待资质认证服务人员",
+                    "待补充服务案例"
             ));
         }
 
@@ -98,7 +95,7 @@ public class AuthService {
     public CurrentUserDto currentUser() {
         SessionUser sessionUser = CurrentUserContext.get();
         if (sessionUser == null) {
-            throw new BusinessException("Please log in first.");
+            throw new BusinessException("请先登录");
         }
         SysUserEntity user = authAccountService.requireActiveUserById(sessionUser.userId());
         return new CurrentUserDto(
@@ -136,26 +133,8 @@ public class AuthService {
     private String normalizeRoleCode(String rawRoleCode) {
         String roleCode = rawRoleCode == null ? "" : rawRoleCode.trim().toUpperCase();
         if (!List.of(RoleCodes.USER, RoleCodes.WORKER, RoleCodes.ADMIN).contains(roleCode)) {
-            throw new BusinessException("Unsupported role type.");
+            throw new BusinessException("不支持的身份类型");
         }
         return roleCode;
-    }
-
-    private void validateWorkerRegistration(RegisterRequest request) {
-        if (!StringUtils.hasText(request.serviceTypes())
-                || request.yearsOfExperience() == null
-                || !StringUtils.hasText(request.certificates())
-                || !StringUtils.hasText(request.serviceAreas())
-                || !StringUtils.hasText(request.availableSchedule())
-                || !StringUtils.hasText(request.intro())) {
-            throw new BusinessException("Worker registration requires service types, experience, certificates, areas, schedule and introduction.");
-        }
-        if (request.yearsOfExperience() < 0) {
-            throw new BusinessException("Years of experience cannot be less than 0.");
-        }
-    }
-
-    private String trimOrEmpty(String value) {
-        return value == null ? "" : value.trim();
     }
 }

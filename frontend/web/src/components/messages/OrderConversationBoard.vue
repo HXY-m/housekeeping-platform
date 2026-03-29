@@ -1,6 +1,6 @@
 <template>
   <div class="message-center-layout">
-    <el-card shadow="never">
+    <el-card shadow="never" class="conversation-surface conversation-surface--sidebar">
       <template #header>
         <div class="card-header-between">
           <div>
@@ -14,7 +14,7 @@
         </div>
       </template>
 
-      <div class="table-toolbar__filters">
+      <div class="table-toolbar__filters conversation-filter-stack">
         <el-input
           v-model.trim="keyword"
           clearable
@@ -31,8 +31,15 @@
         </el-select>
       </div>
 
-      <el-scrollbar max-height="620px" class="message-thread-scroll">
-        <div v-if="filteredThreads.length" class="message-thread-list">
+      <el-scrollbar max-height="640px" class="message-thread-scroll">
+        <div v-if="threadLoading && !filteredThreads.length" class="message-thread-skeleton-list">
+          <el-skeleton v-for="index in 4" :key="index" animated class="message-thread-skeleton">
+            <template #template>
+              <el-skeleton-item variant="rect" style="width: 100%; height: 122px; border-radius: 20px;" />
+            </template>
+          </el-skeleton>
+        </div>
+        <div v-else-if="filteredThreads.length" class="message-thread-list">
           <button
             v-for="thread in filteredThreads"
             :key="thread.orderId"
@@ -43,7 +50,9 @@
           >
             <div class="message-thread-item__top">
               <strong>{{ thread.serviceName }}</strong>
-              <el-tag size="small" :type="getOrderStatusTagType(thread.status)">{{ getOrderStatusLabel(thread.status) }}</el-tag>
+              <el-tag size="small" :type="getOrderStatusTagType(thread.status)">
+                {{ getOrderStatusLabel(thread.status) }}
+              </el-tag>
             </div>
             <div class="message-thread-item__sub">
               {{ portal === 'worker' ? '用户' : '服务人员' }}：{{ thread.counterpartName }}
@@ -53,7 +62,7 @@
               <span class="muted-line">{{ thread.progressNote || '等待更新进度' }}</span>
             </div>
             <div class="message-thread-item__preview">
-              {{ thread.latestMessage || '暂时还没有留言，点击右侧可以发起沟通。' }}
+              {{ thread.latestMessage || '暂时还没有留言，点击右侧即可发起沟通。' }}
             </div>
           </button>
         </div>
@@ -61,7 +70,7 @@
       </el-scrollbar>
     </el-card>
 
-    <el-card shadow="never">
+    <el-card shadow="never" class="conversation-surface conversation-surface--main">
       <template #header>
         <div class="card-header-between">
           <div>
@@ -89,17 +98,26 @@
               <strong>{{ selectedOrder?.serviceAddress || '--' }}</strong>
             </div>
           </div>
-          <el-alert
-            :title="selectedFlowMeta.title"
-            :description="selectedFlowMeta.description"
-            show-icon
-            :closable="false"
-            type="info"
-          />
+          <div class="message-flow-banner">
+            <div>
+              <strong>{{ selectedFlowMeta.title }}</strong>
+              <p>{{ selectedFlowMeta.description }}</p>
+            </div>
+            <el-tag :type="selectedFlowMeta.ownerType || 'info'" effect="plain">
+              当前由{{ selectedFlowMeta.owner || '系统' }}推进
+            </el-tag>
+          </div>
         </div>
 
-        <el-scrollbar max-height="420px" class="message-bubble-scroll" v-loading="messageLoading">
-          <div v-if="messages.length" class="message-bubble-list">
+        <el-scrollbar max-height="440px" class="message-bubble-scroll" v-loading="messageLoading">
+          <div v-if="messageLoading && !messages.length" class="message-bubble-skeleton-list">
+            <el-skeleton v-for="index in 3" :key="index" animated>
+              <template #template>
+                <el-skeleton-item variant="rect" style="width: 100%; height: 88px; border-radius: 18px;" />
+              </template>
+            </el-skeleton>
+          </div>
+          <div v-else-if="messages.length" class="message-bubble-list">
             <div
               v-for="item in messages"
               :key="item.id"
@@ -207,10 +225,8 @@ const filteredThreads = computed(() => {
   })
 })
 
-const selectedThread = computed(() =>
-  filteredThreads.value.find((item) => String(item.orderId) === String(selectedOrderId.value)) ||
-  filteredThreads.value[0] ||
-  null
+const selectedThread = computed(
+  () => filteredThreads.value.find((item) => String(item.orderId) === String(selectedOrderId.value)) || filteredThreads.value[0] || null
 )
 
 const selectedOrder = computed(() =>
@@ -220,6 +236,8 @@ const selectedOrder = computed(() =>
 const selectedFlowMeta = computed(() => {
   if (!selectedOrder.value) {
     return {
+      owner: '系统',
+      ownerType: 'info',
       title: '暂无流程提示',
       description: '选择左侧订单后查看当前阶段说明。',
       hint: '你可以围绕当前订单与对方沟通关键安排。'
@@ -320,10 +338,7 @@ async function submitMessage() {
     })
     draft.value = ''
     ElMessage.success('留言已发送')
-    await Promise.all([
-      loadMessages(selectedThread.value.orderId),
-      loadConversations()
-    ])
+    await Promise.all([loadMessages(selectedThread.value.orderId), loadConversations()])
   } catch (error) {
     ElMessage.error(error.message || '发送留言失败')
   } finally {
@@ -341,13 +356,30 @@ onMounted(loadConversations)
   gap: 16px;
 }
 
+.conversation-surface {
+  background: rgba(255, 255, 255, 0.58);
+  backdrop-filter: blur(22px);
+}
+
+.conversation-surface--sidebar {
+  position: sticky;
+  top: 16px;
+  align-self: start;
+}
+
+.conversation-filter-stack {
+  margin-top: 4px;
+}
+
 .message-thread-scroll,
 .message-bubble-scroll {
   margin-top: 16px;
 }
 
 .message-thread-list,
+.message-thread-skeleton-list,
 .message-bubble-list,
+.message-bubble-skeleton-list,
 .message-thread-panel,
 .message-summary-panel,
 .message-compose {
@@ -357,22 +389,26 @@ onMounted(loadConversations)
 
 .message-thread-item {
   width: 100%;
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  background: #fff;
-  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.48);
+  backdrop-filter: blur(22px);
+  padding: 16px 18px;
   text-align: left;
   cursor: pointer;
   display: grid;
   gap: 8px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  transition:
+    border-color 0.24s ease,
+    box-shadow 0.24s ease,
+    transform 0.24s ease;
 }
 
 .message-thread-item:hover,
 .message-thread-item.is-active {
-  border-color: rgba(15, 118, 110, 0.32);
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
-  transform: translateY(-1px);
+  border-color: rgba(0, 113, 227, 0.26);
+  box-shadow: 0 18px 34px rgba(15, 23, 42, 0.08);
+  transform: translateY(-2px);
 }
 
 .message-thread-item__top,
@@ -395,20 +431,33 @@ onMounted(loadConversations)
   gap: 12px;
 }
 
+.message-flow-banner {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.46), rgba(255, 255, 255, 0.26));
+  border: 1px solid rgba(255, 255, 255, 0.68);
+}
+
+.message-flow-banner p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
 .message-bubble {
   padding: 14px 16px;
   border-radius: 18px;
-  border: 1px solid var(--border);
-  background: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(18px);
 }
 
 .message-bubble--self {
-  background: rgba(15, 118, 110, 0.08);
-  border-color: rgba(15, 118, 110, 0.18);
-}
-
-.message-bubble--other {
-  background: #fff;
+  background: rgba(0, 113, 227, 0.1);
+  border-color: rgba(0, 113, 227, 0.18);
 }
 
 .message-bubble__meta {
@@ -435,10 +484,15 @@ onMounted(loadConversations)
     grid-template-columns: 1fr;
   }
 
+  .conversation-surface--sidebar {
+    position: static;
+  }
+
   .message-summary-panel__meta,
   .message-thread-item__top,
   .message-thread-item__meta,
-  .message-bubble__meta {
+  .message-bubble__meta,
+  .message-flow-banner {
     grid-template-columns: 1fr;
     display: grid;
   }

@@ -1,43 +1,49 @@
 <template>
   <div class="page-stack">
-    <el-card shadow="never" class="page-panel">
-      <div class="page-panel__header">
-        <div>
-          <h1 class="page-panel__title">订单监管</h1>
-          <p class="page-panel__desc">
-            统一查看平台订单状态、预约时间、履约进度和评价结果，筛选条件集中收口，方便快速定位问题订单。
-          </p>
-        </div>
+    <div class="console-overview console-overview--admin">
+      <div>
+        <el-tag type="danger" round>订单监管</el-tag>
+        <h1>平台订单与履约进度</h1>
+        <p>集中查看服务预约、履约推进、用户评价和售后风险，便于快速定位异常订单。</p>
+      </div>
+      <div class="hero-actions">
         <el-button type="primary" :loading="loading" @click="loadOrders">刷新数据</el-button>
       </div>
+    </div>
 
-      <div class="metric-strip">
-        <div class="metric-chip">
-          <span class="metric-chip__label">平台订单</span>
-          <strong>{{ summary.total }}</strong>
-        </div>
-        <div class="metric-chip">
-          <span class="metric-chip__label">待接单</span>
-          <strong>{{ summary.pending }}</strong>
-        </div>
-        <div class="metric-chip">
-          <span class="metric-chip__label">服务中</span>
-          <strong>{{ summary.inService }}</strong>
-        </div>
-        <div class="metric-chip">
-          <span class="metric-chip__label">已完成</span>
-          <strong>{{ summary.completed }}</strong>
+    <div class="metric-strip">
+      <div class="metric-chip">
+        <span class="metric-chip__label">平台订单</span>
+        <strong>{{ summary.total }}</strong>
+      </div>
+      <div class="metric-chip">
+        <span class="metric-chip__label">待接单</span>
+        <strong>{{ summary.pending }}</strong>
+      </div>
+      <div class="metric-chip">
+        <span class="metric-chip__label">服务中</span>
+        <strong>{{ summary.inService }}</strong>
+      </div>
+      <div class="metric-chip">
+        <span class="metric-chip__label">已完成</span>
+        <strong>{{ summary.completed }}</strong>
+      </div>
+    </div>
+
+    <el-card shadow="never" class="page-panel">
+      <div class="card-header-between">
+        <div>
+          <strong>筛选与列表</strong>
+          <p class="section-caption">按服务、用户、服务人员、状态和预约日期筛选。</p>
         </div>
       </div>
-    </el-card>
 
-    <el-card shadow="never">
-      <div class="table-toolbar">
+      <div class="table-toolbar table-toolbar--dense">
         <div class="table-toolbar__filters">
           <el-input
             v-model.trim="filters.keyword"
             clearable
-            placeholder="搜索服务项目、服务人员、用户姓名"
+            placeholder="搜索服务、用户或服务人员"
             style="width: 280px"
           />
           <el-select v-model="filters.status" clearable placeholder="订单状态" style="width: 180px">
@@ -57,10 +63,9 @@
             unlink-panels
           />
         </div>
-        <span class="section-caption">按预约日期和状态快速定位订单</span>
       </div>
 
-      <el-table :data="pagedOrders" v-loading="loading" stripe style="margin-top: 16px">
+      <el-table :data="orders" v-loading="loading" stripe style="margin-top: 16px">
         <el-table-column label="订单信息" min-width="200">
           <template #default="{ row }">
             <div class="table-cell-primary">
@@ -69,15 +74,15 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="用户 / 服务人员" min-width="180">
+        <el-table-column label="用户 / 服务人员" min-width="190">
           <template #default="{ row }">
             <div class="table-cell-primary">
               <strong>{{ row.customerName }}</strong>
-              <span class="table-cell-secondary">{{ row.workerName }}</span>
+              <span class="table-cell-secondary">{{ row.workerName || '待分配服务人员' }}</span>
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="预约时间" min-width="180">
+        <el-table-column label="预约时间" min-width="190">
           <template #default="{ row }">
             <div class="table-cell-primary">
               <strong>{{ row.bookingDate }}</strong>
@@ -86,7 +91,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="serviceAddress" label="服务地址" min-width="220" show-overflow-tooltip />
-        <el-table-column label="状态" width="120">
+        <el-table-column label="订单状态" width="130">
           <template #default="{ row }">
             <el-tag :type="getOrderStatusTagType(row.status)">
               {{ getOrderStatusLabel(row.status) }}
@@ -123,18 +128,18 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { fetchAdminOrders, fetchAdminOrderSummary } from '../../api'
 import ListPagination from '../../components/common/ListPagination.vue'
 import { useServerPagination } from '../../composables/useServerPagination'
 import { getUserOrderFlowMeta } from '../../utils/orderFlow'
-import { getOrderStatusLabel, getOrderStatusTagType, normalizeOrderStatus } from '../../utils/order'
+import { getOrderStatusLabel, getOrderStatusTagType } from '../../utils/order'
 
 const statusOptions = [
   { label: '待接单', value: 'PENDING' },
-  { label: '已接单', value: 'ACCEPTED' },
-  { label: '待用户确认', value: 'CONFIRMED' },
+  { label: '待用户确认', value: 'ACCEPTED' },
+  { label: '待上门', value: 'CONFIRMED' },
   { label: '服务中', value: 'IN_SERVICE' },
   { label: '待确认完工', value: 'WAITING_USER_CONFIRMATION' },
   { label: '已完成', value: 'COMPLETED' }
@@ -154,53 +159,21 @@ const filters = reactive({
   dateRange: []
 })
 
-const filteredOrders = computed(() =>
-  orders.value.filter((item) => {
-    if (filters.status && normalizeOrderStatus(item.status) !== filters.status) {
-      return false
-    }
-
-    if (filters.dateRange?.length === 2) {
-      const [start, end] = filters.dateRange
-      if (item.bookingDate < start || item.bookingDate > end) {
-        return false
-      }
-    }
-
-    if (!filters.keyword) {
-      return true
-    }
-
-    const keyword = filters.keyword.toLowerCase()
-    return [item.serviceName, item.workerName, item.customerName]
-      .filter(Boolean)
-      .some((value) => String(value).toLowerCase().includes(keyword))
-  })
-)
-
 const { currentPage, pageSize, pageSizes, total, buildParams, applyPageResult, resetPage } = useServerPagination(8)
-const pagedOrders = orders
 
-watch(
-  () => [filters.keyword, filters.status, filters.dateRange?.join('|')],
-  () => {
-    if (currentPage.value !== 1) {
-      resetPage()
-      return
-    }
-    loadOrders()
+function buildFilters() {
+  return {
+    keyword: filters.keyword.trim(),
+    status: filters.status,
+    dateFrom: filters.dateRange?.[0] || '',
+    dateTo: filters.dateRange?.[1] || ''
   }
-)
+}
 
 async function loadOrders() {
   loading.value = true
   try {
-    const params = {
-      keyword: filters.keyword.trim(),
-      status: filters.status,
-      dateFrom: filters.dateRange?.[0] || '',
-      dateTo: filters.dateRange?.[1] || ''
-    }
+    const params = buildFilters()
     const [result, summaryResult] = await Promise.all([
       fetchAdminOrders(buildParams(params)),
       fetchAdminOrderSummary(params)
@@ -218,6 +191,17 @@ async function loadOrders() {
     loading.value = false
   }
 }
+
+watch(
+  () => [filters.keyword, filters.status, filters.dateRange?.join('|')],
+  () => {
+    if (currentPage.value !== 1) {
+      resetPage()
+      return
+    }
+    loadOrders()
+  }
+)
 
 watch([currentPage, pageSize], () => {
   loadOrders()

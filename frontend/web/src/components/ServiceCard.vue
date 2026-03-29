@@ -37,7 +37,9 @@ const coverImage = computed(() => getServiceImage(props.category))
 .service-card--clean {
   overflow: hidden;
   border: 1px solid #e4e7ec;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.76);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 12px 28px rgba(16, 24, 40, 0.04);
 }
 
 .service-card__image {
@@ -80,7 +82,8 @@ const coverImage = computed(() => getServiceImage(props.category))
 .service-card__meta span {
   padding: 8px 12px;
   border-radius: 999px;
-  background: #f8fafc;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid #e4e7ec;
   color: #475467;
   font-size: 12px;
 }

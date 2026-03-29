@@ -1,9 +1,10 @@
 <template>
-  <div v-loading="loading" class="page-stack">
+  <div class="page-stack">
     <el-card class="hero-card hero-card--minimal" shadow="never">
       <div class="hero-grid hero-grid--minimal">
         <div class="hero-content--minimal">
-          <h1 class="hero-title">预订值得信赖的家政服务</h1>
+          <h1 class="hero-title">预约值得信赖的家政服务</h1>
+          <p class="hero-copy">按服务类型快速筛选，查看真实服务人员资料，再完成预约。</p>
           <div class="hero-actions">
             <el-button type="primary" size="large" @click="router.push('/workers')">找服务人员</el-button>
             <el-button size="large" @click="router.push('/register?roleCode=WORKER')">注册服务人员</el-button>
@@ -37,7 +38,24 @@
         <el-button text type="primary" @click="router.push('/workers')">查看全部</el-button>
       </div>
 
-      <el-row :gutter="18">
+      <el-row v-if="loading" :gutter="18">
+        <el-col v-for="item in 3" :key="`service-skeleton-${item}`" :xs="24" :sm="12" :lg="8">
+          <el-card shadow="never" class="skeleton-card">
+            <el-skeleton animated>
+              <template #template>
+                <el-skeleton-item variant="image" class="skeleton-card__image" />
+                <div class="skeleton-card__body">
+                  <el-skeleton-item variant="h3" style="width: 56%" />
+                  <el-skeleton-item variant="text" style="width: 100%" />
+                  <el-skeleton-item variant="text" style="width: 72%" />
+                </div>
+              </template>
+            </el-skeleton>
+          </el-card>
+        </el-col>
+      </el-row>
+
+      <el-row v-else :gutter="18">
         <el-col
           v-for="category in home?.categories || []"
           :key="category.id"
@@ -58,7 +76,30 @@
         <el-button text type="primary" @click="router.push('/workers')">更多服务人员</el-button>
       </div>
 
-      <el-row :gutter="18">
+      <el-row v-if="loading" :gutter="18">
+        <el-col v-for="item in 3" :key="`worker-skeleton-${item}`" :xs="24" :sm="12" :lg="8">
+          <el-card shadow="never" class="skeleton-card skeleton-card--worker">
+            <el-skeleton animated>
+              <template #template>
+                <div class="worker-skeleton__top">
+                  <el-skeleton-item variant="circle" class="worker-skeleton__avatar" />
+                  <div class="worker-skeleton__meta">
+                    <el-skeleton-item variant="h3" style="width: 72%" />
+                    <el-skeleton-item variant="text" style="width: 48%" />
+                  </div>
+                </div>
+                <div class="skeleton-card__body">
+                  <el-skeleton-item variant="text" style="width: 100%" />
+                  <el-skeleton-item variant="text" style="width: 88%" />
+                  <el-skeleton-item variant="text" style="width: 64%" />
+                </div>
+              </template>
+            </el-skeleton>
+          </el-card>
+        </el-col>
+      </el-row>
+
+      <el-row v-else :gutter="18">
         <el-col
           v-for="worker in home?.featuredWorkers || []"
           :key="worker.id"
@@ -136,6 +177,38 @@ onMounted(async () => {
 .trust-panel__item strong {
   font-size: 28px;
   line-height: 1;
+}
+
+.skeleton-card {
+  border: 1px solid #e4e7ec;
+}
+
+.skeleton-card__image {
+  width: 100%;
+  height: 196px;
+}
+
+.skeleton-card__body {
+  display: grid;
+  gap: 12px;
+  padding-top: 18px;
+}
+
+.worker-skeleton__top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.worker-skeleton__avatar {
+  width: 76px;
+  height: 76px;
+}
+
+.worker-skeleton__meta {
+  flex: 1;
+  display: grid;
+  gap: 10px;
 }
 
 @media (max-width: 960px) {

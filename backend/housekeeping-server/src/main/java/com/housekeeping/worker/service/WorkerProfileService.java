@@ -63,6 +63,14 @@ public class WorkerProfileService {
         return worker;
     }
 
+    public WorkerEntity requireApprovedWorkerByUserId(Long userId) {
+        WorkerEntity worker = requireWorkerByUserId(userId);
+        if (!WorkerQualificationStatus.isPublicVisible(worker.getQualificationStatus())) {
+            throw new BusinessException("资质审核通过后才能接单和处理服务订单");
+        }
+        return worker;
+    }
+
     @Transactional
     public WorkerEntity upsertProfile(WorkerProfileUpsertCommand command) {
         WorkerEntity worker = workerMapper.selectOne(

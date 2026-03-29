@@ -1,8 +1,24 @@
 <template>
-  <div class="page-stack" v-loading="loading">
-    <el-card v-if="worker" shadow="never" class="worker-detail-card">
+  <div class="page-stack">
+    <el-card v-if="loading" shadow="never" class="worker-detail-card worker-detail-card--loading">
+      <el-skeleton animated>
+        <template #template>
+          <div class="worker-detail-skeleton">
+            <el-skeleton-item variant="circle" class="worker-detail-skeleton__avatar" />
+            <div class="worker-detail-skeleton__meta">
+              <el-skeleton-item variant="h1" style="width: 42%" />
+              <el-skeleton-item variant="text" style="width: 24%" />
+              <el-skeleton-item variant="text" style="width: 100%" />
+              <el-skeleton-item variant="text" style="width: 72%" />
+            </div>
+          </div>
+        </template>
+      </el-skeleton>
+    </el-card>
+
+    <el-card v-else-if="worker" shadow="never" class="worker-detail-card">
       <div class="worker-detail-hero">
-        <el-image :src="getWorkerImage(worker)" :alt="worker.name" fit="cover" class="worker-detail-hero__image" />
+        <el-avatar :src="getWorkerImage(worker)" :size="140" class="worker-detail-hero__avatar" />
 
         <div class="worker-detail-hero__content">
           <div class="tag-wrap">
@@ -43,7 +59,7 @@
       </div>
     </el-card>
 
-    <el-row v-if="worker" :gutter="16">
+    <el-row v-if="worker && !loading" :gutter="16">
       <el-col :xs="24" :lg="12">
         <el-card shadow="hover">
           <template #header><strong>服务信息</strong></template>
@@ -145,15 +161,14 @@ onMounted(async () => {
 
 .worker-detail-hero {
   display: grid;
-  grid-template-columns: 320px minmax(0, 1fr);
-  gap: 24px;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
 }
 
-.worker-detail-hero__image {
-  width: 100%;
-  height: 320px;
-  border-radius: 18px;
-  overflow: hidden;
+.worker-detail-hero__avatar {
+  border: 3px solid #fff;
+  box-shadow: 0 14px 30px rgba(16, 24, 40, 0.08);
 }
 
 .worker-detail-hero__content {
@@ -197,8 +212,26 @@ onMounted(async () => {
   gap: 12px;
 }
 
+.worker-detail-skeleton {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 28px;
+  align-items: center;
+}
+
+.worker-detail-skeleton__avatar {
+  width: 140px;
+  height: 140px;
+}
+
+.worker-detail-skeleton__meta {
+  display: grid;
+  gap: 14px;
+}
+
 @media (max-width: 960px) {
-  .worker-detail-hero {
+  .worker-detail-hero,
+  .worker-detail-skeleton {
     grid-template-columns: 1fr;
   }
 

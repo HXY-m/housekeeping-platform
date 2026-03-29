@@ -354,7 +354,7 @@ onMounted(loadCatalog)
 
 .role-item:hover,
 .role-item--active {
-  border-color: rgba(15, 179, 74, 0.36);
+  border-color: rgba(0, 113, 227, 0.36);
   box-shadow: 0 16px 32px rgba(16, 24, 40, 0.06);
   transform: translateY(-1px);
 }
@@ -382,7 +382,7 @@ onMounted(loadCatalog)
 
 .dirty-indicator {
   margin-left: 8px;
-  color: #0a8a38;
+  color: #005bb5;
   font-weight: 600;
 }
 

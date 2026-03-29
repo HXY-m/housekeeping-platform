@@ -1,106 +1,117 @@
 <template>
   <div class="page-stack">
-    <el-card shadow="never" class="page-panel">
-      <div class="page-panel__header">
-        <div>
-          <h1 class="page-panel__title">运营总览</h1>
-          <p class="page-panel__desc">
-            聚合订单规模、服务供给和满意度，帮助管理员快速判断当前平台负载和待处理重点。
-          </p>
-        </div>
-        <div class="filter-actions">
-          <el-button type="primary" @click="router.push('/admin/applications')">去资质审核</el-button>
-          <el-button plain @click="router.push('/admin/after-sales')">去售后处理</el-button>
-        </div>
+    <div class="console-overview console-overview--admin">
+      <div>
+        <el-tag type="danger" round>运营总览</el-tag>
+        <h1>平台运营控制台</h1>
+        <p>快速查看订单规模、服务供给和整体满意度，优先处理审核、售后和履约波动。</p>
       </div>
-
-      <div class="metric-strip">
-        <div class="metric-chip">
-          <span class="metric-chip__label">总订单量</span>
-          <strong>{{ dashboard.totalOrders }}</strong>
-        </div>
-        <div class="metric-chip">
-          <span class="metric-chip__label">已完成订单</span>
-          <strong>{{ dashboard.completedOrders }}</strong>
-        </div>
-        <div class="metric-chip">
-          <span class="metric-chip__label">活跃服务人员</span>
-          <strong>{{ dashboard.activeWorkers }}</strong>
-        </div>
-        <div class="metric-chip">
-          <span class="metric-chip__label">平均满意度</span>
-          <strong>{{ dashboard.averageRating.toFixed(2) }}</strong>
-        </div>
+      <div class="hero-actions">
+        <el-button type="primary" @click="router.push('/admin/applications')">去资质审核</el-button>
+        <el-button plain @click="router.push('/admin/after-sales')">去售后处理</el-button>
       </div>
-    </el-card>
+    </div>
 
-    <el-row :gutter="16">
-      <el-col :xs="24" :xl="16">
-        <el-card shadow="never">
+    <div class="metric-strip">
+      <div class="metric-chip">
+        <span class="metric-chip__label">总订单量</span>
+        <strong>{{ dashboard.totalOrders }}</strong>
+      </div>
+      <div class="metric-chip">
+        <span class="metric-chip__label">已完成订单</span>
+        <strong>{{ dashboard.completedOrders }}</strong>
+      </div>
+      <div class="metric-chip">
+        <span class="metric-chip__label">活跃服务人员</span>
+        <strong>{{ dashboard.activeWorkers }}</strong>
+      </div>
+      <div class="metric-chip">
+        <span class="metric-chip__label">平均满意度</span>
+        <strong>{{ dashboard.averageRating.toFixed(2) }}</strong>
+      </div>
+    </div>
+
+    <div class="page-grid--sidebar admin-dashboard-grid">
+      <div class="page-stack">
+        <el-row :gutter="16">
+          <el-col :xs="24" :xl="16">
+            <el-card shadow="never" class="dashboard-card">
+              <template #header>
+                <div class="card-header-between">
+                  <strong>服务销量分布</strong>
+                  <span class="section-caption">识别当前主要成交服务类型</span>
+                </div>
+              </template>
+              <AppChart :option="salesChartOption" height="360px" />
+            </el-card>
+          </el-col>
+          <el-col :xs="24" :xl="8">
+            <el-card shadow="never" class="dashboard-card">
+              <template #header>
+                <div class="card-header-between">
+                  <strong>订单完成率</strong>
+                  <span class="section-caption">观察整体履约效率</span>
+                </div>
+              </template>
+              <AppChart :option="completionChartOption" height="360px" />
+            </el-card>
+          </el-col>
+        </el-row>
+
+        <el-card shadow="never" class="dashboard-card">
           <template #header>
             <div class="card-header-between">
-              <strong>服务销量分布</strong>
-              <span class="section-caption">识别当前主要成交服务类型</span>
+              <strong>服务销量排行</strong>
+              <span class="section-caption">用于运营排期和资源调度</span>
             </div>
           </template>
-          <AppChart :option="salesChartOption" height="360px" />
+          <el-table :data="pagedSalesRows" stripe>
+            <el-table-column type="index" label="#" width="60" />
+            <el-table-column prop="name" label="服务类型" min-width="180" />
+            <el-table-column prop="value" label="销量" width="120" />
+          </el-table>
+          <ListPagination
+            v-model:current-page="currentPage"
+            v-model:page-size="pageSize"
+            :page-sizes="pageSizes"
+            :total="total"
+            small
+          />
         </el-card>
-      </el-col>
-      <el-col :xs="24" :xl="8">
-        <el-card shadow="never">
+      </div>
+
+      <div class="page-stack">
+        <el-card shadow="never" class="dashboard-card dashboard-card--sticky">
           <template #header>
             <div class="card-header-between">
-              <strong>订单完成率</strong>
-              <span class="section-caption">观察整体履约效率</span>
+              <strong>运营提示</strong>
+              <el-tag effect="plain" type="danger">实时概览</el-tag>
             </div>
           </template>
-          <AppChart :option="completionChartOption" height="360px" />
+          <div class="info-stack">
+            <div class="info-panel">
+              <span class="info-panel__label">当前重点</span>
+              <strong>{{ topServiceLabel }}</strong>
+              <span class="muted-line">
+                {{ completionRate }}% 的订单已完成，{{ dashboard.activeWorkers }} 名服务人员处于活跃状态。
+              </span>
+            </div>
+            <div class="info-panel">
+              <span class="info-panel__label">建议跟进</span>
+              <span class="muted-line">
+                若待审核申请或售后工单偏多，建议优先进入对应后台页面处理，避免服务供给或用户体验积压。
+              </span>
+            </div>
+            <div class="info-panel">
+              <span class="info-panel__label">运营动作</span>
+              <div class="hero-actions">
+                <el-button plain @click="router.push('/admin/orders')">查看订单监管</el-button>
+                <el-button plain @click="router.push('/admin/reports')">导出报表</el-button>
+              </div>
+            </div>
+          </div>
         </el-card>
-      </el-col>
-    </el-row>
-
-    <div class="page-grid--sidebar">
-      <el-card shadow="never">
-        <template #header>
-          <div class="card-header-between">
-            <strong>服务销量排行</strong>
-            <span class="section-caption">用于运营排期和资源调度</span>
-          </div>
-        </template>
-        <el-table :data="pagedSalesRows" stripe>
-          <el-table-column type="index" label="#" width="60" />
-          <el-table-column prop="name" label="服务类型" min-width="180" />
-          <el-table-column prop="value" label="销量" width="120" />
-        </el-table>
-        <ListPagination
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
-          :page-sizes="pageSizes"
-          :total="total"
-          small
-        />
-      </el-card>
-
-      <el-card shadow="never">
-        <template #header>
-          <strong>运营提示</strong>
-        </template>
-        <div class="info-stack">
-          <div class="info-panel">
-            <span class="info-panel__label">当前重点</span>
-            <strong>{{ topServiceLabel }}</strong>
-            <span class="muted-line">
-              {{ completionRate }}% 的订单已完成，{{ dashboard.activeWorkers }} 名服务人员处于活跃状态。
-            </span>
-          </div>
-          <div class="info-panel">
-            <span class="info-panel__label">建议跟进</span>
-            <span class="muted-line">
-              若待审核申请或售后工单偏多，建议优先进入对应后台页面处理，避免服务供给或用户体验积压。
-            </span>
-          </div>
-        </div>
-      </el-card>
+      </div>
     </div>
   </div>
 </template>
@@ -167,8 +178,8 @@ const salesChartOption = computed(() => ({
           x2: 0,
           y2: 1,
           colorStops: [
-            { offset: 0, color: '#f97316' },
-            { offset: 1, color: '#dc2626' }
+            { offset: 0, color: '#5ac8fa' },
+            { offset: 1, color: '#0071e3' }
           ]
         }
       }
@@ -182,7 +193,7 @@ const completionChartOption = computed(() => ({
       type: 'gauge',
       startAngle: 210,
       endAngle: -30,
-      progress: { show: true, width: 18, itemStyle: { color: '#dc2626' } },
+      progress: { show: true, width: 18, itemStyle: { color: '#0071e3' } },
       axisLine: { lineStyle: { width: 18, color: [[1, '#e5e7eb']] } },
       pointer: { show: false },
       axisTick: { show: false },
@@ -209,3 +220,25 @@ onMounted(async () => {
   dashboard.value = await fetchAdminDashboard()
 })
 </script>
+
+<style scoped>
+.admin-dashboard-grid {
+  align-items: start;
+}
+
+.dashboard-card {
+  background: rgba(255, 255, 255, 0.58);
+  backdrop-filter: blur(22px);
+}
+
+.dashboard-card--sticky {
+  position: sticky;
+  top: 16px;
+}
+
+@media (max-width: 1200px) {
+  .dashboard-card--sticky {
+    position: static;
+  }
+}
+</style>
