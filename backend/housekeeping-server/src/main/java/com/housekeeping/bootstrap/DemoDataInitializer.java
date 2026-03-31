@@ -2,17 +2,17 @@ package com.housekeeping.bootstrap;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.housekeeping.auth.entity.SysUserEntity;
+import com.housekeeping.auth.entity.SysUserRoleEntity;
 import com.housekeeping.auth.mapper.SysUserMapper;
+import com.housekeeping.auth.mapper.SysUserRoleMapper;
+import com.housekeeping.auth.service.AuthAccountService;
+import com.housekeeping.auth.support.RoleCodes;
 import com.housekeeping.category.entity.ServiceCategoryEntity;
 import com.housekeeping.category.mapper.ServiceCategoryMapper;
-import com.housekeeping.order.OrderStatus;
-import com.housekeeping.order.PaymentStatus;
-import com.housekeeping.order.entity.OrderEntity;
-import com.housekeeping.order.entity.OrderPaymentEntity;
-import com.housekeeping.order.entity.OrderProgressEntity;
-import com.housekeeping.order.mapper.OrderMapper;
-import com.housekeeping.order.mapper.OrderPaymentMapper;
-import com.housekeeping.order.mapper.OrderProgressMapper;
+import com.housekeeping.user.entity.UserAddressEntity;
+import com.housekeeping.user.entity.UserProfileEntity;
+import com.housekeeping.user.mapper.UserAddressMapper;
+import com.housekeeping.user.mapper.UserProfileMapper;
 import com.housekeeping.worker.WorkerQualificationStatus;
 import com.housekeeping.worker.entity.WorkerEntity;
 import com.housekeeping.worker.mapper.WorkerMapper;
@@ -20,49 +20,53 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Objects;
-
 @Component
 @Order(30)
 public class DemoDataInitializer implements CommandLineRunner {
 
+    private static final String DEFAULT_CITY = "上海";
     private static final String DEMO_USER_PHONE = "13800000011";
+    private static final String DEMO_USER_USERNAME = "demo_user";
+    private static final String DEMO_USER_NAME = "Demo User";
     private static final String DEMO_WORKER_PHONE = "13800000022";
+    private static final String DEMO_WORKER_USERNAME = "demo_worker";
+    private static final String DEMO_WORKER_NAME = "李阿姨";
+    private static final String DEMO_ADMIN_PHONE = "13800000033";
+    private static final String DEMO_ADMIN_USERNAME = "demo_admin";
+    private static final String DEMO_ADMIN_NAME = "Demo Admin";
 
     private final ServiceCategoryMapper categoryMapper;
     private final WorkerMapper workerMapper;
-    private final OrderMapper orderMapper;
-    private final OrderPaymentMapper orderPaymentMapper;
-    private final OrderProgressMapper orderProgressMapper;
     private final SysUserMapper sysUserMapper;
+    private final SysUserRoleMapper sysUserRoleMapper;
+    private final UserProfileMapper userProfileMapper;
+    private final UserAddressMapper userAddressMapper;
+    private final AuthAccountService authAccountService;
 
     public DemoDataInitializer(ServiceCategoryMapper categoryMapper,
                                WorkerMapper workerMapper,
-                               OrderMapper orderMapper,
-                               OrderPaymentMapper orderPaymentMapper,
-                               OrderProgressMapper orderProgressMapper,
-                               SysUserMapper sysUserMapper) {
+                               SysUserMapper sysUserMapper,
+                               SysUserRoleMapper sysUserRoleMapper,
+                               UserProfileMapper userProfileMapper,
+                               UserAddressMapper userAddressMapper,
+                               AuthAccountService authAccountService) {
         this.categoryMapper = categoryMapper;
         this.workerMapper = workerMapper;
-        this.orderMapper = orderMapper;
-        this.orderPaymentMapper = orderPaymentMapper;
-        this.orderProgressMapper = orderProgressMapper;
         this.sysUserMapper = sysUserMapper;
+        this.sysUserRoleMapper = sysUserRoleMapper;
+        this.userProfileMapper = userProfileMapper;
+        this.userAddressMapper = userAddressMapper;
+        this.authAccountService = authAccountService;
     }
 
     @Override
     public void run(String... args) {
         ensureCategories();
-
-        Long demoUserId = findUserId(DEMO_USER_PHONE);
-        Long demoWorkerUserId = findUserId(DEMO_WORKER_PHONE);
-
-        ensureWorkers(demoWorkerUserId);
-        bindLegacyOrdersToDemoUser(demoUserId);
-        ensureOrders(demoUserId);
-        ensureOrderPaymentDefaults();
+        ensureCoreAccount(DEMO_USER_PHONE, DEMO_USER_USERNAME, DEMO_USER_NAME, RoleCodes.USER);
+        ensureCoreAccount(DEMO_ADMIN_PHONE, DEMO_ADMIN_USERNAME, DEMO_ADMIN_NAME, RoleCodes.ADMIN);
+        Long workerUserId = ensureCoreAccount(DEMO_WORKER_PHONE, DEMO_WORKER_USERNAME, DEMO_WORKER_NAME, RoleCodes.WORKER);
+        ensureDefaultWorker(workerUserId);
+        clearLegacyDefaultWorkerAccounts();
     }
 
     private void ensureCategories() {
@@ -70,257 +74,167 @@ public class DemoDataInitializer implements CommandLineRunner {
             return;
         }
 
-        categoryMapper.insert(new ServiceCategoryEntity("日常保洁", "适合两居室与三居室的定期清洁维护", "¥129 起", "daily-cleaning"));
-        categoryMapper.insert(new ServiceCategoryEntity("深度清洁", "针对厨房与卫生间等重点区域的深度处理", "¥229 起", "deep-cleaning"));
-        categoryMapper.insert(new ServiceCategoryEntity("母婴护理", "月嫂、育儿嫂与产后基础照护服务", "¥368 起", "maternal-care"));
-        categoryMapper.insert(new ServiceCategoryEntity("老人陪护", "上门陪诊、日常陪护与康复辅助", "¥299 起", "elderly-care"));
-        categoryMapper.insert(new ServiceCategoryEntity("家电清洗", "空调、洗衣机、油烟机等家电拆洗", "¥149 起", "appliance-cleaning"));
-    }
-
-    private void ensureWorkers(Long demoWorkerUserId) {
-        if (workerMapper.selectCount(null) == 0) {
-            workerMapper.insert(new WorkerEntity(
-                    demoWorkerUserId,
-                    "李阿姨",
-                    "金牌保洁师",
-                    4.90,
-                    286,
-                    68,
-                    "上海",
-                    "擅长家庭深度保洁和收纳整理，服务稳定，细节到位。",
-                    "日常保洁,深度清洁,收纳整理",
-                    "今天 18:30 后可约",
-                    6,
-                    "家政服务培训证书,消杀培训证明",
-                    "浦东新区,杨浦区,虹口区",
-                    "厨房重油污治理,租房退租深度清洁,母婴家庭轻柔保洁",
-                    WorkerQualificationStatus.APPROVED
-            ));
-            workerMapper.insert(new WorkerEntity(
-                    null,
-                    "王师傅",
-                    "家电清洗师",
-                    4.80,
-                    193,
-                    88,
-                    "上海",
-                    "专注空调与洗衣机清洗，支持现场拍照反馈，适合换季预约。",
-                    "家电清洗,空调拆洗,油烟机清洁",
-                    "明天 09:00 可约",
-                    5,
-                    "家电清洗专项证书",
-                    "静安区,徐汇区,长宁区",
-                    "中央空调深洗,租客搬家前家电清洁",
-                    WorkerQualificationStatus.APPROVED
-            ));
-            workerMapper.insert(new WorkerEntity(
-                    null,
-                    "周阿姨",
-                    "母婴护理师",
-                    4.95,
-                    126,
-                    128,
-                    "上海",
-                    "有育婴经验和护理证书，熟悉新生儿护理与月子期家庭支持。",
-                    "母婴护理,育儿嫂,产后陪护",
-                    "后天 08:00 可约",
-                    8,
-                    "母婴护理证书,健康证",
-                    "闵行区,浦东新区",
-                    "新生儿夜间护理,产后恢复支持",
-                    WorkerQualificationStatus.APPROVED
-            ));
-            return;
-        }
-
-        if (demoWorkerUserId == null) {
-            return;
-        }
-
-        WorkerEntity existed = workerMapper.selectOne(
-                new LambdaQueryWrapper<WorkerEntity>()
-                        .eq(WorkerEntity::getUserId, demoWorkerUserId)
-                        .last("limit 1")
-        );
-        if (existed != null) {
-            if (!WorkerQualificationStatus.isPublicVisible(existed.getQualificationStatus())) {
-                existed.setQualificationStatus(WorkerQualificationStatus.APPROVED);
-                workerMapper.updateById(existed);
-            }
-            return;
-        }
-
-        WorkerEntity candidate = workerMapper.selectOne(
-                new LambdaQueryWrapper<WorkerEntity>()
-                        .isNull(WorkerEntity::getUserId)
-                        .orderByAsc(WorkerEntity::getId)
-                        .last("limit 1")
-        );
-        if (candidate != null) {
-            candidate.setUserId(demoWorkerUserId);
-            candidate.setQualificationStatus(WorkerQualificationStatus.APPROVED);
-            workerMapper.updateById(candidate);
-            return;
-        }
-
-        workerMapper.insert(new WorkerEntity(
-                demoWorkerUserId,
-                "演示服务人员",
-                "平台认证家政师",
-                4.90,
-                42,
-                79,
-                "上海",
-                "用于联调测试的默认服务人员档案。",
-                "日常保洁,深度清洁",
-                "今天全天可约",
-                4,
-                "家政服务培训证书",
-                "浦东新区,黄浦区",
-                "演示订单履约测试",
-                WorkerQualificationStatus.APPROVED
+        categoryMapper.insert(new ServiceCategoryEntity(
+                "日常保洁",
+                "适合日常家庭保洁、基础除尘和厨房卫生间维护的上门服务。",
+                "¥129 起",
+                "daily-cleaning",
+                "2 小时 / 4 小时",
+                "客厅、卧室、厨房、卫生间",
+                "日常保洁、入住保洁",
+                "玻璃擦拭,冰箱外部清洁",
+                "/uploads/demo/services/daily-cleaning.svg",
+                1
+        ));
+        categoryMapper.insert(new ServiceCategoryEntity(
+                "深度清洁",
+                "针对重油污、顽固污渍和换季整理场景的深度清洁服务。",
+                "¥229 起",
+                "deep-cleaning",
+                "4 小时 / 半天",
+                "厨房、卫生间、阳台重点区域",
+                "退租保洁、开荒保洁、节前大扫除",
+                "油污去除,玻璃深度清洁",
+                "/uploads/demo/services/deep-cleaning.svg",
+                1
+        ));
+        categoryMapper.insert(new ServiceCategoryEntity(
+                "母婴护理",
+                "面向产后恢复与婴幼儿照护场景的上门护理服务。",
+                "¥368 起",
+                "maternal-care",
+                "半天 / 全天",
+                "月子照护、基础育儿支持",
+                "产后家庭、新生儿陪护",
+                "喂养协助,夜间陪护",
+                "/uploads/demo/services/maternal-care.svg",
+                1
+        ));
+        categoryMapper.insert(new ServiceCategoryEntity(
+                "老人陪护",
+                "提供日常照护、陪诊协助与基础康复陪伴服务。",
+                "¥299 起",
+                "elderly-care",
+                "半天 / 全天",
+                "居家陪护、陪诊、康复协助",
+                "老人照护、术后陪伴",
+                "陪诊,买药协助",
+                "/uploads/demo/services/elderly-care.svg",
+                1
+        ));
+        categoryMapper.insert(new ServiceCategoryEntity(
+                "家电清洗",
+                "提供空调、油烟机、洗衣机等家电拆洗与维护服务。",
+                "¥149 起",
+                "appliance-cleaning",
+                "2 小时 / 单台计费",
+                "空调、洗衣机、油烟机",
+                "换季清洗、搬家前后维护",
+                "过滤网拆洗,外壳除尘",
+                "/uploads/demo/services/appliance-cleaning.svg",
+                1
         ));
     }
 
-    private void bindLegacyOrdersToDemoUser(Long demoUserId) {
-        if (demoUserId == null) {
-            return;
+    private Long ensureCoreAccount(String phone, String username, String realName, String roleCode) {
+        SysUserEntity user = authAccountService.findUserByPhone(phone);
+        if (user == null) {
+            user = authAccountService.createUser(phone, username, "123456", realName);
+        } else {
+            authAccountService.updateUsernameIfBlank(user.getId(), username);
         }
 
-        List<OrderEntity> legacyOrders = orderMapper.selectList(
-                new LambdaQueryWrapper<OrderEntity>().isNull(OrderEntity::getUserId)
-        );
-        for (OrderEntity order : legacyOrders) {
-            order.setUserId(demoUserId);
-            orderMapper.updateById(order);
-        }
-    }
-
-    private void ensureOrders(Long demoUserId) {
-        if (orderMapper.selectCount(null) > 0) {
-            return;
-        }
-
-        List<WorkerEntity> workers = workerMapper.selectList(
-                new LambdaQueryWrapper<WorkerEntity>().orderByAsc(WorkerEntity::getId)
-        );
-        WorkerEntity cleaningWorker = workers.size() > 0 ? workers.get(0) : null;
-        WorkerEntity applianceWorker = workers.size() > 1 ? workers.get(1) : null;
-
-        if (cleaningWorker != null) {
-            OrderEntity order1 = new OrderEntity(
-                    demoUserId,
-                    "日常保洁",
-                    cleaningWorker.getId(),
-                    "张女士",
-                    "13800000001",
-                    "上海市浦东新区锦绣路 88 号",
-                    "2026-03-27",
-                    "08:00-10:00",
-                    OrderStatus.PENDING.code(),
-                    "服务人员已接收预约，等待上门",
-                    "重点清洁厨房和卫生间"
-            );
-            orderMapper.insert(order1);
-            orderProgressMapper.insert(new OrderProgressEntity(order1.getId(), OrderStatus.PENDING.code(), "服务人员已接收预约，等待上门"));
-            ensurePayment(order1, 0, null, false);
-        }
-
-        if (applianceWorker != null && !Objects.equals(applianceWorker.getId(), cleaningWorker == null ? null : cleaningWorker.getId())) {
-            OrderEntity order2 = new OrderEntity(
-                    demoUserId,
-                    "家电清洗",
-                    applianceWorker.getId(),
-                    "陈先生",
-                    "13800000002",
-                    "上海市徐汇区漕溪北路 128 号",
-                    "2026-03-28",
-                    "13:00-15:00",
-                    OrderStatus.IN_SERVICE.code(),
-                    "服务人员已到达，正在进行空调拆洗",
-                    "清洗 2 台挂机空调"
-            );
-            orderMapper.insert(order2);
-            orderProgressMapper.insert(new OrderProgressEntity(order2.getId(), OrderStatus.IN_SERVICE.code(), "服务人员已到达，正在进行空调拆洗"));
-            ensurePayment(order2, applianceWorker.getHourlyPrice(), "WECHAT_PAY", true);
-        }
-    }
-
-    private void ensureOrderPaymentDefaults() {
-        List<OrderEntity> orders = orderMapper.selectList(new LambdaQueryWrapper<OrderEntity>().orderByAsc(OrderEntity::getId));
-        for (OrderEntity order : orders) {
-            boolean paid = PaymentStatus.PAID.matches(order.getPaymentStatus());
-            int amount = order.getPayableAmount() == null || order.getPayableAmount() <= 0
-                    ? resolveWorkerPrice(order.getWorkerId())
-                    : order.getPayableAmount();
-            ensurePayment(order, amount, paid ? (order.getPaymentMethod() == null || order.getPaymentMethod().isBlank() ? "WECHAT_PAY" : order.getPaymentMethod()) : null, paid);
-        }
-    }
-
-    private int resolveWorkerPrice(Long workerId) {
-        WorkerEntity worker = workerId == null ? null : workerMapper.selectById(workerId);
-        return worker == null || worker.getHourlyPrice() == null ? 0 : worker.getHourlyPrice();
-    }
-
-    private void ensurePayment(OrderEntity order, int amount, String paymentMethod, boolean paid) {
         boolean needUpdate = false;
-        if (order.getPayableAmount() == null || order.getPayableAmount() <= 0) {
-            order.setPayableAmount(amount);
+        if (!realName.equals(user.getRealName())) {
+            user.setRealName(realName);
             needUpdate = true;
         }
-        if (paid) {
-            if (!PaymentStatus.PAID.matches(order.getPaymentStatus())) {
-                order.setPaymentStatus(PaymentStatus.PAID.code());
-                needUpdate = true;
-            }
-            if (order.getPaymentMethod() == null || order.getPaymentMethod().isBlank()) {
-                order.setPaymentMethod(paymentMethod == null ? "WECHAT_PAY" : paymentMethod);
-                needUpdate = true;
-            }
-            if (order.getPaidAt() == null) {
-                order.setPaidAt(LocalDateTime.now().minusHours(2));
-                needUpdate = true;
-            }
-        } else if (order.getPaymentStatus() == null || order.getPaymentStatus().isBlank()) {
-            order.setPaymentStatus(PaymentStatus.UNPAID.code());
-            order.setPaymentMethod("");
+        if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
+            user.setStatus("ACTIVE");
             needUpdate = true;
         }
-
         if (needUpdate) {
-            orderMapper.updateById(order);
+            sysUserMapper.updateById(user);
         }
 
-        if (!paid) {
-            return;
-        }
-
-        Long count = orderPaymentMapper.selectCount(
-                new LambdaQueryWrapper<OrderPaymentEntity>()
-                        .eq(OrderPaymentEntity::getOrderId, order.getId())
-        );
-        if (count != null && count > 0) {
-            return;
-        }
-
-        orderPaymentMapper.insert(new OrderPaymentEntity(
-                order.getId(),
-                order.getUserId(),
-                order.getPayableAmount(),
-                order.getPaymentMethod(),
-                PaymentStatus.PAID.code(),
-                "DEMO" + order.getId(),
-                order.getPaidAt() == null ? LocalDateTime.now().minusHours(2) : order.getPaidAt(),
-                order.getPaidAt() == null ? LocalDateTime.now().minusHours(2) : order.getPaidAt()
-        ));
+        authAccountService.bindRole(user.getId(), roleCode);
+        ensureUserProfileCity(user.getId(), DEFAULT_CITY);
+        return user.getId();
     }
 
-    private Long findUserId(String phone) {
-        SysUserEntity user = sysUserMapper.selectOne(
-                new LambdaQueryWrapper<SysUserEntity>()
-                        .eq(SysUserEntity::getPhone, phone)
+    private void ensureUserProfileCity(Long userId, String city) {
+        UserProfileEntity profile = userProfileMapper.selectOne(
+                new LambdaQueryWrapper<UserProfileEntity>()
+                        .eq(UserProfileEntity::getUserId, userId)
                         .last("limit 1")
         );
-        return user == null ? null : user.getId();
+        if (profile == null) {
+            userProfileMapper.insert(new UserProfileEntity(userId, "", city, "", ""));
+            return;
+        }
+        if (profile.getCity() == null || profile.getCity().isBlank()) {
+            profile.setCity(city);
+            userProfileMapper.updateById(profile);
+        }
+    }
+
+    private void ensureDefaultWorker(Long userId) {
+        WorkerEntity worker = workerMapper.selectOne(
+                new LambdaQueryWrapper<WorkerEntity>()
+                        .eq(WorkerEntity::getUserId, userId)
+                        .last("limit 1")
+        );
+        if (worker == null) {
+            worker = new WorkerEntity();
+        }
+
+        worker.setUserId(userId);
+        worker.setName(DEMO_WORKER_NAME);
+        worker.setRoleLabel("平台认证保洁师");
+        worker.setRating(4.90);
+        worker.setCompletedOrders(286);
+        worker.setHourlyPrice(68);
+        worker.setCity(DEFAULT_CITY);
+        worker.setIntro("擅长家庭日常保洁、深度清洁与空间整理，服务稳定细致。");
+        worker.setTags("日常保洁,深度清洁,收纳整理");
+        worker.setNextAvailable("今天 18:30 后可约");
+        worker.setYearsOfExperience(6);
+        worker.setCertificates("家政服务培训证书,健康证");
+        worker.setServiceAreas("浦东新区,杨浦区,虹口区");
+        worker.setServiceCases("退租保洁,厨房重油污清洁,长期家庭保洁");
+        worker.setQualificationStatus(WorkerQualificationStatus.APPROVED);
+        if (worker.getAvatarUrl() == null) {
+            worker.setAvatarUrl("");
+        }
+
+        if (worker.getId() == null) {
+            workerMapper.insert(worker);
+        } else {
+            workerMapper.updateById(worker);
+        }
+    }
+
+    private void clearLegacyDefaultWorkerAccounts() {
+        clearLegacyWorker("13800000023", "王师傅");
+        clearLegacyWorker("13800000024", "周阿姨");
+    }
+
+    private void clearLegacyWorker(String phone, String workerName) {
+        SysUserEntity user = authAccountService.findUserByPhone(phone);
+        if (user != null) {
+            workerMapper.delete(new LambdaQueryWrapper<WorkerEntity>()
+                    .eq(WorkerEntity::getUserId, user.getId()));
+            userAddressMapper.delete(new LambdaQueryWrapper<UserAddressEntity>()
+                    .eq(UserAddressEntity::getUserId, user.getId()));
+            userProfileMapper.delete(new LambdaQueryWrapper<UserProfileEntity>()
+                    .eq(UserProfileEntity::getUserId, user.getId()));
+            sysUserRoleMapper.delete(new LambdaQueryWrapper<SysUserRoleEntity>()
+                    .eq(SysUserRoleEntity::getUserId, user.getId()));
+            sysUserMapper.deleteById(user.getId());
+        }
+
+        workerMapper.delete(new LambdaQueryWrapper<WorkerEntity>()
+                .isNull(WorkerEntity::getUserId)
+                .eq(WorkerEntity::getName, workerName));
     }
 }

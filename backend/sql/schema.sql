@@ -65,6 +65,8 @@ CREATE TABLE IF NOT EXISTS user_address (
   detail_address VARCHAR(255) NOT NULL,
   address_tag VARCHAR(30) NOT NULL DEFAULT '',
   default_address TINYINT(1) NOT NULL DEFAULT 0,
+  latitude DOUBLE NULL,
+  longitude DOUBLE NULL,
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   KEY idx_user_address_user (user_id),

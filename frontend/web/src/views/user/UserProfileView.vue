@@ -74,14 +74,16 @@
               </el-col>
               <el-col :xs="24" :md="12">
                 <el-form-item label="所在城市">
-                  <el-select
-                    v-model="profileForm.city"
-                    filterable
-                    clearable
-                    placeholder="请选择所在城市"
-                    style="width: 100%"
-                  >
-                    <el-option v-for="city in CITY_OPTIONS" :key="city" :label="city" :value="city" />
+                <el-select
+                  v-model="profileForm.city"
+                  filterable
+                  clearable
+                  allow-create
+                  default-first-option
+                  placeholder="请选择所在城市"
+                  style="width: 100%"
+                >
+                  <el-option v-for="city in CITY_OPTIONS" :key="city" :label="city" :value="city" />
                   </el-select>
                 </el-form-item>
               </el-col>
@@ -117,6 +119,7 @@
                   <strong>{{ address.contactName }}</strong>
                   <div class="tag-group">
                     <el-tag size="small" effect="plain">{{ address.addressTag || '常用地址' }}</el-tag>
+                    <el-tag v-if="address.latitude && address.longitude" size="small" effect="plain" type="primary">已定位</el-tag>
                     <el-tag v-if="address.defaultAddress" size="small" type="success">默认</el-tag>
                   </div>
                 </div>
@@ -169,6 +172,8 @@
                 v-model="addressForm.city"
                 filterable
                 clearable
+                allow-create
+                default-first-option
                 placeholder="请选择城市"
                 style="width: 100%"
               >
@@ -182,6 +187,10 @@
             </el-form-item>
           </el-col>
         </el-row>
+        <div class="booking-address-row" style="margin-bottom: 12px">
+          <el-button plain @click="addressMapPickerVisible = true">从地图选择地址</el-button>
+          <span class="muted-line">支持搜索小区、街道或直接在地图上点选。</span>
+        </div>
         <el-form-item label="详细地址">
           <el-input v-model="addressForm.detailAddress" type="textarea" :rows="3" maxlength="200" show-word-limit />
         </el-form-item>
@@ -195,12 +204,20 @@
         <el-button type="primary" :loading="savingAddress" @click="submitAddress">保存地址</el-button>
       </template>
     </el-dialog>
+
+    <AddressMapPickerDialog
+      v-model="addressMapPickerVisible"
+      :city="addressForm.city || profileForm.city"
+      :detail-address="addressForm.detailAddress"
+      @select="handleAddressMapSelect"
+    />
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import AddressMapPickerDialog from '../../components/common/AddressMapPickerDialog.vue'
 import {
   createUserAddress,
   deleteUserAddress,
@@ -220,6 +237,7 @@ const uploadingAvatar = ref(false)
 const avatarInputRef = ref(null)
 const addresses = ref([])
 const addressDialogVisible = ref(false)
+const addressMapPickerVisible = ref(false)
 const addressDialogMode = ref('create')
 const editingAddressId = ref(null)
 
@@ -238,7 +256,9 @@ const addressForm = reactive({
   city: '',
   detailAddress: '',
   addressTag: '',
-  defaultAddress: false
+  defaultAddress: false,
+  latitude: null,
+  longitude: null
 })
 
 const profileCompletion = computed(() => {
@@ -336,7 +356,9 @@ function openAddressDialog(address = null) {
       city: address.city || '',
       detailAddress: address.detailAddress || '',
       addressTag: address.addressTag || '',
-      defaultAddress: Boolean(address.defaultAddress)
+      defaultAddress: Boolean(address.defaultAddress),
+      latitude: address.latitude ?? null,
+      longitude: address.longitude ?? null
     })
     addressDialogVisible.value = true
     return
@@ -350,9 +372,21 @@ function openAddressDialog(address = null) {
     city: profileForm.city || '',
     detailAddress: '',
     addressTag: '家庭',
-    defaultAddress: !addresses.value.length
+    defaultAddress: !addresses.value.length,
+    latitude: null,
+    longitude: null
   })
   addressDialogVisible.value = true
+}
+
+function handleAddressMapSelect(result) {
+  if (!result) {
+    return
+  }
+  addressForm.city = result.city || addressForm.city
+  addressForm.detailAddress = result.detailAddress || result.displayAddress || addressForm.detailAddress
+  addressForm.latitude = result.latitude ?? null
+  addressForm.longitude = result.longitude ?? null
 }
 
 async function submitAddress() {
@@ -374,7 +408,9 @@ async function submitAddress() {
       city: addressForm.city.trim(),
       detailAddress: addressForm.detailAddress.trim(),
       addressTag: addressForm.addressTag.trim(),
-      defaultAddress: addressForm.defaultAddress
+      defaultAddress: addressForm.defaultAddress,
+      latitude: addressForm.latitude,
+      longitude: addressForm.longitude
     }
 
     if (addressDialogMode.value === 'create') {

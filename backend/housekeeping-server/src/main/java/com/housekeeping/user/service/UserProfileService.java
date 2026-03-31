@@ -96,6 +96,8 @@ public class UserProfileService {
                 request.detailAddress().trim(),
                 trimOrEmpty(request.addressTag()),
                 shouldDefault,
+                request.latitude(),
+                request.longitude(),
                 now,
                 now
         );
@@ -123,6 +125,8 @@ public class UserProfileService {
         entity.setDetailAddress(request.detailAddress().trim());
         entity.setAddressTag(trimOrEmpty(request.addressTag()));
         entity.setDefaultAddress(shouldDefault);
+        entity.setLatitude(request.latitude());
+        entity.setLongitude(request.longitude());
         entity.setUpdatedAt(LocalDateTime.now());
         userAddressMapper.updateById(entity);
         return toAddressDto(entity);
@@ -173,6 +177,8 @@ public class UserProfileService {
                 detailAddress,
                 addressTag,
                 true,
+                null,
+                null,
                 now,
                 now
         ));
@@ -248,7 +254,9 @@ public class UserProfileService {
                 entity.getCity(),
                 entity.getDetailAddress(),
                 entity.getAddressTag(),
-                Boolean.TRUE.equals(entity.getDefaultAddress())
+                Boolean.TRUE.equals(entity.getDefaultAddress()),
+                entity.getLatitude(),
+                entity.getLongitude()
         );
     }
 

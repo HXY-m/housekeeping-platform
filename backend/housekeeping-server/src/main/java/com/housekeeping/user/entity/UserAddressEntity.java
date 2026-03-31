@@ -18,6 +18,8 @@ public class UserAddressEntity {
     private String detailAddress;
     private String addressTag;
     private Boolean defaultAddress;
+    private Double latitude;
+    private Double longitude;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -26,6 +28,7 @@ public class UserAddressEntity {
 
     public UserAddressEntity(Long userId, String contactName, String contactPhone, String city,
                              String detailAddress, String addressTag, Boolean defaultAddress,
+                             Double latitude, Double longitude,
                              LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.userId = userId;
         this.contactName = contactName;
@@ -34,6 +37,8 @@ public class UserAddressEntity {
         this.detailAddress = detailAddress;
         this.addressTag = addressTag;
         this.defaultAddress = defaultAddress;
+        this.latitude = latitude;
+        this.longitude = longitude;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -100,6 +105,22 @@ public class UserAddressEntity {
 
     public void setDefaultAddress(Boolean defaultAddress) {
         this.defaultAddress = defaultAddress;
+    }
+
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(Double latitude) {
+        this.latitude = latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(Double longitude) {
+        this.longitude = longitude;
     }
 
     public LocalDateTime getCreatedAt() {

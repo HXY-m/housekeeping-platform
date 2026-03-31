@@ -1,0 +1,32 @@
+<svg width="960" height="640" viewBox="0 0 960 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="118" y1="72" x2="842" y2="566" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F9EFEF"/>
+      <stop offset="1" stop-color="#F1D8D6"/>
+    </linearGradient>
+    <linearGradient id="card" x1="120" y1="110" x2="816" y2="532" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.94"/>
+      <stop offset="1" stop-color="#FFF8F6" stop-opacity="0.82"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="640" rx="40" fill="url(#bg)"/>
+  <rect x="72" y="72" width="816" height="496" rx="34" fill="url(#card)" stroke="#E7CCCC"/>
+  <rect x="116" y="118" width="148" height="42" rx="21" fill="#D28C88" fill-opacity="0.16"/>
+  <text x="144" y="145" fill="#B16E6A" font-size="20" font-family="Arial, sans-serif" font-weight="700">母婴护理</text>
+  <text x="116" y="214" fill="#2F3135" font-size="58" font-family="Arial, sans-serif" font-weight="700">更细心地照看妈妈与宝宝</text>
+  <text x="118" y="266" fill="#76767B" font-size="24" font-family="Arial, sans-serif">月子陪护、夜间协助、基础育儿支持与家庭照料</text>
+  <rect x="118" y="458" width="182" height="56" rx="28" fill="#B16E6A"/>
+  <text x="154" y="493" fill="#FFFFFF" font-size="24" font-family="Arial, sans-serif" font-weight="700">全天贴心陪护</text>
+  <g opacity="0.94">
+    <rect x="620" y="194" width="160" height="188" rx="28" fill="#E5B8B2"/>
+    <rect x="602" y="244" width="196" height="178" rx="38" fill="#F8E9E7"/>
+    <rect x="646" y="170" width="108" height="40" rx="20" fill="#F6DEDA"/>
+    <path d="M674 296C674 276 690 260 710 260C726 260 738 270 744 286C752 278 763 274 776 274C800 274 820 294 820 318C820 358 782 382 714 426C648 382 612 354 612 318C612 294 630 278 654 278C663 278 669 282 674 296Z" fill="#D98A88"/>
+    <circle cx="576" cy="210" r="20" fill="#FFFFFF"/>
+    <path d="M576 170V250" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round"/>
+    <path d="M536 210H616" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="812" cy="166" r="12" fill="#FFFFFF"/>
+    <path d="M812 140V192" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round"/>
+    <path d="M786 166H838" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round"/>
+  </g>
+</svg>

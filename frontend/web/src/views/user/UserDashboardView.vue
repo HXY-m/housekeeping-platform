@@ -72,7 +72,7 @@
             <el-timeline-item
               v-for="order in recentOrders"
               :key="order.id"
-              :timestamp="`${order.bookingDate} ${order.bookingSlot}`"
+              :timestamp="formatBookingDateTime(order.bookingDate, order.bookingSlot)"
             >
               <div class="timeline-title">{{ order.serviceName }}</div>
               <p>{{ order.workerName }} / {{ order.serviceAddress }}</p>
@@ -91,8 +91,10 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppChart from '../../components/charts/AppChart.vue'
 import { fetchFavoriteWorkers, fetchMyAfterSales, fetchOrders } from '../../api'
+import { formatBookingDateTime } from '../../utils/bookingSlots'
 import {
   buildAfterSaleStatusMap,
+  buildCompactDonutOption,
   buildOrderStatusSeriesData,
   buildServiceMap,
   mapToSeriesData,
@@ -120,20 +122,14 @@ const summary = computed(() => ({
 
 const recentOrders = computed(() => orders.value.slice(0, 5))
 
-const statusChartOption = computed(() => ({
-  tooltip: { trigger: 'item' },
-  legend: { bottom: 0, textStyle: { color: '#6e6e73' } },
-  color: ['#0071e3', '#2997ff', '#69b6ff', '#9ed0ff', '#cfe7ff', '#e8f3ff'],
-  series: [
-    {
-      type: 'pie',
-      radius: ['44%', '70%'],
-      itemStyle: { borderRadius: 14, borderColor: '#fff', borderWidth: 4 },
-      data: buildOrderStatusSeriesData(orders.value),
-      label: { formatter: '{b}\n{c} 单', color: '#1d1d1f' }
-    }
-  ]
-}))
+const statusChartOption = computed(() =>
+  buildCompactDonutOption(buildOrderStatusSeriesData(orders.value), {
+    centerLabel: '订单',
+    unit: '单',
+    centerX: '30%',
+    colors: ['#0071e3', '#2997ff', '#69b6ff', '#9ed0ff', '#cfe7ff', '#e8f3ff']
+  })
+)
 
 const serviceChartOption = computed(() => {
   const rows = mapToSortedRows(buildServiceMap(orders.value)).slice(0, 6)

@@ -58,7 +58,7 @@
               {{ portal === 'worker' ? '用户' : '服务人员' }}：{{ thread.counterpartName }}
             </div>
             <div class="message-thread-item__meta">
-              <span>{{ [thread.bookingDate, thread.bookingSlot].filter(Boolean).join(' ') || '--' }}</span>
+              <span>{{ formatBookingDateTime(thread.bookingDate, thread.bookingSlot) }}</span>
               <span class="muted-line">{{ thread.progressNote || '等待更新进度' }}</span>
             </div>
             <div class="message-thread-item__preview">
@@ -91,7 +91,7 @@
           <div class="message-summary-panel__meta">
             <div class="order-meta-item">
               <span class="order-meta-item__label">预约时间</span>
-              <strong>{{ [selectedThread.bookingDate, selectedThread.bookingSlot].filter(Boolean).join(' ') || '--' }}</strong>
+              <strong>{{ formatBookingDateTime(selectedThread.bookingDate, selectedThread.bookingSlot) }}</strong>
             </div>
             <div class="order-meta-item">
               <span class="order-meta-item__label">服务地址</span>
@@ -169,6 +169,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { fetchOrderConversations, fetchOrderMessages, sendOrderMessage } from '../../api'
 import { authStore } from '../../stores/auth'
+import { formatBookingDateTime } from '../../utils/bookingSlots'
 import {
   ORDER_STATUS_OPTIONS,
   getOrderStatusLabel,

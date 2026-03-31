@@ -48,7 +48,7 @@
         <div class="order-card__meta-grid">
           <div class="order-meta-item">
             <span class="order-meta-item__label">预约时间</span>
-            <strong>{{ order.bookingDate }} {{ order.bookingSlot }}</strong>
+            <strong>{{ formatBookingDateTime(order.bookingDate, order.bookingSlot) }}</strong>
           </div>
           <div class="order-meta-item">
             <span class="order-meta-item__label">联系人</span>
@@ -354,6 +354,7 @@ import {
   uploadAfterSaleAttachment
 } from '../../api'
 import { getAfterSaleStatusLabel, getAfterSaleStatusTagType } from '../../utils/afterSale'
+import { formatBookingDateTime } from '../../utils/bookingSlots'
 import { getOrderStepProgress, getOrderSteps, getUserOrderFlowMeta } from '../../utils/orderFlow'
 import { getOrderStatusLabel, getOrderStatusTagType, normalizeOrderStatus } from '../../utils/order'
 import { buildConversationPath } from '../../utils/orderNavigation'

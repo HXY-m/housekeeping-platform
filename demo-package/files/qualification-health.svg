@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="420" viewBox="0 0 640 420">
+  <rect width="640" height="420" rx="24" fill="#f0fdf4"/>
+  <rect x="44" y="44" width="552" height="332" rx="24" fill="#ffffff" stroke="#16a34a" stroke-width="4"/>
+  <path d="M120 152h64v-56h48v56h64v48h-64v56h-48v-56h-64z" fill="#16a34a"/>
+  <rect x="332" y="108" width="180" height="18" rx="9" fill="#14532d"/>
+  <rect x="332" y="156" width="154" height="14" rx="7" fill="#86efac"/>
+  <rect x="332" y="190" width="190" height="14" rx="7" fill="#bbf7d0"/>
+  <rect x="332" y="224" width="168" height="14" rx="7" fill="#bbf7d0"/>
+  <text x="70" y="334" font-family="Segoe UI, Arial" font-size="28" fill="#15803d" font-weight="700">Health Certificate</text>
+</svg>

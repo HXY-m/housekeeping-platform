@@ -114,7 +114,7 @@ public class AuthService {
     public List<DemoAccountDto> demoAccounts() {
         return List.of(
                 new DemoAccountDto(RoleCodes.USER, "13800000011", "demo_user", "123456", "Demo User"),
-                new DemoAccountDto(RoleCodes.WORKER, "13800000022", "demo_worker", "123456", "Demo Worker"),
+                new DemoAccountDto(RoleCodes.WORKER, "13800000022", "demo_worker", "123456", "李阿姨"),
                 new DemoAccountDto(RoleCodes.ADMIN, "13800000033", "demo_admin", "123456", "Demo Admin")
         );
     }

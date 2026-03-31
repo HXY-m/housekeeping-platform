@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="420" viewBox="0 0 640 420">
+  <rect width="640" height="420" rx="24" fill="#f8fafc"/>
+  <rect x="36" y="36" width="568" height="348" rx="22" fill="#ffffff" stroke="#0f766e" stroke-width="4"/>
+  <rect x="72" y="86" width="160" height="200" rx="18" fill="#ccfbf1"/>
+  <circle cx="152" cy="152" r="42" fill="#0f766e"/>
+  <rect x="114" y="212" width="76" height="18" rx="9" fill="#5eead4"/>
+  <rect x="274" y="110" width="238" height="20" rx="10" fill="#0f172a"/>
+  <rect x="274" y="158" width="204" height="16" rx="8" fill="#94a3b8"/>
+  <rect x="274" y="196" width="232" height="16" rx="8" fill="#cbd5e1"/>
+  <rect x="274" y="234" width="188" height="16" rx="8" fill="#cbd5e1"/>
+  <text x="72" y="334" font-family="Segoe UI, Arial" font-size="28" fill="#0f766e" font-weight="700">Qualification ID</text>
+</svg>

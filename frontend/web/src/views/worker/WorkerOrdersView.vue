@@ -112,7 +112,7 @@
         <div class="order-card__meta-grid">
           <div class="order-meta-item">
             <span class="order-meta-item__label">预约时间</span>
-            <strong>{{ order.bookingDate }} {{ order.bookingSlot }}</strong>
+            <strong>{{ formatBookingDateTime(order.bookingDate, order.bookingSlot) }}</strong>
           </div>
           <div class="order-meta-item">
             <span class="order-meta-item__label">联系方式</span>
@@ -169,6 +169,7 @@ import ListPagination from '../../components/common/ListPagination.vue'
 import WorkerOrderDetailView from './WorkerOrderDetailView.vue'
 import { useServerPagination } from '../../composables/useServerPagination'
 import { fetchCurrentWorkerProfile, fetchWorkerOrderSummary, fetchWorkerOrders } from '../../api'
+import { formatBookingDateTime } from '../../utils/bookingSlots'
 import { getWorkerOrderFlowMeta } from '../../utils/orderFlow'
 import {
   WORKER_ORDER_STATUS_OPTIONS,

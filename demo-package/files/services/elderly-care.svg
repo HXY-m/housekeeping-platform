@@ -1,0 +1,32 @@
+<svg width="960" height="640" viewBox="0 0 960 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="118" y1="72" x2="842" y2="566" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EEF2EC"/>
+      <stop offset="1" stop-color="#D8E0D3"/>
+    </linearGradient>
+    <linearGradient id="card" x1="120" y1="110" x2="816" y2="532" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.94"/>
+      <stop offset="1" stop-color="#F8FBF6" stop-opacity="0.84"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="640" rx="40" fill="url(#bg)"/>
+  <rect x="72" y="72" width="816" height="496" rx="34" fill="url(#card)" stroke="#CBD5C6"/>
+  <rect x="116" y="118" width="148" height="42" rx="21" fill="#7B9372" fill-opacity="0.14"/>
+  <text x="144" y="145" fill="#657B5F" font-size="20" font-family="Arial, sans-serif" font-weight="700">老人陪护</text>
+  <text x="116" y="214" fill="#2C3130" font-size="58" font-family="Arial, sans-serif" font-weight="700">陪伴照护，轻松安心一些</text>
+  <text x="118" y="266" fill="#6F7572" font-size="24" font-family="Arial, sans-serif">居家看护、陪诊协助、基础康复陪伴与日常起居支持</text>
+  <rect x="118" y="458" width="182" height="56" rx="28" fill="#657B5F"/>
+  <text x="154" y="493" fill="#FFFFFF" font-size="24" font-family="Arial, sans-serif" font-weight="700">灵活半天陪护</text>
+  <g opacity="0.95">
+    <circle cx="680" cy="254" r="78" fill="#E0E8DB"/>
+    <circle cx="648" cy="246" r="42" fill="#93A98B"/>
+    <circle cx="722" cy="246" r="42" fill="#93A98B"/>
+    <path d="M620 346C620 312 646 286 680 286C714 286 740 312 740 346V398H620V346Z" fill="#7E9575"/>
+    <path d="M586 334C614 314 648 324 666 352L680 374L646 410L586 334Z" fill="#F8FBF6"/>
+    <path d="M774 334C746 314 712 324 694 352L680 374L714 410L774 334Z" fill="#F8FBF6"/>
+    <path d="M568 156L580 180" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round"/>
+    <path d="M554 170L594 166" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round"/>
+    <path d="M808 170L820 194" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round"/>
+    <path d="M794 184L834 180" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round"/>
+  </g>
+</svg>

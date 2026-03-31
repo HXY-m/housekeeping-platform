@@ -1,0 +1,34 @@
+<svg width="960" height="640" viewBox="0 0 960 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="118" y1="72" x2="842" y2="566" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EEF3F9"/>
+      <stop offset="1" stop-color="#D7E0EB"/>
+    </linearGradient>
+    <linearGradient id="card" x1="120" y1="110" x2="816" y2="532" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.94"/>
+      <stop offset="1" stop-color="#F6F9FD" stop-opacity="0.84"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="640" rx="40" fill="url(#bg)"/>
+  <rect x="72" y="72" width="816" height="496" rx="34" fill="url(#card)" stroke="#CAD5E2"/>
+  <rect x="116" y="118" width="148" height="42" rx="21" fill="#7690B2" fill-opacity="0.14"/>
+  <text x="140" y="145" fill="#617A9A" font-size="20" font-family="Arial, sans-serif" font-weight="700">家电清洗</text>
+  <text x="116" y="214" fill="#27303A" font-size="58" font-family="Arial, sans-serif" font-weight="700">家电清洁，也可以很省心</text>
+  <text x="118" y="266" fill="#697480" font-size="24" font-family="Arial, sans-serif">空调、洗衣机、油烟机等专项拆洗与维护清洁</text>
+  <rect x="118" y="458" width="182" height="56" rx="28" fill="#617A9A"/>
+  <text x="154" y="493" fill="#FFFFFF" font-size="24" font-family="Arial, sans-serif" font-weight="700">按台灵活预约</text>
+  <g opacity="0.96">
+    <rect x="576" y="190" width="236" height="120" rx="30" fill="#F7FAFD"/>
+    <rect x="602" y="218" width="184" height="18" rx="9" fill="#A3B7CC"/>
+    <rect x="612" y="252" width="74" height="12" rx="6" fill="#C9D7E5"/>
+    <circle cx="748" cy="258" r="14" fill="#8FA8C2"/>
+    <rect x="618" y="318" width="160" height="170" rx="32" fill="#D8E3EE"/>
+    <rect x="648" y="346" width="100" height="26" rx="13" fill="#EDF3F8"/>
+    <circle cx="698" cy="420" r="46" fill="#F9FCFE"/>
+    <circle cx="698" cy="420" r="26" fill="#B4C7DA"/>
+    <path d="M542 268L570 294" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round"/>
+    <path d="M556 248L556 314" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round"/>
+    <path d="M826 150L840 176" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round"/>
+    <path d="M812 166L854 162" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round"/>
+  </g>
+</svg>

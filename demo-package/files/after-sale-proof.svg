@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="420" viewBox="0 0 640 420">
+  <rect width="640" height="420" rx="24" fill="#fef2f2"/>
+  <rect x="42" y="42" width="556" height="336" rx="24" fill="#ffffff" stroke="#dc2626" stroke-width="4"/>
+  <path d="M148 112l76 132H72z" fill="#ef4444"/>
+  <rect x="144" y="164" width="8" height="58" rx="4" fill="#ffffff"/>
+  <rect x="144" y="234" width="8" height="8" rx="4" fill="#ffffff"/>
+  <rect x="294" y="118" width="210" height="18" rx="9" fill="#7f1d1d"/>
+  <rect x="294" y="166" width="224" height="14" rx="7" fill="#fca5a5"/>
+  <rect x="294" y="200" width="188" height="14" rx="7" fill="#fecaca"/>
+  <rect x="294" y="234" width="208" height="14" rx="7" fill="#fecaca"/>
+  <text x="74" y="338" font-family="Segoe UI, Arial" font-size="28" fill="#b91c1c" font-weight="700">After-Sale Proof</text>
+</svg>

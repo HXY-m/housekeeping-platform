@@ -93,8 +93,8 @@
         <el-table-column label="预约时间" min-width="190">
           <template #default="{ row }">
             <div class="table-cell-primary">
-              <strong>{{ row.bookingDate }}</strong>
-              <span class="table-cell-secondary">{{ row.bookingSlot }}</span>
+              <strong>{{ formatBookingDateTime(row.bookingDate, row.bookingSlot) }}</strong>
+              <span class="table-cell-secondary">{{ row.customerName }}</span>
             </div>
           </template>
         </el-table-column>
@@ -151,6 +151,7 @@ import { ElMessage } from 'element-plus'
 import { fetchAdminOrders, fetchAdminOrderSummary } from '../../api'
 import ListPagination from '../../components/common/ListPagination.vue'
 import { useServerPagination } from '../../composables/useServerPagination'
+import { formatBookingDateTime } from '../../utils/bookingSlots'
 import { formatCurrency } from '../../utils/format'
 import { getUserOrderFlowMeta } from '../../utils/orderFlow'
 import { getOrderStatusLabel, getOrderStatusTagType } from '../../utils/order'

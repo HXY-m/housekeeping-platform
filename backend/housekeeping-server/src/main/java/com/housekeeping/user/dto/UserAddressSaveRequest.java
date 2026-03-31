@@ -20,6 +20,8 @@ public record UserAddressSaveRequest(
         @Size(max = 30, message = "地址标签长度不能超过 30 个字符")
         String addressTag,
         @NotNull(message = "请指定是否默认地址")
-        Boolean defaultAddress
+        Boolean defaultAddress,
+        Double latitude,
+        Double longitude
 ) {
 }

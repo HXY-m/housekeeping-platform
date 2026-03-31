@@ -39,6 +39,7 @@ import com.housekeeping.worker.dto.WorkerProfileUpsertCommand;
 import com.housekeeping.worker.entity.WorkerEntity;
 import com.housekeeping.worker.mapper.WorkerMapper;
 import com.housekeeping.worker.service.WorkerProfileService;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -49,6 +50,7 @@ import java.util.List;
 
 @Component
 @Order(40)
+@ConditionalOnProperty(prefix = "app.demo", name = "full-scenario-enabled", havingValue = "true")
 public class DemoScenarioInitializer implements CommandLineRunner {
 
     private static final String USER_A_PHONE = "13800000044";

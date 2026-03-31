@@ -7,6 +7,8 @@ public record UserAddressDto(
         String city,
         String detailAddress,
         String addressTag,
-        boolean defaultAddress
+        boolean defaultAddress,
+        Double latitude,
+        Double longitude
 ) {
 }

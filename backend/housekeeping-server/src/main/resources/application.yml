@@ -18,6 +18,8 @@ app:
   cors:
     allowed-origins:
       - http://localhost:5173
+  demo:
+    full-scenario-enabled: false
   security:
     jwt-secret: ${JWT_SECRET:housekeeping-platform-jwt-secret-key-change-me-2026-03-27-housekeeping}
     jwt-expire-hours: ${JWT_EXPIRE_HOURS:12}

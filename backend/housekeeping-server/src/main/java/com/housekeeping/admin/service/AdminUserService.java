@@ -265,24 +265,31 @@ public class AdminUserService {
                 .stream()
                 .collect(Collectors.toMap(UserProfileEntity::getUserId, Function.identity()));
 
-        Set<Long> workerUserIds = workerMapper.selectList(
+        Map<Long, WorkerEntity> workerMap = workerMapper.selectList(
                         new LambdaQueryWrapper<WorkerEntity>()
                                 .in(WorkerEntity::getUserId, filteredUserIds))
                 .stream()
-                .map(WorkerEntity::getUserId)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
+                .filter(item -> item.getUserId() != null)
+                .collect(Collectors.toMap(WorkerEntity::getUserId, Function.identity(), (left, right) -> left));
 
         return filteredUsers.stream()
-                .map(user -> new AdminUserDto(
-                        user.getId(),
-                        user.getRealName(),
-                        user.getPhone(),
-                        user.getStatus(),
-                        roleMap.getOrDefault(user.getId(), List.of()),
-                        profileMap.get(user.getId()) == null ? "" : profileMap.get(user.getId()).getCity(),
-                        workerUserIds.contains(user.getId())
-                ))
+                .map(user -> {
+                    UserProfileEntity profile = profileMap.get(user.getId());
+                    WorkerEntity worker = workerMap.get(user.getId());
+                    String city = profile == null ? "" : safeValue(profile.getCity());
+                    if (city.isBlank() && worker != null) {
+                        city = safeValue(worker.getCity());
+                    }
+                    return new AdminUserDto(
+                            user.getId(),
+                            user.getRealName(),
+                            user.getPhone(),
+                            user.getStatus(),
+                            roleMap.getOrDefault(user.getId(), List.of()),
+                            city,
+                            worker != null
+                    );
+                })
                 .toList();
     }
 

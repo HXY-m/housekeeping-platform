@@ -92,6 +92,7 @@ public class DemoDataService {
 
     public List<WorkerCardDto> getWorkers(String serviceName) {
         LambdaQueryWrapper<WorkerEntity> wrapper = new LambdaQueryWrapper<WorkerEntity>()
+                .isNotNull(WorkerEntity::getUserId)
                 .eq(WorkerEntity::getQualificationStatus, WorkerQualificationStatus.APPROVED);
         if (serviceName != null && !serviceName.isBlank()) {
             wrapper.like(WorkerEntity::getTags, serviceName);
@@ -105,6 +106,7 @@ public class DemoDataService {
 
     public PageResult<WorkerCardDto> pageWorkers(long current, long size, String serviceName) {
         LambdaQueryWrapper<WorkerEntity> wrapper = new LambdaQueryWrapper<WorkerEntity>()
+                .isNotNull(WorkerEntity::getUserId)
                 .eq(WorkerEntity::getQualificationStatus, WorkerQualificationStatus.APPROVED);
         if (serviceName != null && !serviceName.isBlank()) {
             wrapper.like(WorkerEntity::getTags, serviceName);
@@ -117,7 +119,9 @@ public class DemoDataService {
 
     public WorkerDetailDto getWorker(Long id) {
         WorkerEntity worker = workerMapper.selectById(id);
-        if (worker == null || !WorkerQualificationStatus.isPublicVisible(worker.getQualificationStatus())) {
+        if (worker == null
+                || worker.getUserId() == null
+                || !WorkerQualificationStatus.isPublicVisible(worker.getQualificationStatus())) {
             throw new BusinessException("未找到对应的服务人员");
         }
         return workerDtoMapper.toDetailDto(worker);
@@ -136,6 +140,7 @@ public class DemoDataService {
                 .filter(order -> OrderStatus.COMPLETED.matches(order.getStatus()))
                 .count();
         long activeWorkers = workers.stream()
+                .filter(item -> item.getUserId() != null)
                 .filter(item -> WorkerQualificationStatus.isPublicVisible(item.getQualificationStatus()))
                 .count();
         double averageRating = workers.stream()

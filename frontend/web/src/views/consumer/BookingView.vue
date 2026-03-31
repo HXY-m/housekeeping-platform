@@ -93,8 +93,8 @@
                         :label="slot.value"
                         :disabled="slot.disabled"
                       >
-                        <span class="slot-title">{{ slot.label }}</span>
-                        <span class="slot-meta">{{ slot.desc }}</span>
+                        <span class="slot-title">{{ slot.period }}</span>
+                        <span class="slot-meta">{{ slot.label }} · {{ slot.desc }}</span>
                       </el-radio-button>
                     </el-radio-group>
                     <p class="muted-line">{{ availabilityHint }}</p>
@@ -138,6 +138,7 @@
                         :value="item.id"
                       />
                     </el-select>
+                    <el-button plain @click="mapPickerVisible = true">地图选点</el-button>
                     <el-button plain @click="router.push('/user/profile')">管理地址簿</el-button>
                   </div>
                 </el-form-item>
@@ -157,7 +158,14 @@
 
               <el-col :xs="24">
                 <el-form-item label="服务地址">
-                  <el-input v-model="form.serviceAddress" placeholder="街道、小区、门牌号等详细地址" />
+                  <el-input
+                    v-model="form.serviceAddress"
+                    placeholder="街道、小区、门牌号等详细地址"
+                  >
+                    <template #append>
+                      <el-button @click="mapPickerVisible = true">地图选点</el-button>
+                    </template>
+                  </el-input>
                 </el-form-item>
               </el-col>
             </el-row>
@@ -199,6 +207,13 @@
         </el-form>
       </el-col>
     </el-row>
+
+    <AddressMapPickerDialog
+      v-model="mapPickerVisible"
+      :city="mapPickerCity"
+      :detail-address="form.serviceAddress"
+      @select="handleMapAddressSelect"
+    />
   </div>
 </template>
 
@@ -206,6 +221,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import AddressMapPickerDialog from '../../components/common/AddressMapPickerDialog.vue'
 import {
   createOrder,
   fetchBookingAvailability,
@@ -213,21 +229,13 @@ import {
   fetchUserProfile,
   fetchWorker
 } from '../../api'
+import { BOOKING_SLOT_ORDER, getBookingSlotMeta } from '../../utils/bookingSlots'
 import { formatCurrency } from '../../utils/format'
 import { getWorkerImage } from '../../utils/displayAssets'
 
 const route = useRoute()
 const router = useRouter()
 
-const SLOT_META = {
-  '08:00-10:00': { label: '上午', desc: '适合常规上门' },
-  '10:00-12:00': { label: '午前', desc: '适合半日服务' },
-  '13:00-15:00': { label: '下午', desc: '适合深度清洁' },
-  '15:00-17:00': { label: '傍晚', desc: '适合下班前后预约' },
-  '18:00-20:00': { label: '晚间', desc: '适合夜间上门' }
-}
-
-const DEFAULT_SLOT_ORDER = Object.keys(SLOT_META)
 const defaultServiceOptions = ['日常保洁', '深度清洁', '母婴护理', '老人陪护', '家电清洗']
 
 const successMessage = ref('')
@@ -235,8 +243,10 @@ const selectedAddressId = ref(null)
 const addresses = ref([])
 const worker = ref(null)
 const slotLoading = ref(false)
-const availableSlots = ref(DEFAULT_SLOT_ORDER)
+const availableSlots = ref(BOOKING_SLOT_ORDER)
 const occupiedSlots = ref([])
+const mapPickerVisible = ref(false)
+const profileCity = ref('')
 
 const form = reactive({
   workerId: String(route.params.workerId || ''),
@@ -250,6 +260,12 @@ const form = reactive({
 })
 
 const serviceOptions = computed(() => (worker.value?.tags?.length ? worker.value.tags : defaultServiceOptions))
+const mapPickerCity = computed(() => {
+  if (selectedAddressId.value) {
+    return addresses.value.find((item) => item.id === selectedAddressId.value)?.city || profileCity.value || ''
+  }
+  return profileCity.value || ''
+})
 
 const activeStep = computed(() => {
   if (!form.bookingDate || !form.bookingSlot || !form.serviceName) {
@@ -262,12 +278,16 @@ const activeStep = computed(() => {
 })
 
 const slotOptions = computed(() =>
-  DEFAULT_SLOT_ORDER.map((value) => ({
-    value,
-    label: SLOT_META[value].label,
-    desc: occupiedSlots.value.includes(value) ? '该时段已被预约' : SLOT_META[value].desc,
-    disabled: !availableSlots.value.includes(value)
-  }))
+  BOOKING_SLOT_ORDER.map((value) => {
+    const meta = getBookingSlotMeta(value)
+    return {
+      value,
+      label: meta.label,
+      period: meta.period,
+      desc: occupiedSlots.value.includes(value) ? '该时段已被预约' : meta.desc,
+      disabled: !availableSlots.value.includes(value)
+    }
+  })
 )
 
 const availabilityHint = computed(() => {
@@ -284,7 +304,7 @@ const availabilityHint = computed(() => {
 })
 
 function buildAddressLabel(address) {
-  return `${address.addressTag || '常用地址'} / ${address.city} ${address.detailAddress}`
+  return `${address.addressTag || '常用地址'} / ${address.city} ${address.detailAddress}${address.latitude && address.longitude ? ' · 已定位' : ''}`
 }
 
 function applyAddress(address) {
@@ -313,7 +333,7 @@ function getTodayString() {
 
 async function loadAvailability() {
   if (!form.workerId || !form.bookingDate) {
-    availableSlots.value = DEFAULT_SLOT_ORDER
+    availableSlots.value = BOOKING_SLOT_ORDER
     occupiedSlots.value = []
     form.bookingSlot = ''
     return
@@ -335,6 +355,15 @@ async function loadAvailability() {
   } finally {
     slotLoading.value = false
   }
+}
+
+function handleMapAddressSelect(result) {
+  if (!result) {
+    return
+  }
+  selectedAddressId.value = null
+  profileCity.value = result.city || profileCity.value
+  form.serviceAddress = result.displayAddress || [result.city, result.detailAddress].filter(Boolean).join(' ')
 }
 
 async function submitOrder() {
@@ -377,6 +406,7 @@ onMounted(async () => {
     addresses.value = addressRows
     form.serviceName = workerDetail.tags?.[0] || defaultServiceOptions[0]
     form.bookingDate = getTodayString()
+    profileCity.value = profile?.city || ''
 
     if (!form.customerName) {
       form.customerName = profile.realName || ''

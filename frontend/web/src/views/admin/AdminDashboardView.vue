@@ -117,6 +117,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppChart from '../../components/charts/AppChart.vue'
 import { fetchAdminDashboard } from '../../api'
+import { buildCompactDonutOption } from '../../utils/dashboard'
 import { formatCurrency } from '../../utils/format'
 import { getOrderStatusLabel } from '../../utils/order'
 import { getPaymentMethodLabel } from '../../utils/payment'
@@ -161,23 +162,22 @@ const statusRows = computed(() =>
   }))
 )
 
-const statusChartOption = computed(() => ({
-  tooltip: { trigger: 'item' },
-  legend: { bottom: 0, textStyle: { color: '#6e6e73' } },
-  color: ['#0071e3', '#5e9eff', '#8cc0ff', '#b6d8ff', '#d5e9ff', '#ebf3ff'],
-  series: [
-    {
-      type: 'pie',
-      radius: ['42%', '70%'],
-      itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 4 },
-      data: Object.entries(dashboard.value.statusDistribution || {}).map(([key, value]) => ({
+const statusChartOption = computed(() =>
+  buildCompactDonutOption(
+    Object.entries(dashboard.value.statusDistribution || {})
+      .filter(([, value]) => Number(value) > 0)
+      .map(([key, value]) => ({
         name: getOrderStatusLabel(key),
         value
       })),
-      label: { formatter: '{b}\n{c} 单', color: '#1d1d1f' }
+    {
+      centerLabel: '订单',
+      unit: '单',
+      centerX: '30%',
+      colors: ['#0071e3', '#5e9eff', '#8cc0ff', '#b6d8ff', '#d5e9ff', '#ebf3ff']
     }
-  ]
-}))
+  )
+)
 
 const revenueChartOption = computed(() => ({
   tooltip: { trigger: 'axis' },

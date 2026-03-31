@@ -89,7 +89,7 @@
         <div class="order-card__meta-grid">
           <div class="order-meta-item">
             <span class="order-meta-item__label">预约时间</span>
-            <strong>{{ order.bookingDate }} {{ order.bookingSlot }}</strong>
+            <strong>{{ formatBookingDateTime(order.bookingDate, order.bookingSlot) }}</strong>
           </div>
           <div class="order-meta-item">
             <span class="order-meta-item__label">联系人</span>
@@ -151,6 +151,7 @@ import UserOrderDetailView from '../user/UserOrderDetailView.vue'
 import { useServerPagination } from '../../composables/useServerPagination'
 import { fetchOrders, fetchOrderSummary } from '../../api'
 import { getUserOrderFlowMeta } from '../../utils/orderFlow'
+import { formatBookingDateTime } from '../../utils/bookingSlots'
 import { getOrderStatusLabel, getOrderStatusTagType } from '../../utils/order'
 import { formatCurrency } from '../../utils/format'
 import { getPaymentStatusLabel, getPaymentStatusTagType } from '../../utils/payment'
