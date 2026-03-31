@@ -356,7 +356,7 @@ async function submitOrder() {
       ...form,
       workerId: Number(form.workerId)
     })
-    successMessage.value = `预约成功，订单号 #${order.id}，当前状态：${order.status}`
+    successMessage.value = `预约成功，订单号 #${order.id}，应付金额 ${formatCurrency(order.payableAmount || 0)}，请前往订单中心完成支付。`
     ElMessage.success('预约成功')
   } catch (error) {
     ElMessage.error(error.message || '预约失败')

@@ -131,8 +131,8 @@ public class OrderMessageService {
         String preview = content.length() > 60 ? content.substring(0, 60) + "..." : content;
         String title = "订单 #" + order.getId() + " 有新的沟通消息";
         String actionPath = RoleCodes.USER.equals(sender.roleCode())
-                ? "/worker/messages?orderId=" + order.getId()
-                : "/user/messages?orderId=" + order.getId();
+                ? "/worker/conversations?orderId=" + order.getId()
+                : "/user/conversations?orderId=" + order.getId();
 
         if (RoleCodes.USER.equals(sender.roleCode())) {
             WorkerEntity worker = workerMapper.selectById(order.getWorkerId());

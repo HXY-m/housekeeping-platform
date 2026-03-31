@@ -1,15 +1,19 @@
 export { clearToken, downloadFile, getToken, hasToken, request, setToken } from './api/http'
-export { fetchHome } from './api/home'
-export { fetchWorkers, fetchWorker, fetchCurrentWorkerProfile } from './api/workers'
+export { fetchHome, fetchServiceCategories } from './api/home'
+export { fetchWorkers, fetchWorker, fetchCurrentWorkerProfile, fetchWorkerDashboard } from './api/workers'
 export {
   fetchOrders,
+  fetchOrderDetail,
   fetchOrderSummary,
+  fetchOrderPayments,
   createOrder,
+  payOrder,
   fetchBookingAvailability,
   confirmUserOrder,
   confirmUserOrderCompletion,
   submitOrderReview,
   fetchWorkerOrders,
+  fetchWorkerOrderDetail,
   fetchWorkerOrderSummary,
   acceptWorkerOrder,
   startWorkerOrder,

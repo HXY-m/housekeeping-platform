@@ -4,7 +4,7 @@
       <div>
         <el-tag type="success" round>服务管理</el-tag>
         <h1>服务项目</h1>
-        <p>维护前台展示的服务项目、价格标签和图片。</p>
+        <p>维护前台展示的服务项目、价格标签、展示图片和服务标签。</p>
       </div>
       <div class="hero-actions">
         <el-button type="primary" @click="openCreate">新增项目</el-button>
@@ -58,8 +58,8 @@
           </template>
         </el-table-column>
         <el-table-column prop="name" label="项目名称" min-width="150" />
-        <el-table-column prop="priceLabel" label="价格标签" width="140" />
-        <el-table-column prop="serviceDuration" label="服务时长" width="140" />
+        <el-table-column prop="priceLabel" label="价格标签" width="160" />
+        <el-table-column prop="serviceDuration" label="服务时长" min-width="180" show-overflow-tooltip />
         <el-table-column prop="serviceArea" label="服务范围" min-width="180" show-overflow-tooltip />
         <el-table-column prop="serviceScene" label="适用场景" min-width="180" show-overflow-tooltip />
         <el-table-column label="状态" width="100">
@@ -67,7 +67,7 @@
             <el-tag :type="row.enabled ? 'success' : 'info'">{{ row.enabled ? '启用' : '停用' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="slug" label="标识" width="160" />
+        <el-table-column prop="slug" label="标识" width="170" />
         <el-table-column prop="description" label="项目描述" min-width="220" show-overflow-tooltip />
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
@@ -87,7 +87,7 @@
       />
     </el-card>
 
-    <el-dialog v-model="dialogVisible" :title="dialogMode === 'create' ? '新增服务项目' : '编辑服务项目'" width="760px">
+    <el-dialog v-model="dialogVisible" :title="dialogMode === 'create' ? '新增服务项目' : '编辑服务项目'" width="780px">
       <el-form label-position="top">
         <div class="media-upload-panel">
           <div class="media-upload-panel__preview">
@@ -106,48 +106,122 @@
         <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item label="项目名称">
-              <el-input v-model="form.name" maxlength="100" />
+              <el-input v-model="form.name" maxlength="100" placeholder="例如：深度保洁" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="价格标签">
-              <el-input v-model="form.priceLabel" maxlength="50" placeholder="例如：128 元起 / 2 小时起" />
+              <el-select
+                v-model="form.priceLabel"
+                filterable
+                allow-create
+                default-first-option
+                clearable
+                placeholder="请选择或输入价格标签"
+                style="width: 100%"
+              >
+                <el-option v-for="item in PRICE_LABEL_OPTIONS" :key="item" :label="item" :value="item" />
+              </el-select>
             </el-form-item>
           </el-col>
         </el-row>
 
         <el-row :gutter="16">
-          <el-col :span="12">
+          <el-col :span="16">
             <el-form-item label="标识">
-              <el-input v-model="form.slug" maxlength="100" placeholder="例如：deep-cleaning" />
+              <el-input v-model="form.slug" maxlength="100" placeholder="用于路由或检索的唯一标识" />
             </el-form-item>
           </el-col>
+          <el-col :span="8">
+            <el-form-item label="快速操作">
+              <el-button plain style="width: 100%" @click="syncSlugFromName">根据项目名称生成标识</el-button>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item label="服务时长">
-              <el-input v-model="form.serviceDuration" maxlength="100" placeholder="例如：2 小时 / 4 小时" />
+              <el-select
+                v-model="form.serviceDurationList"
+                multiple
+                filterable
+                allow-create
+                default-first-option
+                collapse-tags
+                collapse-tags-tooltip
+                placeholder="请选择常用时长"
+                style="width: 100%"
+              >
+                <el-option v-for="item in DURATION_OPTIONS" :key="item" :label="item" :value="item" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="服务范围">
+              <el-select
+                v-model="form.serviceAreaList"
+                multiple
+                filterable
+                allow-create
+                default-first-option
+                collapse-tags
+                collapse-tags-tooltip
+                placeholder="请选择服务范围"
+                style="width: 100%"
+              >
+                <el-option v-for="item in AREA_OPTIONS" :key="item" :label="item" :value="item" />
+              </el-select>
             </el-form-item>
           </el-col>
         </el-row>
 
         <el-row :gutter="16">
           <el-col :span="12">
-            <el-form-item label="服务范围">
-              <el-input v-model="form.serviceArea" maxlength="255" />
+            <el-form-item label="适用场景">
+              <el-select
+                v-model="form.serviceSceneList"
+                multiple
+                filterable
+                allow-create
+                default-first-option
+                collapse-tags
+                collapse-tags-tooltip
+                placeholder="请选择适用场景"
+                style="width: 100%"
+              >
+                <el-option v-for="item in SCENE_OPTIONS" :key="item" :label="item" :value="item" />
+              </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="适用场景">
-              <el-input v-model="form.serviceScene" maxlength="255" />
+            <el-form-item label="增值服务">
+              <el-select
+                v-model="form.extraServiceList"
+                multiple
+                filterable
+                allow-create
+                default-first-option
+                collapse-tags
+                collapse-tags-tooltip
+                placeholder="请选择可附加服务"
+                style="width: 100%"
+              >
+                <el-option v-for="item in EXTRA_SERVICE_OPTIONS" :key="item" :label="item" :value="item" />
+              </el-select>
             </el-form-item>
           </el-col>
         </el-row>
 
-        <el-form-item label="增值服务">
-          <el-input v-model="form.extraServices" maxlength="255" />
-        </el-form-item>
-
         <el-form-item label="项目描述">
-          <el-input v-model="form.description" type="textarea" :rows="4" maxlength="300" show-word-limit />
+          <el-input
+            v-model="form.description"
+            type="textarea"
+            :rows="4"
+            maxlength="300"
+            show-word-limit
+            placeholder="简要说明适合什么家庭、上门内容和服务特点"
+          />
         </el-form-item>
 
         <el-form-item label="是否启用">
@@ -186,6 +260,12 @@ import ListPagination from '../../components/common/ListPagination.vue'
 import { useServerPagination } from '../../composables/useServerPagination'
 import { getServiceImage } from '../../utils/displayAssets'
 
+const PRICE_LABEL_OPTIONS = ['88 元起 / 2 小时', '128 元起 / 2 小时', '168 元起 / 3 小时', '228 元起 / 半天']
+const DURATION_OPTIONS = ['2 小时', '3 小时', '4 小时', '半天', '全天']
+const AREA_OPTIONS = ['全屋', '客厅', '厨房', '卫生间', '卧室', '阳台', '收纳空间']
+const SCENE_OPTIONS = ['日常维护', '新居开荒', '换季整理', '老人家庭', '母婴家庭', '出租房交付']
+const EXTRA_SERVICE_OPTIONS = ['玻璃清洁', '厨房重油污', '衣柜整理', '冰箱清洁', '除螨消杀', '宠物家庭专项']
+
 const loading = ref(false)
 const uploadingImage = ref(false)
 const categories = ref([])
@@ -193,6 +273,8 @@ const dialogVisible = ref(false)
 const dialogMode = ref('create')
 const editingId = ref(null)
 const imageInputRef = ref(null)
+const slugTouched = ref(false)
+const syncingSlug = ref(false)
 const summary = ref({
   total: 0,
   enabled: 0,
@@ -210,10 +292,10 @@ const form = reactive({
   description: '',
   priceLabel: '',
   slug: '',
-  serviceDuration: '',
-  serviceArea: '',
-  serviceScene: '',
-  extraServices: '',
+  serviceDurationList: [],
+  serviceAreaList: [],
+  serviceSceneList: [],
+  extraServiceList: [],
   imageUrl: '',
   enabled: true
 })
@@ -227,18 +309,48 @@ const previewImage = computed(() =>
   })
 )
 
+function normalizeMultiValue(value) {
+  return String(value || '')
+    .split(/[、/,，\n]/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function serializeMultiValue(values) {
+  return (values || []).map((item) => String(item).trim()).filter(Boolean).join(' / ')
+}
+
+function generateSlug(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_/]+/g, '-')
+    .replace(/[^\w\-\u4e00-\u9fa5]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
+function syncSlugFromName() {
+  syncingSlug.value = true
+  form.slug = generateSlug(form.name)
+  syncingSlug.value = false
+  slugTouched.value = false
+}
+
 function resetForm() {
   form.name = ''
   form.description = ''
   form.priceLabel = ''
   form.slug = ''
-  form.serviceDuration = ''
-  form.serviceArea = ''
-  form.serviceScene = ''
-  form.extraServices = ''
+  form.serviceDurationList = []
+  form.serviceAreaList = []
+  form.serviceSceneList = []
+  form.extraServiceList = []
   form.imageUrl = ''
   form.enabled = true
   editingId.value = null
+  slugTouched.value = false
+  syncingSlug.value = false
 }
 
 function openCreate() {
@@ -250,16 +362,17 @@ function openCreate() {
 function openEdit(row) {
   dialogMode.value = 'edit'
   editingId.value = row.id
-  form.name = row.name
-  form.description = row.description
-  form.priceLabel = row.priceLabel
-  form.slug = row.slug
-  form.serviceDuration = row.serviceDuration || ''
-  form.serviceArea = row.serviceArea || ''
-  form.serviceScene = row.serviceScene || ''
-  form.extraServices = row.extraServices || ''
+  form.name = row.name || ''
+  form.description = row.description || ''
+  form.priceLabel = row.priceLabel || ''
+  form.slug = row.slug || ''
+  form.serviceDurationList = normalizeMultiValue(row.serviceDuration)
+  form.serviceAreaList = normalizeMultiValue(row.serviceArea)
+  form.serviceSceneList = normalizeMultiValue(row.serviceScene)
+  form.extraServiceList = normalizeMultiValue(row.extraServices)
   form.imageUrl = row.imageUrl || ''
-  form.enabled = row.enabled
+  form.enabled = !!row.enabled
+  slugTouched.value = true
   dialogVisible.value = true
 }
 
@@ -340,8 +453,12 @@ async function loadCategories() {
 
 async function submitForm() {
   if (!form.name.trim() || !form.description.trim() || !form.priceLabel.trim()) {
-    ElMessage.warning('请先完善项目名称、描述和价格标签')
+    ElMessage.warning('请先完善项目名称、项目描述和价格标签')
     return
+  }
+
+  if (!form.slug.trim()) {
+    form.slug = generateSlug(form.name)
   }
 
   const payload = {
@@ -349,10 +466,10 @@ async function submitForm() {
     description: form.description.trim(),
     priceLabel: form.priceLabel.trim(),
     slug: form.slug.trim(),
-    serviceDuration: form.serviceDuration.trim(),
-    serviceArea: form.serviceArea.trim(),
-    serviceScene: form.serviceScene.trim(),
-    extraServices: form.extraServices.trim(),
+    serviceDuration: serializeMultiValue(form.serviceDurationList),
+    serviceArea: serializeMultiValue(form.serviceAreaList),
+    serviceScene: serializeMultiValue(form.serviceSceneList),
+    extraServices: serializeMultiValue(form.extraServiceList),
     imageUrl: form.imageUrl.trim(),
     enabled: form.enabled
   }
@@ -386,6 +503,26 @@ async function handleDelete(row) {
     }
   }
 }
+
+watch(
+  () => form.name,
+  (value) => {
+    if (!slugTouched.value || !form.slug.trim()) {
+      syncingSlug.value = true
+      form.slug = generateSlug(value)
+      syncingSlug.value = false
+    }
+  }
+)
+
+watch(
+  () => form.slug,
+  (value) => {
+    if (value && !syncingSlug.value) {
+      slugTouched.value = true
+    }
+  }
+)
 
 watch([currentPage, pageSize], () => {
   loadCategories()

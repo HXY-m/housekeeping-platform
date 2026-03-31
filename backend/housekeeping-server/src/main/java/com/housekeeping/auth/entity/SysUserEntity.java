@@ -10,6 +10,7 @@ public class SysUserEntity {
     @TableId(type = IdType.AUTO)
     private Long id;
     private String phone;
+    private String username;
     private String password;
     private String realName;
     private String status;
@@ -19,6 +20,14 @@ public class SysUserEntity {
 
     public SysUserEntity(String phone, String password, String realName, String status) {
         this.phone = phone;
+        this.password = password;
+        this.realName = realName;
+        this.status = status;
+    }
+
+    public SysUserEntity(String phone, String username, String password, String realName, String status) {
+        this.phone = phone;
+        this.username = username;
         this.password = password;
         this.realName = realName;
         this.status = status;
@@ -38,6 +47,14 @@ public class SysUserEntity {
 
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
     }
 
     public String getPassword() {

@@ -44,6 +44,12 @@ public class WorkerOrderController {
         ));
     }
 
+    @GetMapping("/{id}")
+    @Operation(summary = "鑾峰彇褰撳墠鏈嶅姟浜哄憳璁㈠崟璇︽儏")
+    public ApiResponse<OrderDto> order(@PathVariable Long id) {
+        return ApiResponse.ok(orderService.getCurrentWorkerOrder(id));
+    }
+
     @GetMapping("/summary")
     @Operation(summary = "获取当前服务人员订单摘要")
     public ApiResponse<Map<String, Long>> summary(@RequestParam(required = false) String status) {

@@ -8,12 +8,27 @@ export function fetchOrders(params) {
   return request(`/api/orders${buildQuery(params)}`)
 }
 
+export function fetchOrderDetail(id) {
+  return request(`/api/orders/${id}`)
+}
+
 export function fetchOrderSummary(params = {}) {
   return request(`/api/orders/summary${buildQuery(params)}`)
 }
 
+export function fetchOrderPayments(id) {
+  return request(`/api/orders/${id}/payments`)
+}
+
 export function createOrder(payload) {
   return request('/api/orders', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  })
+}
+
+export function payOrder(id, payload) {
+  return request(`/api/orders/${id}/payments`, {
     method: 'POST',
     body: JSON.stringify(payload)
   })
@@ -51,6 +66,10 @@ export function fetchWorkerOrders(params) {
     return request(`/api/worker/orders${buildQuery({ current: 1, size: 100 })}`).then((result) => result?.records || [])
   }
   return request(`/api/worker/orders${buildQuery(params)}`)
+}
+
+export function fetchWorkerOrderDetail(id) {
+  return request(`/api/worker/orders/${id}`)
 }
 
 export function fetchWorkerOrderSummary(params = {}) {

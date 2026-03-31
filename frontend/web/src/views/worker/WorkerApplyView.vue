@@ -5,7 +5,7 @@
         <div>
           <h1 class="page-panel__title">服务人员资质申请</h1>
           <p class="page-panel__desc">
-            请同时提交服务介绍、服务范围、可接单时段与资质文件。审核通过后，资料才会出现在前台并开放接单。
+            请在这里补充服务范围、接单时段和资质文件。审核通过后，资料才会出现在前台并开放接单。
           </p>
         </div>
         <div class="filter-actions">
@@ -39,8 +39,8 @@
         <template #header>
           <div class="card-header-between">
             <div>
-              <strong>申请表单</strong>
-              <p class="muted-line">展示头像将用于前台推荐服务人员卡片，可与资质文件一并提交。</p>
+              <strong>资质表单</strong>
+              <p class="muted-line">展示头像会用于前台推荐卡片，资质附件会交由管理员审核。</p>
             </div>
             <el-tag type="warning">服务人员端</el-tag>
           </div>
@@ -249,6 +249,7 @@ import FileAttachmentList from '../../components/common/FileAttachmentList.vue'
 import {
   fetchCurrentWorkerProfile,
   fetchMyWorkerApplications,
+  fetchServiceCategories,
   submitWorkerApplication,
   uploadAttachment,
   uploadImage
@@ -264,8 +265,7 @@ import {
 const maxProofCount = 5
 const maxProofSize = 10 * 1024 * 1024
 const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'pdf', 'doc', 'docx', 'txt']
-
-const serviceTypeOptions = ['日常保洁', '深度清洁', '家电清洗', '收纳整理', '做饭阿姨', '老人陪护', '母婴护理']
+const fallbackServiceTypeOptions = ['日常保洁', '深度清洁', '家电清洗', '收纳整理', '做饭阿姨', '老人陪护', '母婴护理']
 const certificateOptions = ['健康证', '育婴师证', '母婴护理证', '养老护理员证', '家政培训结业证']
 const areaOptions = ['浦东新区', '闵行区', '徐汇区', '静安区', '黄浦区', '杨浦区', '宝山区']
 const scheduleOptions = ['工作日白天', '工作日晚间', '周末白天', '周末晚间', '节假日可接单']
@@ -275,6 +275,7 @@ const avatarInputRef = ref(null)
 const applications = ref([])
 const proofFileList = ref([])
 const uploadingAvatar = ref(false)
+const serviceTypeOptions = ref([...fallbackServiceTypeOptions])
 
 const form = reactive({
   realName: authStore.state.user?.realName || '',
@@ -335,7 +336,7 @@ function statusLabel(status) {
 
 function splitValues(value) {
   return String(value || '')
-    .split(/[、,，;\n]/)
+    .split(/[、,，\n/]/)
     .map((item) => item.trim())
     .filter(Boolean)
 }
@@ -377,6 +378,16 @@ async function loadWorkerProfile() {
     }
   } catch {
     // ignore
+  }
+}
+
+async function loadServiceTypes() {
+  try {
+    const categories = await fetchServiceCategories()
+    const names = (categories || []).map((item) => item?.name?.trim()).filter(Boolean)
+    serviceTypeOptions.value = names.length ? names : [...fallbackServiceTypeOptions]
+  } catch {
+    serviceTypeOptions.value = [...fallbackServiceTypeOptions]
   }
 }
 
@@ -532,7 +543,7 @@ async function uploadProofAttachments() {
 }
 
 async function loadApplications() {
-  await loadWorkerProfile()
+  await Promise.all([loadWorkerProfile(), loadServiceTypes()])
   applications.value = await fetchMyWorkerApplications().catch(() => [])
   if (applications.value.length) {
     syncForm(applications.value[0])

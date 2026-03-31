@@ -22,12 +22,12 @@
           style="width: 100%"
         />
         <el-select v-model="statusFilter" clearable placeholder="状态筛选" style="width: 100%">
-          <el-option label="待接单" value="PENDING" />
-          <el-option label="已接单" value="ACCEPTED" />
-          <el-option label="待上门" value="CONFIRMED" />
-          <el-option label="服务中" value="IN_SERVICE" />
-          <el-option label="待确认完工" value="WAITING_USER_CONFIRMATION" />
-          <el-option label="已完成" value="COMPLETED" />
+          <el-option
+            v-for="option in ORDER_STATUS_OPTIONS"
+            :key="option.value"
+            :label="option.label"
+            :value="option.value"
+          />
         </el-select>
       </div>
 
@@ -169,7 +169,12 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { fetchOrderConversations, fetchOrderMessages, sendOrderMessage } from '../../api'
 import { authStore } from '../../stores/auth'
-import { getOrderStatusLabel, getOrderStatusTagType, normalizeOrderStatus } from '../../utils/order'
+import {
+  ORDER_STATUS_OPTIONS,
+  getOrderStatusLabel,
+  getOrderStatusTagType,
+  normalizeOrderStatus
+} from '../../utils/order'
 import { getUserOrderFlowMeta, getWorkerOrderFlowMeta } from '../../utils/orderFlow'
 
 const props = defineProps({

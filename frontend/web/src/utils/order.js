@@ -7,6 +7,29 @@ export const ORDER_STATUS_LABEL_MAP = {
   COMPLETED: '已完成'
 }
 
+export const ORDER_STATUS_SORT_WEIGHT_MAP = {
+  PENDING: 0,
+  ACCEPTED: 1,
+  CONFIRMED: 2,
+  IN_SERVICE: 3,
+  WAITING_USER_CONFIRMATION: 4,
+  COMPLETED: 5
+}
+
+export const ORDER_STATUS_OPTIONS = Object.entries(ORDER_STATUS_LABEL_MAP).map(([value, label]) => ({
+  label,
+  value
+}))
+
+export const WORKER_ORDER_STATUS_OPTIONS = [
+  { label: '待接单', value: 'PENDING' },
+  { label: '待用户确认', value: 'ACCEPTED' },
+  { label: '待开工', value: 'CONFIRMED' },
+  { label: '服务中', value: 'IN_SERVICE' },
+  { label: '待确认完工', value: 'WAITING_USER_CONFIRMATION' },
+  { label: '已完成', value: 'COMPLETED' }
+]
+
 const LEGACY_STATUS_MAP = {
   待服务: 'PENDING',
   待接单: 'PENDING',
@@ -26,6 +49,11 @@ export function normalizeOrderStatus(status) {
 export function getOrderStatusLabel(status) {
   const code = normalizeOrderStatus(status)
   return ORDER_STATUS_LABEL_MAP[code] || status
+}
+
+export function getOrderStatusSortWeight(status) {
+  const code = normalizeOrderStatus(status)
+  return ORDER_STATUS_SORT_WEIGHT_MAP[code] ?? 99
 }
 
 export function getOrderStatusTagType(status) {

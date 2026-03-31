@@ -15,6 +15,7 @@
               <span>消息中心</span>
               <el-badge v-if="unreadCount" :value="unreadCount" :max="99" class="layout-menu-badge" />
             </el-menu-item>
+            <el-menu-item v-if="showMenu('USER_MESSAGE_USE')" index="/user/conversations">订单沟通</el-menu-item>
             <el-menu-item v-if="showMenu('USER_ORDER_USE')" index="/user/orders">我的订单</el-menu-item>
           </el-menu>
         </el-aside>
@@ -23,7 +24,7 @@
           <el-header class="user-header">
             <div class="console-title-block">
               <div class="console-title">用户中心</div>
-              <div class="console-subtitle">查看预约、售后和服务沟通</div>
+              <div class="console-subtitle">查看预约、售后、通知与订单沟通</div>
             </div>
             <div class="console-header-actions">
               <el-button @click="router.push('/workers')">查找服务人员</el-button>
@@ -62,7 +63,7 @@ import { formatRoleLabel } from '../utils/auth'
 const route = useRoute()
 const router = useRouter()
 const unreadCount = computed(() => notificationStore.getUnreadCount('user'))
-const userInitial = computed(() => (authStore.state.user?.realName || '用').slice(0, 1))
+const userInitial = computed(() => (authStore.state.user?.realName || '用户').slice(0, 1))
 
 function showMenu(permissionCode) {
   if (!authStore.hasPermissionData()) {

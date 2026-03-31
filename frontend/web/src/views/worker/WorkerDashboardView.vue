@@ -1,15 +1,15 @@
 <template>
   <div class="page-stack">
-    <div class="console-overview console-overview--worker">
+    <div class="console-overview console-overview--worker compact-overview">
       <div>
         <el-tag :type="qualificationTagType" round>{{ qualificationLabel }}</el-tag>
-        <h1>{{ workerQualified ? '履约节奏一屏掌握' : '先完成资质认证，再开始接单' }}</h1>
-        <p>{{ qualificationNotice.description }}</p>
+        <h1>{{ workerQualified ? '服务人员数据中心' : '请先完成资质认证' }}</h1>
+        <p>{{ workerQualified ? '收入、订单和待办都集中在这里，处理效率会更高。' : qualificationNotice.description }}</p>
       </div>
       <div class="hero-actions">
-        <el-button v-if="workerQualified" type="primary" @click="router.push('/worker/orders')">进入订单列表</el-button>
+        <el-button v-if="workerQualified" type="primary" @click="router.push('/worker/orders')">进入订单台</el-button>
         <el-button type="primary" plain @click="router.push('/worker/qualification')">
-          {{ qualificationNotice.buttonText }}
+          {{ workerQualified ? '查看资质资料' : qualificationNotice.buttonText }}
         </el-button>
       </div>
     </div>
@@ -23,81 +23,91 @@
       :closable="false"
     />
 
+    <div class="metric-strip metric-strip--dense">
+      <div class="metric-chip">
+        <span class="metric-chip__label">总订单</span>
+        <strong>{{ dashboard.totalOrders }}</strong>
+      </div>
+      <div class="metric-chip">
+        <span class="metric-chip__label">待接单</span>
+        <strong>{{ dashboard.pendingOrders }}</strong>
+      </div>
+      <div class="metric-chip">
+        <span class="metric-chip__label">服务中</span>
+        <strong>{{ dashboard.inServiceOrders }}</strong>
+      </div>
+      <div class="metric-chip">
+        <span class="metric-chip__label">待用户确认</span>
+        <strong>{{ dashboard.waitingUserConfirmationOrders }}</strong>
+      </div>
+      <div class="metric-chip">
+        <span class="metric-chip__label">累计营业额</span>
+        <strong>{{ formatCurrency(dashboard.totalRevenue) }}</strong>
+      </div>
+      <div class="metric-chip">
+        <span class="metric-chip__label">今日流水</span>
+        <strong>{{ formatCurrency(dashboard.todayRevenue) }}</strong>
+      </div>
+      <div class="metric-chip">
+        <span class="metric-chip__label">本月流水</span>
+        <strong>{{ formatCurrency(dashboard.monthRevenue) }}</strong>
+      </div>
+      <div class="metric-chip">
+        <span class="metric-chip__label">已支付订单</span>
+        <strong>{{ dashboard.paidOrderCount }}</strong>
+      </div>
+    </div>
+
     <div v-if="workerQualified && todoItems.length" class="summary-grid">
       <el-card v-for="item in todoItems" :key="item.key" shadow="never" class="summary-card summary-card--todo">
-        <el-statistic :title="item.label" :value="item.value" />
+        <div class="compact-stat">
+          <strong>{{ item.value }}</strong>
+          <span>{{ item.label }}</span>
+        </div>
         <div class="muted-line">{{ item.hint }}</div>
       </el-card>
     </div>
 
-    <div class="summary-grid">
-      <el-card shadow="never" class="summary-card">
-        <el-statistic title="资质状态" :value="qualificationLabel" />
-      </el-card>
-      <el-card shadow="never" class="summary-card">
-        <el-statistic title="分配订单" :value="summary.total" />
-      </el-card>
-      <el-card shadow="never" class="summary-card">
-        <el-statistic title="待接单" :value="summary.pending" />
-      </el-card>
-      <el-card shadow="never" class="summary-card">
-        <el-statistic title="已完成" :value="summary.completed" />
-      </el-card>
-    </div>
-
     <el-row :gutter="16" v-loading="loading">
-      <el-col :xs="24" :xl="10">
-        <el-card shadow="never" class="dashboard-card">
-          <template #header><strong>订单状态结构</strong></template>
-          <AppChart :option="statusChartOption" height="330px" />
+      <el-col :xs="24" :xl="8">
+        <el-card shadow="never" class="dashboard-card dashboard-card--compact">
+          <template #header><strong>订单状态</strong></template>
+          <AppChart :option="statusChartOption" height="240px" />
         </el-card>
       </el-col>
-      <el-col :xs="24" :xl="14">
-        <el-card shadow="never" class="dashboard-card">
-          <template #header>
-            <strong>{{ workerQualified ? '未来服务排期' : '接单前准备清单' }}</strong>
-          </template>
-          <AppChart v-if="workerQualified" :option="bookingChartOption" height="330px" />
-          <div v-else class="dashboard-guide-list">
-            <div class="info-panel">
-              <span class="info-panel__label">第一步</span>
-              <strong>完善服务信息</strong>
-              <span class="muted-line">填写服务类型、服务区域、接单时段和个人介绍。</span>
-            </div>
-            <div class="info-panel">
-              <span class="info-panel__label">第二步</span>
-              <strong>上传资质文件</strong>
-              <span class="muted-line">提交身份证明、职业培训或健康证明等审核材料。</span>
-            </div>
-            <div class="info-panel">
-              <span class="info-panel__label">第三步</span>
-              <strong>等待管理员审核</strong>
-              <span class="muted-line">审核通过后，订单处理页会自动开放。</span>
-            </div>
-          </div>
+      <el-col :xs="24" :xl="8">
+        <el-card shadow="never" class="dashboard-card dashboard-card--compact">
+          <template #header><strong>近 7 天流水</strong></template>
+          <AppChart :option="revenueChartOption" height="240px" />
+        </el-card>
+      </el-col>
+      <el-col :xs="24" :xl="8">
+        <el-card shadow="never" class="dashboard-card dashboard-card--compact">
+          <template #header><strong>服务成交结构</strong></template>
+          <AppChart :option="serviceChartOption" height="240px" />
         </el-card>
       </el-col>
     </el-row>
 
     <el-row :gutter="16" v-loading="loading">
-      <el-col :xs="24" :xl="12">
-        <el-card shadow="never" class="dashboard-card">
-          <template #header><strong>服务类型接单量</strong></template>
-          <AppChart :option="serviceChartOption" height="300px" />
-        </el-card>
-      </el-col>
-      <el-col :xs="24" :xl="12">
-        <el-card shadow="never" class="dashboard-card">
-          <template #header>
-            <strong>{{ workerQualified ? '待优先处理订单' : '当前认证提示' }}</strong>
-          </template>
-          <el-table v-if="workerQualified" :data="priorityOrders" size="small">
-            <el-table-column prop="serviceName" label="服务项目" min-width="120" />
-            <el-table-column prop="customerName" label="联系人" width="100" />
-            <el-table-column prop="bookingDate" label="日期" width="120" />
-            <el-table-column prop="bookingSlot" label="时段" width="120" />
-            <el-table-column prop="progressNote" label="当前进度" min-width="180" show-overflow-tooltip />
-          </el-table>
+      <el-col :xs="24" :xl="9">
+        <el-card shadow="never" class="dashboard-card dashboard-card--compact">
+          <template #header><strong>{{ workerQualified ? '最近营业额流水' : '当前资质提醒' }}</strong></template>
+
+          <div v-if="workerQualified" class="compact-flow-list">
+            <div v-if="dashboard.recentPayments.length" v-for="item in dashboard.recentPayments" :key="item.paymentId" class="compact-flow-item">
+              <div>
+                <strong>{{ item.serviceName }}</strong>
+                <div class="muted-line">{{ item.customerName }} · {{ item.paidAt || '待支付' }}</div>
+              </div>
+              <div class="compact-flow-item__right">
+                <strong>{{ formatCurrency(item.amount) }}</strong>
+                <span>{{ getPaymentMethodLabel(item.paymentMethod) }}</span>
+              </div>
+            </div>
+            <el-empty v-else description="暂无营业额流水" />
+          </div>
+
           <div v-else class="dashboard-guide-list">
             <div class="info-panel">
               <span class="info-panel__label">当前状态</span>
@@ -108,6 +118,43 @@
               <el-button type="primary" @click="router.push('/worker/qualification')">
                 {{ qualificationNotice.buttonText }}
               </el-button>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+
+      <el-col :xs="24" :xl="15">
+        <el-card shadow="never" class="dashboard-card dashboard-card--compact">
+          <template #header><strong>{{ workerQualified ? '工作重点' : '接单前准备' }}</strong></template>
+
+          <div v-if="workerQualified" class="info-stack compact-info-stack">
+            <div class="info-panel">
+              <span class="info-panel__label">当前优先级</span>
+              <strong>{{ primaryTodoTitle }}</strong>
+              <span class="muted-line">{{ primaryTodoDescription }}</span>
+            </div>
+            <el-table :data="statusRows" size="small" stripe>
+              <el-table-column prop="label" label="状态" min-width="140" />
+              <el-table-column prop="count" label="订单数" width="90" />
+              <el-table-column prop="hint" label="处理建议" min-width="220" show-overflow-tooltip />
+            </el-table>
+          </div>
+
+          <div v-else class="dashboard-guide-list">
+            <div class="info-panel">
+              <span class="info-panel__label">第一步</span>
+              <strong>完善服务信息</strong>
+              <span class="muted-line">填写服务类型、服务区域、接单时段和个人简介。</span>
+            </div>
+            <div class="info-panel">
+              <span class="info-panel__label">第二步</span>
+              <strong>上传资质文件</strong>
+              <span class="muted-line">提交身份证明、培训证明、健康证明等审核材料。</span>
+            </div>
+            <div class="info-panel">
+              <span class="info-panel__label">第三步</span>
+              <strong>等待管理员审核</strong>
+              <span class="muted-line">审核通过后，订单入口会自动开放，并可直接从通知进入订单台。</span>
             </div>
           </div>
         </el-card>
@@ -129,11 +176,7 @@
         </div>
         <div class="info-panel">
           <span class="info-panel__label">建议顺序</span>
-          <span class="muted-line">1. 先查看待接单订单 2. 开工前上传上门打卡 3. 服务中补充过程凭证。</span>
-        </div>
-        <div class="info-panel">
-          <span class="info-panel__label">工作台提醒</span>
-          <span class="muted-line">左侧订单入口和顶部待办角标会持续提示当前需要优先处理的事项。</span>
+          <span class="muted-line">1. 先处理待接单订单 2. 开工前上传上门打卡 3. 服务中补充过程凭证。</span>
         </div>
       </div>
       <template #footer>
@@ -148,15 +191,11 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import AppChart from '../../components/charts/AppChart.vue'
-import { fetchCurrentWorkerProfile, fetchWorkerOrders, fetchWorkerOrderSummary } from '../../api'
+import { fetchWorkerDashboard } from '../../api'
 import { authStore } from '../../stores/auth'
-import {
-  buildDateMap,
-  buildOrderStatusSeriesData,
-  buildServiceMap,
-  mapToSortedRows
-} from '../../utils/dashboard'
-import { normalizeOrderStatus } from '../../utils/order'
+import { formatCurrency } from '../../utils/format'
+import { getOrderStatusLabel } from '../../utils/order'
+import { getPaymentMethodLabel } from '../../utils/payment'
 import {
   getWorkerTodoItems,
   markWorkerApprovedGuideSeen,
@@ -172,116 +211,152 @@ import {
 
 const router = useRouter()
 const loading = ref(false)
-const orders = ref([])
-const workerProfile = ref(null)
-const orderSummary = ref({
-  total: 0,
-  pending: 0,
-  accepted: 0,
-  confirmed: 0,
-  inService: 0,
-  waitingUserConfirmation: 0,
-  todo: 0
-})
 const guideDialogVisible = ref(false)
+const dashboard = ref({
+  qualificationStatus: 'UNSUBMITTED',
+  totalOrders: 0,
+  pendingOrders: 0,
+  confirmedOrders: 0,
+  inServiceOrders: 0,
+  waitingUserConfirmationOrders: 0,
+  completedOrders: 0,
+  todoOrders: 0,
+  paidOrderCount: 0,
+  totalRevenue: 0,
+  todayRevenue: 0,
+  monthRevenue: 0,
+  serviceSales: {},
+  statusDistribution: {},
+  revenueTrend: [],
+  recentPayments: []
+})
 
-const qualificationStatus = computed(() => normalizeWorkerQualificationStatus(workerProfile.value?.qualificationStatus))
+const qualificationStatus = computed(() =>
+  normalizeWorkerQualificationStatus(dashboard.value.qualificationStatus)
+)
 const workerQualified = computed(() => isWorkerQualificationApproved(qualificationStatus.value))
 const qualificationLabel = computed(() => getWorkerQualificationLabel(qualificationStatus.value))
 const qualificationTagType = computed(() => getWorkerQualificationTagType(qualificationStatus.value))
 const qualificationNotice = computed(() => getWorkerQualificationNotice(qualificationStatus.value))
-const todoItems = computed(() => getWorkerTodoItems(orderSummary.value))
 
-const summary = computed(() => ({
-  total: Number(orderSummary.value.total || orders.value.length || 0),
-  pending: Number(orderSummary.value.pending || 0),
-  inService: Number(orderSummary.value.inService || 0),
-  completed: orders.value.filter((item) => normalizeOrderStatus(item.status) === 'COMPLETED').length
-}))
-
-const priorityOrders = computed(() =>
-  orders.value
-    .filter((item) => {
-      const status = normalizeOrderStatus(item.status)
-      return status === 'PENDING' || status === 'ACCEPTED' || status === 'CONFIRMED' || status === 'WAITING_USER_CONFIRMATION'
-    })
-    .slice(0, 6)
+const todoItems = computed(() =>
+  getWorkerTodoItems({
+    pending: dashboard.value.pendingOrders,
+    confirmed: dashboard.value.confirmedOrders,
+    inService: dashboard.value.inServiceOrders,
+    waitingUserConfirmation: dashboard.value.waitingUserConfirmationOrders
+  }).filter((item) => item.value > 0)
 )
+
+const primaryTodoTitle = computed(() => {
+  const firstPending = todoItems.value[0]
+  return firstPending ? `${firstPending.label}优先处理` : '当前没有紧急待办'
+})
+
+const primaryTodoDescription = computed(() => {
+  const firstPending = todoItems.value[0]
+  return firstPending ? firstPending.hint : '可以先查看消息中心，或等待新的用户预约。'
+})
+
+const statusRows = computed(() => [
+  {
+    label: getOrderStatusLabel('PENDING'),
+    count: Number(dashboard.value.pendingOrders || 0),
+    hint: '尽快确认是否接单，减少用户等待时间。'
+  },
+  {
+    label: getOrderStatusLabel('CONFIRMED'),
+    count: Number(dashboard.value.confirmedOrders || 0),
+    hint: '用户已确认预约，建议先安排上门时间。'
+  },
+  {
+    label: getOrderStatusLabel('IN_SERVICE'),
+    count: Number(dashboard.value.inServiceOrders || 0),
+    hint: '及时补充服务过程记录和现场凭证。'
+  },
+  {
+    label: getOrderStatusLabel('WAITING_USER_CONFIRMATION'),
+    count: Number(dashboard.value.waitingUserConfirmationOrders || 0),
+    hint: '用户确认完工后，这些订单会进入完成状态。'
+  },
+  {
+    label: getOrderStatusLabel('COMPLETED'),
+    count: Number(dashboard.value.completedOrders || 0),
+    hint: '可继续关注评价和新增预约。'
+  }
+])
 
 const statusChartOption = computed(() => ({
   tooltip: { trigger: 'item' },
   legend: { bottom: 0, textStyle: { color: '#6e6e73' } },
-  color: ['#0071e3', '#2997ff', '#69b6ff', '#9ed0ff', '#cfe7ff', '#e8f3ff'],
+  color: ['#0071e3', '#5e9eff', '#8cc0ff', '#b6d8ff', '#d5e9ff'],
   series: [
     {
       type: 'pie',
       radius: ['42%', '70%'],
-      itemStyle: { borderRadius: 12, borderColor: '#fff', borderWidth: 4 },
-      data: buildOrderStatusSeriesData(orders.value),
+      itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 4 },
+      data: Object.entries(dashboard.value.statusDistribution || {})
+        .filter(([, value]) => Number(value) > 0)
+        .map(([key, value]) => ({
+          name: getOrderStatusLabel(key),
+          value
+        })),
       label: { formatter: '{b}\n{c} 单', color: '#1d1d1f' }
     }
   ]
 }))
 
-const bookingChartOption = computed(() => {
-  const rows = mapToSortedRows(buildDateMap(orders.value)).slice(0, 7).reverse()
-  return {
-    tooltip: { trigger: 'axis' },
-    grid: { left: 48, right: 16, top: 24, bottom: 36 },
-    xAxis: {
-      type: 'category',
-      data: rows.map((item) => item.name),
-      axisLabel: { interval: 0, rotate: 20, color: '#6e6e73' }
-    },
-    yAxis: {
-      type: 'value',
-      minInterval: 1,
-      splitLine: { lineStyle: { color: 'rgba(110, 110, 115, 0.12)' } },
-      axisLabel: { color: '#6e6e73' }
-    },
-    series: [
-      {
-        type: 'line',
-        smooth: true,
-        symbolSize: 10,
-        data: rows.map((item) => item.value),
-        lineStyle: { width: 4, color: '#0071e3' },
-        itemStyle: { color: '#0071e3' },
-        areaStyle: { color: 'rgba(0, 113, 227, 0.16)' }
-      }
-    ]
-  }
-})
+const revenueChartOption = computed(() => ({
+  tooltip: { trigger: 'axis' },
+  grid: { left: 42, right: 14, top: 20, bottom: 28 },
+  xAxis: {
+    type: 'category',
+    data: dashboard.value.revenueTrend.map((item) => item.label),
+    axisLabel: { color: '#6e6e73' }
+  },
+  yAxis: {
+    type: 'value',
+    splitLine: { lineStyle: { color: 'rgba(110, 110, 115, 0.12)' } },
+    axisLabel: { color: '#6e6e73' }
+  },
+  series: [
+    {
+      type: 'line',
+      smooth: true,
+      data: dashboard.value.revenueTrend.map((item) => item.amount),
+      lineStyle: { width: 3, color: '#0071e3' },
+      itemStyle: { color: '#0071e3' },
+      areaStyle: { color: 'rgba(0, 113, 227, 0.14)' }
+    }
+  ]
+}))
 
-const serviceChartOption = computed(() => {
-  const rows = mapToSortedRows(buildServiceMap(orders.value)).slice(0, 6)
-  return {
-    tooltip: { trigger: 'axis' },
-    grid: { left: 46, right: 16, top: 20, bottom: 20 },
-    xAxis: {
-      type: 'value',
-      minInterval: 1,
-      splitLine: { lineStyle: { color: 'rgba(110, 110, 115, 0.12)' } },
-      axisLabel: { color: '#6e6e73' }
-    },
-    yAxis: {
-      type: 'category',
-      data: rows.map((item) => item.name),
-      axisLabel: { color: '#6e6e73' }
-    },
-    series: [
-      {
-        type: 'bar',
-        data: rows.map((item) => item.value),
-        barWidth: 16,
-        itemStyle: {
-          borderRadius: [0, 10, 10, 0],
-          color: '#0071e3'
-        }
+const serviceChartOption = computed(() => ({
+  tooltip: { trigger: 'axis' },
+  grid: { left: 46, right: 12, top: 16, bottom: 16 },
+  xAxis: {
+    type: 'value',
+    minInterval: 1,
+    splitLine: { lineStyle: { color: 'rgba(110, 110, 115, 0.12)' } },
+    axisLabel: { color: '#6e6e73' }
+  },
+  yAxis: {
+    type: 'category',
+    data: Object.keys(dashboard.value.serviceSales || {}).slice(0, 6),
+    axisLabel: { color: '#6e6e73' }
+  },
+  series: [
+    {
+      type: 'bar',
+      barWidth: 14,
+      data: Object.values(dashboard.value.serviceSales || {}).slice(0, 6),
+      itemStyle: {
+        borderRadius: [0, 8, 8, 0],
+        color: '#34aadc'
       }
-    ]
-  }
-})
+    }
+  ]
+}))
 
 function tryOpenApprovedGuide() {
   const userId = authStore.state.user?.id
@@ -308,22 +383,7 @@ watch(workerQualified, (qualified) => {
 onMounted(async () => {
   loading.value = true
   try {
-    const [profileResult, orderResult, summaryResult] = await Promise.all([
-      fetchCurrentWorkerProfile().catch(() => null),
-      fetchWorkerOrders().catch(() => []),
-      fetchWorkerOrderSummary().catch(() => ({}))
-    ])
-    workerProfile.value = profileResult
-    orders.value = Array.isArray(orderResult?.records) ? orderResult.records : orderResult
-    orderSummary.value = {
-      total: Number(summaryResult?.total || orders.value.length || 0),
-      pending: Number(summaryResult?.pending || 0),
-      accepted: Number(summaryResult?.accepted || 0),
-      confirmed: Number(summaryResult?.confirmed || 0),
-      inService: Number(summaryResult?.inService || 0),
-      waitingUserConfirmation: Number(summaryResult?.waitingUserConfirmation || 0),
-      todo: Number(summaryResult?.todo || 0)
-    }
+    dashboard.value = await fetchWorkerDashboard()
     tryOpenApprovedGuide()
   } finally {
     loading.value = false
@@ -332,17 +392,75 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.dashboard-card {
+.compact-overview {
+  padding-bottom: 18px;
+}
+
+.metric-strip--dense {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.dashboard-card--compact {
   background: rgba(255, 255, 255, 0.76);
   backdrop-filter: blur(18px);
 }
 
-.dashboard-guide-list {
+.compact-flow-list {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
-.summary-card--todo :deep(.el-statistic__content) {
-  color: #0071e3;
+.compact-flow-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(29, 29, 31, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.compact-flow-item__right {
+  display: grid;
+  gap: 4px;
+  justify-items: end;
+  color: #6e6e73;
+  font-size: 12px;
+}
+
+.compact-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.compact-stat strong {
+  font-size: 28px;
+}
+
+.compact-info-stack {
+  gap: 12px;
+}
+
+@media (max-width: 1200px) {
+  .metric-strip--dense {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .metric-strip--dense {
+    grid-template-columns: 1fr;
+  }
+
+  .compact-flow-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .compact-flow-item__right {
+    justify-items: start;
+  }
 }
 </style>

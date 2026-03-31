@@ -7,12 +7,35 @@
         </div>
 
         <el-form :model="form" label-position="top" @submit.prevent="handleLogin">
-          <el-form-item label="手机号">
-            <el-input v-model="form.phone" size="large" placeholder="请输入手机号" />
+          <el-form-item label="登录方式">
+            <el-segmented
+              v-model="form.loginType"
+              :options="loginTypeOptions"
+              block
+              class="login-type-switch"
+            />
           </el-form-item>
+
+          <el-form-item :label="accountLabel">
+            <el-input
+              v-model.trim="form.account"
+              size="large"
+              :placeholder="accountPlaceholder"
+              autocomplete="username"
+            />
+          </el-form-item>
+
           <el-form-item label="密码">
-            <el-input v-model="form.password" size="large" type="password" placeholder="请输入密码" show-password />
+            <el-input
+              v-model="form.password"
+              size="large"
+              type="password"
+              show-password
+              placeholder="请输入密码"
+              autocomplete="current-password"
+            />
           </el-form-item>
+
           <el-form-item label="身份">
             <el-select v-model="form.roleCode" size="large" style="width: 100%">
               <el-option label="普通用户" value="USER" />
@@ -20,6 +43,7 @@
               <el-option label="管理员" value="ADMIN" />
             </el-select>
           </el-form-item>
+
           <el-button class="full-width" type="primary" size="large" @click="handleLogin">登录</el-button>
         </el-form>
 
@@ -29,7 +53,7 @@
       <aside class="login-panel__aside">
         <div class="login-panel__aside-head">
           <strong>体验账号</strong>
-          <span>点击即可自动填充</span>
+          <span>点击即可自动填充当前登录方式对应的账号</span>
         </div>
 
         <div class="demo-account-list">
@@ -41,7 +65,8 @@
             @click="fillDemoAccount(account)"
           >
             <strong>{{ getDemoDisplayName(account) }}</strong>
-            <div class="muted-line">{{ formatRoleLabel(account.roleCode) }} / {{ account.phone }}</div>
+            <div class="muted-line">手机号：{{ account.phone }}</div>
+            <div class="muted-line">用户名：{{ account.username || '未设置' }}</div>
           </button>
         </div>
       </aside>
@@ -50,26 +75,43 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { fetchDemoAccounts, login } from '../../api'
 import { authStore } from '../../stores/auth'
-import { formatRoleLabel } from '../../utils/auth'
 
 const route = useRoute()
 const router = useRouter()
 const errorMessage = ref('')
 const demoAccounts = ref([])
 
+const loginTypeOptions = [
+  { label: '手机号登录', value: 'PHONE' },
+  { label: '用户名登录', value: 'USERNAME' }
+]
+
 const form = reactive({
-  phone: '',
+  loginType: 'PHONE',
+  account: '',
   password: '',
   roleCode: 'USER'
 })
 
+const accountLabel = computed(() => (form.loginType === 'PHONE' ? '手机号' : '用户名'))
+const accountPlaceholder = computed(() =>
+  form.loginType === 'PHONE' ? '请输入手机号' : '请输入用户名'
+)
+
+watch(
+  () => form.loginType,
+  () => {
+    form.account = ''
+  }
+)
+
 function fillDemoAccount(account) {
-  form.phone = account.phone
+  form.account = form.loginType === 'PHONE' ? account.phone : account.username || ''
   form.password = account.password
   form.roleCode = account.roleCode
 }
@@ -99,8 +141,11 @@ async function handleLogin() {
 
 onMounted(async () => {
   demoAccounts.value = await fetchDemoAccounts().catch(() => [])
-  if (route.query.phone) {
-    form.phone = String(route.query.phone)
+  if (route.query.account) {
+    form.account = String(route.query.account)
+  } else if (route.query.phone) {
+    form.account = String(route.query.phone)
+    form.loginType = 'PHONE'
   }
   if (route.query.error === 'no_permission') {
     errorMessage.value = '当前账号没有目标页面的访问权限，请切换身份后重新登录。'
@@ -118,7 +163,7 @@ onMounted(async () => {
 
 .login-panel {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.88fr);
   gap: 24px;
   align-items: start;
 }
@@ -151,6 +196,10 @@ onMounted(async () => {
 .login-panel__aside-head span {
   color: var(--muted);
   line-height: 1.7;
+}
+
+.login-type-switch {
+  width: 100%;
 }
 
 .demo-account-card--button {

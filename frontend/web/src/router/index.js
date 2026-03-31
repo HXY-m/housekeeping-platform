@@ -47,7 +47,9 @@ const router = createRouter({
         { path: 'profile', component: () => import('../views/user/UserProfileView.vue'), meta: { permission: 'USER_PROFILE_MANAGE' } },
         { path: 'favorites', component: () => import('../views/user/UserFavoritesView.vue'), meta: { permission: 'USER_FAVORITE_MANAGE' } },
         { path: 'messages', component: () => import('../views/user/UserMessagesView.vue'), meta: { permission: 'USER_MESSAGE_USE' } },
-        { path: 'orders', component: () => import('../views/consumer/OrdersView.vue'), meta: { permission: 'USER_ORDER_USE' } }
+        { path: 'conversations', component: () => import('../views/user/UserConversationsView.vue'), meta: { permission: 'USER_MESSAGE_USE' } },
+        { path: 'orders', component: () => import('../views/consumer/OrdersView.vue'), meta: { permission: 'USER_ORDER_USE' } },
+        { path: 'orders/:id', component: () => import('../views/user/UserOrderDetailView.vue'), meta: { permission: 'USER_ORDER_USE' } }
       ]
     },
     {
@@ -58,7 +60,9 @@ const router = createRouter({
       children: [
         { path: 'dashboard', component: () => import('../views/worker/WorkerDashboardView.vue'), meta: { permission: 'WORKER_DASHBOARD_VIEW' } },
         { path: 'orders', component: () => import('../views/worker/WorkerOrdersView.vue'), meta: { permission: 'WORKER_ORDER_HANDLE' } },
+        { path: 'orders/:id', component: () => import('../views/worker/WorkerOrderDetailView.vue'), meta: { permission: 'WORKER_ORDER_HANDLE' } },
         { path: 'messages', component: () => import('../views/worker/WorkerMessagesView.vue'), meta: { permission: 'WORKER_MESSAGE_USE' } },
+        { path: 'conversations', component: () => import('../views/worker/WorkerConversationsView.vue'), meta: { permission: 'WORKER_MESSAGE_USE' } },
         { path: 'qualification', component: () => import('../views/worker/WorkerApplyView.vue'), meta: { permission: 'WORKER_QUALIFICATION_SUBMIT' } }
       ]
     },
@@ -105,7 +109,7 @@ function getRequiredPermissions(meta) {
 }
 
 async function ensureWorkerCanAccessRoute(to) {
-  const requiresApprovedQualification = to.path === '/worker/orders'
+  const requiresApprovedQualification = to.path === '/worker/orders' || /^\/worker\/orders\/\d+/.test(to.path)
   if (!requiresApprovedQualification) {
     return true
   }

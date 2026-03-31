@@ -151,7 +151,7 @@ public class AfterSaleService {
                     "订单 #" + entity.getOrderId() + " 已被用户发起售后，请关注处理进度。",
                     "AFTER_SALE",
                     entity.getId(),
-                    "/worker/messages?tab=notifications"
+                    "/worker/messages"
             );
         }
         return buildSingleDto(entity);
@@ -188,7 +188,7 @@ public class AfterSaleService {
                 "售后工单 #" + entity.getId() + " 已更新为 " + entity.getStatus() + "。",
                 "AFTER_SALE",
                 entity.getId(),
-                "/user/messages?tab=notifications"
+                "/user/messages"
         );
         return buildSingleDto(entity);
     }

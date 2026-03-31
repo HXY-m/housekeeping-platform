@@ -3,6 +3,7 @@ package com.housekeeping.audit;
 public final class OperationLogActions {
 
     public static final String ORDER_CREATE = "ORDER_CREATE";
+    public static final String ORDER_PAY = "ORDER_PAY";
     public static final String ORDER_ACCEPT = "ORDER_ACCEPT";
     public static final String ORDER_START = "ORDER_START";
     public static final String ORDER_COMPLETE = "ORDER_COMPLETE";

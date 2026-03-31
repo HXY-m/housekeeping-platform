@@ -9,6 +9,11 @@ const PAYMENT_METHOD_LABELS = {
   BANK_CARD: '银行卡'
 }
 
+export const PAYMENT_METHOD_OPTIONS = Object.entries(PAYMENT_METHOD_LABELS).map(([value, label]) => ({
+  value,
+  label
+}))
+
 export function getPaymentStatusLabel(status) {
   return PAYMENT_STATUS_META[status]?.label || status || '待支付'
 }

@@ -14,6 +14,10 @@ public record OrderDto(
         String status,
         String progressNote,
         String remark,
+        Integer payableAmount,
+        String paymentStatus,
+        String paymentMethod,
+        String paidAt,
         boolean reviewed,
         Integer reviewRating,
         String reviewContent,
@@ -31,6 +35,6 @@ public record OrderDto(
                     String progressNote,
                     String remark) {
         this(id, serviceName, workerName, customerName, contactPhone, serviceAddress, bookingDate, bookingSlot,
-                status, progressNote, remark, false, null, null, List.of());
+                status, progressNote, remark, 0, "UNPAID", "", null, false, null, null, List.of());
     }
 }

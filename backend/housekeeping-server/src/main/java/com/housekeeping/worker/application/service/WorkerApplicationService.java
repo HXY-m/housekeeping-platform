@@ -112,11 +112,12 @@ public class WorkerApplicationService {
                 "待资质审核服务人员",
                 null
         ));
+
         operationLogService.record(
                 OperationLogActions.WORKER_APPLICATION_SUBMIT,
                 "WORKER_APPLICATION",
                 entity.getId(),
-                "提交服务人员资质申请，姓名=" + entity.getRealName()
+                "提交服务人员资质申请，姓名：" + entity.getRealName()
         );
         notificationService.notifyAdmins(
                 NotificationType.WORKER_APPLICATION,
@@ -199,22 +200,38 @@ public class WorkerApplicationService {
 
         entity.setUpdatedAt(LocalDateTime.now());
         workerApplicationMapper.updateById(entity);
+
         operationLogService.record(
                 OperationLogActions.WORKER_APPLICATION_REVIEW,
                 "WORKER_APPLICATION",
                 entity.getId(),
-                "审核服务人员资质申请，结果=" + entity.getStatus()
+                "审核服务人员资质申请，结果：" + entity.getStatus()
         );
+
+        String notificationTitle;
+        String notificationContent;
+        String actionPath;
+        if ("APPROVED".equalsIgnoreCase(entity.getStatus())) {
+            notificationTitle = "资质审核已通过，可以开始接单";
+            notificationContent = "你的资质申请 #" + entity.getId() + " 已审核通过，服务信息已对外展示，点击即可进入订单台开始处理预约。";
+            actionPath = "/worker/orders?source=qualification_approved";
+        } else {
+            notificationTitle = "资质审核未通过，请重新完善资料";
+            notificationContent = "你的资质申请 #" + entity.getId() + " 未通过审核，请根据驳回意见补充服务信息和资质文件后重新提交。";
+            actionPath = "/worker/qualification?source=qualification_rejected";
+        }
+
         notificationService.notifyUser(
                 entity.getUserId(),
                 RoleCodes.WORKER,
                 NotificationType.WORKER_APPLICATION,
-                "你的资质申请已有审核结果",
-                "资质申请 #" + entity.getId() + " 已更新为 " + entity.getStatus() + "。",
+                notificationTitle,
+                notificationContent,
                 "WORKER_APPLICATION",
                 entity.getId(),
-                "/worker/qualification"
+                actionPath
         );
+
         Map<Long, List<WorkerApplicationAttachmentDto>> attachmentMap = buildAttachmentMap(List.of(entity.getId()));
         return toDto(entity, attachmentMap.getOrDefault(entity.getId(), List.of()));
     }

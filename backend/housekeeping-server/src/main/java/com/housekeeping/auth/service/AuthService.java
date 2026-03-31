@@ -43,8 +43,10 @@ public class AuthService {
 
     public LoginResponse login(LoginRequest request) {
         String roleCode = normalizeRoleCode(request.roleCode());
-        SysUserEntity user = authAccountService.requireActiveUserByPhone(request.phone());
+        String loginType = normalizeLoginType(request.loginType());
+        validateLoginAccount(loginType, request.account());
 
+        SysUserEntity user = authAccountService.requireActiveUserByLogin(loginType, request.account());
         if (!PasswordUtil.matches(request.password(), user.getPassword())) {
             throw new BusinessException("密码错误");
         }
@@ -63,8 +65,10 @@ public class AuthService {
         }
 
         authAccountService.ensurePhoneAvailable(request.phone());
+        authAccountService.ensureUsernameAvailable(request.username());
         SysUserEntity user = authAccountService.createUser(
                 request.phone().trim(),
+                request.username().trim(),
                 request.password().trim(),
                 request.realName().trim()
         );
@@ -109,9 +113,9 @@ public class AuthService {
 
     public List<DemoAccountDto> demoAccounts() {
         return List.of(
-                new DemoAccountDto(RoleCodes.USER, "13800000011", "123456", "Demo User"),
-                new DemoAccountDto(RoleCodes.WORKER, "13800000022", "123456", "Demo Worker"),
-                new DemoAccountDto(RoleCodes.ADMIN, "13800000033", "123456", "Demo Admin")
+                new DemoAccountDto(RoleCodes.USER, "13800000011", "demo_user", "123456", "Demo User"),
+                new DemoAccountDto(RoleCodes.WORKER, "13800000022", "demo_worker", "123456", "Demo Worker"),
+                new DemoAccountDto(RoleCodes.ADMIN, "13800000033", "demo_admin", "123456", "Demo Admin")
         );
     }
 
@@ -136,5 +140,26 @@ public class AuthService {
             throw new BusinessException("不支持的身份类型");
         }
         return roleCode;
+    }
+
+    private String normalizeLoginType(String rawLoginType) {
+        String loginType = rawLoginType == null ? "" : rawLoginType.trim().toUpperCase();
+        if (!List.of("PHONE", "USERNAME").contains(loginType)) {
+            throw new BusinessException("不支持的登录方式");
+        }
+        return loginType;
+    }
+
+    private void validateLoginAccount(String loginType, String account) {
+        String value = account == null ? "" : account.trim();
+        if (value.isEmpty()) {
+            throw new BusinessException("请填写登录账号");
+        }
+        if ("PHONE".equals(loginType) && !value.matches("^1\\d{10}$")) {
+            throw new BusinessException("请输入合法的 11 位手机号");
+        }
+        if ("USERNAME".equals(loginType) && !value.matches("^[A-Za-z0-9_]{4,20}$")) {
+            throw new BusinessException("用户名需为 4-20 位字母、数字或下划线");
+        }
     }
 }

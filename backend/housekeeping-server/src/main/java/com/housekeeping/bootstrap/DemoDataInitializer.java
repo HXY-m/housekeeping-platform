@@ -6,9 +6,12 @@ import com.housekeeping.auth.mapper.SysUserMapper;
 import com.housekeeping.category.entity.ServiceCategoryEntity;
 import com.housekeeping.category.mapper.ServiceCategoryMapper;
 import com.housekeeping.order.OrderStatus;
+import com.housekeeping.order.PaymentStatus;
 import com.housekeeping.order.entity.OrderEntity;
+import com.housekeeping.order.entity.OrderPaymentEntity;
 import com.housekeeping.order.entity.OrderProgressEntity;
 import com.housekeeping.order.mapper.OrderMapper;
+import com.housekeeping.order.mapper.OrderPaymentMapper;
 import com.housekeeping.order.mapper.OrderProgressMapper;
 import com.housekeeping.worker.WorkerQualificationStatus;
 import com.housekeeping.worker.entity.WorkerEntity;
@@ -17,6 +20,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
@@ -30,17 +34,20 @@ public class DemoDataInitializer implements CommandLineRunner {
     private final ServiceCategoryMapper categoryMapper;
     private final WorkerMapper workerMapper;
     private final OrderMapper orderMapper;
+    private final OrderPaymentMapper orderPaymentMapper;
     private final OrderProgressMapper orderProgressMapper;
     private final SysUserMapper sysUserMapper;
 
     public DemoDataInitializer(ServiceCategoryMapper categoryMapper,
                                WorkerMapper workerMapper,
                                OrderMapper orderMapper,
+                               OrderPaymentMapper orderPaymentMapper,
                                OrderProgressMapper orderProgressMapper,
                                SysUserMapper sysUserMapper) {
         this.categoryMapper = categoryMapper;
         this.workerMapper = workerMapper;
         this.orderMapper = orderMapper;
+        this.orderPaymentMapper = orderPaymentMapper;
         this.orderProgressMapper = orderProgressMapper;
         this.sysUserMapper = sysUserMapper;
     }
@@ -55,6 +62,7 @@ public class DemoDataInitializer implements CommandLineRunner {
         ensureWorkers(demoWorkerUserId);
         bindLegacyOrdersToDemoUser(demoUserId);
         ensureOrders(demoUserId);
+        ensureOrderPaymentDefaults();
     }
 
     private void ensureCategories() {
@@ -215,6 +223,7 @@ public class DemoDataInitializer implements CommandLineRunner {
             );
             orderMapper.insert(order1);
             orderProgressMapper.insert(new OrderProgressEntity(order1.getId(), OrderStatus.PENDING.code(), "服务人员已接收预约，等待上门"));
+            ensurePayment(order1, 0, null, false);
         }
 
         if (applianceWorker != null && !Objects.equals(applianceWorker.getId(), cleaningWorker == null ? null : cleaningWorker.getId())) {
@@ -233,7 +242,77 @@ public class DemoDataInitializer implements CommandLineRunner {
             );
             orderMapper.insert(order2);
             orderProgressMapper.insert(new OrderProgressEntity(order2.getId(), OrderStatus.IN_SERVICE.code(), "服务人员已到达，正在进行空调拆洗"));
+            ensurePayment(order2, applianceWorker.getHourlyPrice(), "WECHAT_PAY", true);
         }
+    }
+
+    private void ensureOrderPaymentDefaults() {
+        List<OrderEntity> orders = orderMapper.selectList(new LambdaQueryWrapper<OrderEntity>().orderByAsc(OrderEntity::getId));
+        for (OrderEntity order : orders) {
+            boolean paid = PaymentStatus.PAID.matches(order.getPaymentStatus());
+            int amount = order.getPayableAmount() == null || order.getPayableAmount() <= 0
+                    ? resolveWorkerPrice(order.getWorkerId())
+                    : order.getPayableAmount();
+            ensurePayment(order, amount, paid ? (order.getPaymentMethod() == null || order.getPaymentMethod().isBlank() ? "WECHAT_PAY" : order.getPaymentMethod()) : null, paid);
+        }
+    }
+
+    private int resolveWorkerPrice(Long workerId) {
+        WorkerEntity worker = workerId == null ? null : workerMapper.selectById(workerId);
+        return worker == null || worker.getHourlyPrice() == null ? 0 : worker.getHourlyPrice();
+    }
+
+    private void ensurePayment(OrderEntity order, int amount, String paymentMethod, boolean paid) {
+        boolean needUpdate = false;
+        if (order.getPayableAmount() == null || order.getPayableAmount() <= 0) {
+            order.setPayableAmount(amount);
+            needUpdate = true;
+        }
+        if (paid) {
+            if (!PaymentStatus.PAID.matches(order.getPaymentStatus())) {
+                order.setPaymentStatus(PaymentStatus.PAID.code());
+                needUpdate = true;
+            }
+            if (order.getPaymentMethod() == null || order.getPaymentMethod().isBlank()) {
+                order.setPaymentMethod(paymentMethod == null ? "WECHAT_PAY" : paymentMethod);
+                needUpdate = true;
+            }
+            if (order.getPaidAt() == null) {
+                order.setPaidAt(LocalDateTime.now().minusHours(2));
+                needUpdate = true;
+            }
+        } else if (order.getPaymentStatus() == null || order.getPaymentStatus().isBlank()) {
+            order.setPaymentStatus(PaymentStatus.UNPAID.code());
+            order.setPaymentMethod("");
+            needUpdate = true;
+        }
+
+        if (needUpdate) {
+            orderMapper.updateById(order);
+        }
+
+        if (!paid) {
+            return;
+        }
+
+        Long count = orderPaymentMapper.selectCount(
+                new LambdaQueryWrapper<OrderPaymentEntity>()
+                        .eq(OrderPaymentEntity::getOrderId, order.getId())
+        );
+        if (count != null && count > 0) {
+            return;
+        }
+
+        orderPaymentMapper.insert(new OrderPaymentEntity(
+                order.getId(),
+                order.getUserId(),
+                order.getPayableAmount(),
+                order.getPaymentMethod(),
+                PaymentStatus.PAID.code(),
+                "DEMO" + order.getId(),
+                order.getPaidAt() == null ? LocalDateTime.now().minusHours(2) : order.getPaidAt(),
+                order.getPaidAt() == null ? LocalDateTime.now().minusHours(2) : order.getPaidAt()
+        ));
     }
 
     private Long findUserId(String phone) {

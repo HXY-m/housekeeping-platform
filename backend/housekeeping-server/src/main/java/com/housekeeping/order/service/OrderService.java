@@ -16,16 +16,22 @@ import com.housekeeping.exception.BusinessException;
 import com.housekeeping.notification.NotificationType;
 import com.housekeeping.notification.service.NotificationService;
 import com.housekeeping.order.OrderServiceRecordStage;
+import com.housekeeping.order.OrderPaymentMethod;
 import com.housekeeping.order.OrderStatus;
+import com.housekeeping.order.PaymentStatus;
 import com.housekeeping.order.dto.BookingAvailabilityDto;
 import com.housekeeping.order.dto.OrderDto;
+import com.housekeeping.order.dto.OrderPaymentDto;
+import com.housekeeping.order.dto.OrderPaymentRequest;
 import com.housekeeping.order.dto.OrderRequest;
 import com.housekeeping.order.dto.OrderReviewRequest;
 import com.housekeeping.order.dto.OrderServiceRecordDto;
 import com.housekeeping.order.entity.OrderEntity;
+import com.housekeeping.order.entity.OrderPaymentEntity;
 import com.housekeeping.order.entity.OrderProgressEntity;
 import com.housekeeping.order.entity.OrderReviewEntity;
 import com.housekeeping.order.mapper.OrderMapper;
+import com.housekeeping.order.mapper.OrderPaymentMapper;
 import com.housekeeping.order.mapper.OrderProgressMapper;
 import com.housekeeping.order.mapper.OrderReviewMapper;
 import com.housekeeping.worker.entity.WorkerEntity;
@@ -37,6 +43,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -50,6 +57,8 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class OrderService {
 
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
     public static final List<String> BOOKING_SLOTS = List.of(
             "08:00-10:00",
             "10:00-12:00",
@@ -59,6 +68,7 @@ public class OrderService {
     );
 
     private final OrderMapper orderMapper;
+    private final OrderPaymentMapper orderPaymentMapper;
     private final OrderProgressMapper orderProgressMapper;
     private final OrderReviewMapper orderReviewMapper;
     private final WorkerMapper workerMapper;
@@ -72,6 +82,7 @@ public class OrderService {
     private final NotificationService notificationService;
 
     public OrderService(OrderMapper orderMapper,
+                        OrderPaymentMapper orderPaymentMapper,
                         OrderProgressMapper orderProgressMapper,
                         OrderReviewMapper orderReviewMapper,
                         WorkerMapper workerMapper,
@@ -84,6 +95,7 @@ public class OrderService {
                         OrderAccessService orderAccessService,
                         NotificationService notificationService) {
         this.orderMapper = orderMapper;
+        this.orderPaymentMapper = orderPaymentMapper;
         this.orderProgressMapper = orderProgressMapper;
         this.orderReviewMapper = orderReviewMapper;
         this.workerMapper = workerMapper;
@@ -110,6 +122,10 @@ public class OrderService {
         return PageResult.from(page, buildOrderDtos(page.getRecords()));
     }
 
+    public OrderDto getCurrentUserOrder(Long orderId) {
+        return buildSingleOrderDto(orderAccessService.requireCurrentUserOrder(orderId));
+    }
+
     public List<OrderDto> listCurrentWorkerOrders() {
         return buildOrderDtos(orderAccessService.listCurrentWorkerOrders());
     }
@@ -122,6 +138,10 @@ public class OrderService {
                 buildCurrentWorkerOrderWrapper(worker.getId(), status)
         );
         return PageResult.from(page, buildOrderDtos(page.getRecords()));
+    }
+
+    public OrderDto getCurrentWorkerOrder(Long orderId) {
+        return buildSingleOrderDto(orderAccessService.requireCurrentWorkerOrder(orderId));
     }
 
     public List<OrderDto> listAllOrders() {
@@ -160,6 +180,8 @@ public class OrderService {
                 OrderStatus.ACCEPTED.matches(item.getStatus())
                         || OrderStatus.WAITING_USER_CONFIRMATION.matches(item.getStatus())
         ).count());
+        summary.put("paid", orders.stream().filter(item -> PaymentStatus.PAID.matches(item.getPaymentStatus())).count());
+        summary.put("unpaid", orders.stream().filter(item -> !PaymentStatus.PAID.matches(item.getPaymentStatus())).count());
         summary.put("afterSales", afterSales);
         return summary;
     }
@@ -192,6 +214,17 @@ public class OrderService {
         summary.put("pending", orders.stream().filter(item -> OrderStatus.PENDING.matches(item.getStatus())).count());
         summary.put("inService", orders.stream().filter(item -> OrderStatus.IN_SERVICE.matches(item.getStatus())).count());
         summary.put("completed", orders.stream().filter(item -> OrderStatus.COMPLETED.matches(item.getStatus())).count());
+        summary.put("paid", orders.stream().filter(item -> PaymentStatus.PAID.matches(item.getPaymentStatus())).count());
+        summary.put("unpaid", orders.stream().filter(item -> !PaymentStatus.PAID.matches(item.getPaymentStatus())).count());
+        summary.put(
+                "paidAmount",
+                orders.stream()
+                        .filter(item -> PaymentStatus.PAID.matches(item.getPaymentStatus()))
+                        .map(OrderEntity::getPayableAmount)
+                        .filter(Objects::nonNull)
+                        .mapToLong(Integer::longValue)
+                        .sum()
+        );
         return summary;
     }
 
@@ -216,6 +249,17 @@ public class OrderService {
                 .toList();
 
         return new BookingAvailabilityDto(workerId, parsedDate.toString(), availableSlots, occupiedSlots);
+    }
+
+    public List<OrderPaymentDto> listCurrentUserOrderPayments(Long orderId) {
+        OrderEntity order = orderAccessService.requireCurrentUserOrder(orderId);
+        return orderPaymentMapper.selectList(
+                        new LambdaQueryWrapper<OrderPaymentEntity>()
+                                .eq(OrderPaymentEntity::getOrderId, order.getId())
+                                .orderByDesc(OrderPaymentEntity::getId)
+                ).stream()
+                .map(this::toPaymentDto)
+                .toList();
     }
 
     @Transactional
@@ -243,6 +287,10 @@ public class OrderService {
                 "订单已创建，等待服务人员接单",
                 request.remark().trim()
         );
+        order.setPayableAmount(resolveOrderAmount(worker));
+        order.setPaymentStatus(PaymentStatus.UNPAID.code());
+        order.setPaymentMethod("");
+        order.setPaidAt(null);
         orderMapper.insert(order);
         appendProgress(order.getId(), OrderStatus.PENDING, "订单已创建，等待服务人员接单");
         operationLogService.record(
@@ -255,6 +303,57 @@ public class OrderService {
                 worker,
                 "你有新的预约待处理",
                 currentUser.realName() + " 提交了 " + order.getServiceName() + " 预约，等待你接单。",
+                order.getId(),
+                "/worker/orders"
+        );
+        return buildSingleOrderDto(order);
+    }
+
+    @Transactional
+    public OrderDto payOrder(Long orderId, OrderPaymentRequest request) {
+        SessionUser currentUser = requireCurrentUser();
+        OrderEntity order = orderAccessService.requireCurrentUserOrder(orderId);
+        if (PaymentStatus.PAID.matches(order.getPaymentStatus())) {
+            throw new BusinessException("该订单已经支付完成");
+        }
+
+        OrderPaymentMethod paymentMethod;
+        try {
+            paymentMethod = OrderPaymentMethod.from(request.paymentMethod());
+        } catch (IllegalArgumentException exception) {
+            throw new BusinessException(exception.getMessage());
+        }
+
+        int payableAmount = order.getPayableAmount() == null ? 0 : order.getPayableAmount();
+        LocalDateTime paidAt = LocalDateTime.now();
+        String paymentNo = generatePaymentNo(order.getId());
+
+        orderPaymentMapper.insert(new OrderPaymentEntity(
+                order.getId(),
+                currentUser.userId(),
+                payableAmount,
+                paymentMethod.code(),
+                PaymentStatus.PAID.code(),
+                paymentNo,
+                paidAt,
+                paidAt
+        ));
+
+        order.setPaymentStatus(PaymentStatus.PAID.code());
+        order.setPaymentMethod(paymentMethod.code());
+        order.setPaidAt(paidAt);
+        orderMapper.updateById(order);
+
+        operationLogService.record(
+                OperationLogActions.ORDER_PAY,
+                "ORDER",
+                orderId,
+                "订单支付成功，方式=" + paymentMethod.code() + "，金额=" + payableAmount
+        );
+        notifyWorkerStatus(
+                requireWorker(order.getWorkerId()),
+                "用户已完成支付",
+                "订单 #" + order.getId() + " 已完成支付，金额 ¥" + payableAmount + "，可继续关注后续确认进度。",
                 order.getId(),
                 "/worker/orders"
         );
@@ -282,6 +381,9 @@ public class OrderService {
     public OrderDto confirmOrderByUser(Long orderId) {
         OrderEntity order = orderAccessService.requireCurrentUserOrder(orderId);
         requireStatus(order, OrderStatus.ACCEPTED, "只有服务人员接单后，用户才能确认预约");
+        if (!PaymentStatus.PAID.matches(order.getPaymentStatus())) {
+            throw new BusinessException("请先完成支付，再确认预约安排");
+        }
         updateOrderStatus(order, OrderStatus.CONFIRMED, "用户已确认预约安排，等待服务人员上门");
         appendProgress(order.getId(), OrderStatus.CONFIRMED, "用户已确认预约安排，等待服务人员上门");
         notifyWorkerStatus(
@@ -579,6 +681,26 @@ public class OrderService {
                 .orElse(worker.getRating() == null ? 5.0 : worker.getRating());
         worker.setRating(Math.round(average * 100.0) / 100.0);
         workerMapper.updateById(worker);
+    }
+
+    private OrderPaymentDto toPaymentDto(OrderPaymentEntity entity) {
+        return new OrderPaymentDto(
+                entity.getId(),
+                entity.getAmount(),
+                entity.getPaymentMethod(),
+                entity.getPaymentStatus(),
+                entity.getPaymentNo(),
+                entity.getCreatedAt() == null ? null : entity.getCreatedAt().format(DATE_TIME_FORMATTER),
+                entity.getPaidAt() == null ? null : entity.getPaidAt().format(DATE_TIME_FORMATTER)
+        );
+    }
+
+    private int resolveOrderAmount(WorkerEntity worker) {
+        return worker.getHourlyPrice() == null ? 0 : worker.getHourlyPrice();
+    }
+
+    private String generatePaymentNo(Long orderId) {
+        return "PAY" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss")) + orderId;
     }
 
     private LambdaQueryWrapper<OrderEntity> buildCurrentUserOrderWrapper(Long userId, String status) {

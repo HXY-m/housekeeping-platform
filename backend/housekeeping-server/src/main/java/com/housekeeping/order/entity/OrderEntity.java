@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
+import java.time.LocalDateTime;
+
 @TableName("booking_order")
 public class OrderEntity {
 
@@ -20,6 +22,10 @@ public class OrderEntity {
     private String status;
     private String progressNote;
     private String remark;
+    private Integer payableAmount;
+    private String paymentStatus;
+    private String paymentMethod;
+    private LocalDateTime paidAt;
 
     public OrderEntity() {
     }
@@ -141,5 +147,37 @@ public class OrderEntity {
 
     public void setRemark(String remark) {
         this.remark = remark;
+    }
+
+    public Integer getPayableAmount() {
+        return payableAmount;
+    }
+
+    public void setPayableAmount(Integer payableAmount) {
+        this.payableAmount = payableAmount;
+    }
+
+    public String getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setPaymentStatus(String paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
+
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod;
+    }
+
+    public LocalDateTime getPaidAt() {
+        return paidAt;
+    }
+
+    public void setPaidAt(LocalDateTime paidAt) {
+        this.paidAt = paidAt;
     }
 }

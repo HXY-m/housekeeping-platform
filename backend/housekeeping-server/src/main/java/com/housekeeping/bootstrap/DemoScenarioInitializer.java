@@ -13,14 +13,18 @@ import com.housekeeping.message.mapper.OrderMessageMapper;
 import com.housekeeping.notification.NotificationType;
 import com.housekeeping.notification.entity.UserNotificationEntity;
 import com.housekeeping.notification.mapper.UserNotificationMapper;
+import com.housekeeping.order.OrderPaymentMethod;
 import com.housekeeping.order.OrderServiceRecordStage;
 import com.housekeeping.order.OrderStatus;
+import com.housekeeping.order.PaymentStatus;
 import com.housekeeping.order.entity.OrderEntity;
+import com.housekeeping.order.entity.OrderPaymentEntity;
 import com.housekeeping.order.entity.OrderProgressEntity;
 import com.housekeeping.order.entity.OrderReviewEntity;
 import com.housekeeping.order.entity.OrderServiceRecordAttachmentEntity;
 import com.housekeeping.order.entity.OrderServiceRecordEntity;
 import com.housekeeping.order.mapper.OrderMapper;
+import com.housekeeping.order.mapper.OrderPaymentMapper;
 import com.housekeeping.order.mapper.OrderProgressMapper;
 import com.housekeeping.order.mapper.OrderReviewMapper;
 import com.housekeeping.order.mapper.OrderServiceRecordAttachmentMapper;
@@ -68,6 +72,7 @@ public class DemoScenarioInitializer implements CommandLineRunner {
     private final WorkerApplicationMapper workerApplicationMapper;
     private final WorkerApplicationAttachmentMapper workerApplicationAttachmentMapper;
     private final OrderMapper orderMapper;
+    private final OrderPaymentMapper orderPaymentMapper;
     private final OrderProgressMapper orderProgressMapper;
     private final OrderReviewMapper orderReviewMapper;
     private final OrderServiceRecordMapper orderServiceRecordMapper;
@@ -84,6 +89,7 @@ public class DemoScenarioInitializer implements CommandLineRunner {
                                    WorkerApplicationMapper workerApplicationMapper,
                                    WorkerApplicationAttachmentMapper workerApplicationAttachmentMapper,
                                    OrderMapper orderMapper,
+                                   OrderPaymentMapper orderPaymentMapper,
                                    OrderProgressMapper orderProgressMapper,
                                    OrderReviewMapper orderReviewMapper,
                                    OrderServiceRecordMapper orderServiceRecordMapper,
@@ -99,6 +105,7 @@ public class DemoScenarioInitializer implements CommandLineRunner {
         this.workerApplicationMapper = workerApplicationMapper;
         this.workerApplicationAttachmentMapper = workerApplicationAttachmentMapper;
         this.orderMapper = orderMapper;
+        this.orderPaymentMapper = orderPaymentMapper;
         this.orderProgressMapper = orderProgressMapper;
         this.orderReviewMapper = orderReviewMapper;
         this.orderServiceRecordMapper = orderServiceRecordMapper;
@@ -216,6 +223,7 @@ public class DemoScenarioInitializer implements CommandLineRunner {
         ensureProgresses(pendingOrder.getId(), List.of(
                 progress(OrderStatus.PENDING, "用户已提交预约，等待服务人员接单")
         ));
+        ensurePayment(pendingOrder, mainWorker.getHourlyPrice(), null, false, null);
 
         OrderEntity acceptedOrder = ensureOrder(
                 "[DEMO_ACCEPTED]",
@@ -235,6 +243,7 @@ public class DemoScenarioInitializer implements CommandLineRunner {
                 progress(OrderStatus.PENDING, "用户已提交预约，等待服务人员接单"),
                 progress(OrderStatus.ACCEPTED, "服务人员已接单，等待用户确认预约安排")
         ));
+        ensurePayment(acceptedOrder, mainWorker.getHourlyPrice(), OrderPaymentMethod.WECHAT_PAY, true, LocalDateTime.now().minusDays(1).minusHours(4));
 
         OrderEntity confirmedOrder = ensureOrder(
                 "[DEMO_CONFIRMED]",
@@ -255,6 +264,7 @@ public class DemoScenarioInitializer implements CommandLineRunner {
                 progress(OrderStatus.ACCEPTED, "服务人员已接单，等待用户确认预约安排"),
                 progress(OrderStatus.CONFIRMED, "用户已确认预约，等待服务人员上门")
         ));
+        ensurePayment(confirmedOrder, mainWorker.getHourlyPrice(), OrderPaymentMethod.ALIPAY, true, LocalDateTime.now().minusDays(1).minusHours(2));
 
         OrderEntity inServiceOrder = ensureOrder(
                 "[DEMO_IN_SERVICE]",
@@ -276,6 +286,7 @@ public class DemoScenarioInitializer implements CommandLineRunner {
                 progress(OrderStatus.CONFIRMED, "用户已确认预约，等待服务人员上门"),
                 progress(OrderStatus.IN_SERVICE, "服务人员已上门，正在进行空调拆洗")
         ));
+        ensurePayment(inServiceOrder, mainWorker.getHourlyPrice(), OrderPaymentMethod.WECHAT_PAY, true, LocalDateTime.now().minusHours(8));
         ensureServiceRecords(inServiceOrder.getId(), mainWorker.getId(), List.of(
                 serviceRecord(OrderServiceRecordStage.CHECK_IN, "到达现场并完成上门打卡", SERVICE_CHECK_IN_URL),
                 serviceRecord(OrderServiceRecordStage.SERVICE_PROOF, "已完成首轮过滤网拆洗和外壳除尘", SERVICE_PROGRESS_URL)
@@ -302,6 +313,7 @@ public class DemoScenarioInitializer implements CommandLineRunner {
                 progress(OrderStatus.IN_SERVICE, "服务人员已上门，正在进行深度清洁"),
                 progress(OrderStatus.WAITING_USER_CONFIRMATION, "服务人员已提交完工，等待用户确认")
         ));
+        ensurePayment(waitingConfirmOrder, mainWorker.getHourlyPrice(), OrderPaymentMethod.ALIPAY, true, LocalDateTime.now().minusHours(6));
         ensureServiceRecords(waitingConfirmOrder.getId(), mainWorker.getId(), List.of(
                 serviceRecord(OrderServiceRecordStage.CHECK_IN, "到达现场并拍摄入户打卡", SERVICE_CHECK_IN_URL),
                 serviceRecord(OrderServiceRecordStage.SERVICE_PROOF, "完成厨房、卫生间和客厅的重点区域清洁", SERVICE_PROGRESS_URL),
@@ -330,6 +342,7 @@ public class DemoScenarioInitializer implements CommandLineRunner {
                 progress(OrderStatus.WAITING_USER_CONFIRMATION, "服务人员已提交完工，等待用户确认"),
                 progress(OrderStatus.COMPLETED, "用户已确认完工，订单完成")
         ));
+        ensurePayment(completedReviewedOrder, mainWorker.getHourlyPrice(), OrderPaymentMethod.WECHAT_PAY, true, LocalDateTime.now().minusDays(1).minusHours(6));
         ensureServiceRecords(completedReviewedOrder.getId(), mainWorker.getId(), List.of(
                 serviceRecord(OrderServiceRecordStage.CHECK_IN, "按预约时间到达并完成签到", SERVICE_CHECK_IN_URL),
                 serviceRecord(OrderServiceRecordStage.SERVICE_PROOF, "完成卧室、客厅和地面除尘拖地", SERVICE_PROGRESS_URL),
@@ -359,6 +372,7 @@ public class DemoScenarioInitializer implements CommandLineRunner {
                 progress(OrderStatus.WAITING_USER_CONFIRMATION, "服务人员已提交完工，等待用户确认"),
                 progress(OrderStatus.COMPLETED, "用户已确认完工，订单完成")
         ));
+        ensurePayment(completedAfterSaleOrder, mainWorker.getHourlyPrice(), OrderPaymentMethod.BANK_CARD, true, LocalDateTime.now().minusDays(2).minusHours(3));
         ensureServiceRecords(completedAfterSaleOrder.getId(), mainWorker.getId(), List.of(
                 serviceRecord(OrderServiceRecordStage.CHECK_IN, "服务前完成设备外观拍照", SERVICE_CHECK_IN_URL),
                 serviceRecord(OrderServiceRecordStage.SERVICE_PROOF, "已完成油烟机内部除油和洗衣机滚筒清洁", SERVICE_PROGRESS_URL),
@@ -433,7 +447,7 @@ public class DemoScenarioInitializer implements CommandLineRunner {
                 "用户就订单 #" + acceptedOrder.getId() + " 留下了新的备注消息。",
                 "ORDER",
                 acceptedOrder.getId(),
-                "/worker/messages?orderId=" + acceptedOrder.getId()
+                "/worker/conversations?orderId=" + acceptedOrder.getId()
         );
         ensureNotification(
                 pendingWorkerUser.getId(),
@@ -460,10 +474,21 @@ public class DemoScenarioInitializer implements CommandLineRunner {
     private SysUserEntity ensureUser(String phone, String realName, String roleCode) {
         SysUserEntity user = authAccountService.findUserByPhone(phone);
         if (user == null) {
-            user = authAccountService.createUser(phone, "123456", realName);
+            user = authAccountService.createUser(phone, buildDemoUsername(phone, roleCode), "123456", realName);
+        } else {
+            authAccountService.updateUsernameIfBlank(user.getId(), buildDemoUsername(phone, roleCode));
         }
         authAccountService.bindRole(user.getId(), roleCode);
         return user;
+    }
+
+    private String buildDemoUsername(String phone, String roleCode) {
+        String suffix = phone.length() > 4 ? phone.substring(phone.length() - 4) : phone;
+        return switch (roleCode) {
+            case RoleCodes.ADMIN -> "admin_" + suffix;
+            case RoleCodes.WORKER -> "worker_" + suffix;
+            default -> "user_" + suffix;
+        };
     }
 
     private void ensureUserProfile(SysUserEntity user, String city, String detailAddress, String tag) {
@@ -608,6 +633,66 @@ public class DemoScenarioInitializer implements CommandLineRunner {
         );
         orderMapper.insert(entity);
         return entity;
+    }
+
+    private void ensurePayment(OrderEntity order,
+                               Integer amount,
+                               OrderPaymentMethod paymentMethod,
+                               boolean paid,
+                               LocalDateTime paidAt) {
+        boolean needUpdate = false;
+        if (order.getPayableAmount() == null || order.getPayableAmount() <= 0) {
+            order.setPayableAmount(amount == null ? 0 : amount);
+            needUpdate = true;
+        }
+
+        if (paid) {
+            if (!PaymentStatus.PAID.matches(order.getPaymentStatus())) {
+                order.setPaymentStatus(PaymentStatus.PAID.code());
+                needUpdate = true;
+            }
+            if (order.getPaymentMethod() == null || order.getPaymentMethod().isBlank()) {
+                order.setPaymentMethod(paymentMethod == null ? OrderPaymentMethod.WECHAT_PAY.code() : paymentMethod.code());
+                needUpdate = true;
+            }
+            if (order.getPaidAt() == null) {
+                order.setPaidAt(paidAt == null ? LocalDateTime.now().minusHours(2) : paidAt);
+                needUpdate = true;
+            }
+        } else if (order.getPaymentStatus() == null || order.getPaymentStatus().isBlank()) {
+            order.setPaymentStatus(PaymentStatus.UNPAID.code());
+            order.setPaymentMethod("");
+            order.setPaidAt(null);
+            needUpdate = true;
+        }
+
+        if (needUpdate) {
+            orderMapper.updateById(order);
+        }
+
+        if (!paid) {
+            return;
+        }
+
+        Long count = orderPaymentMapper.selectCount(
+                new LambdaQueryWrapper<OrderPaymentEntity>()
+                        .eq(OrderPaymentEntity::getOrderId, order.getId())
+        );
+        if (count != null && count > 0) {
+            return;
+        }
+
+        LocalDateTime createdAt = order.getPaidAt() == null ? LocalDateTime.now().minusHours(2) : order.getPaidAt();
+        orderPaymentMapper.insert(new OrderPaymentEntity(
+                order.getId(),
+                order.getUserId(),
+                order.getPayableAmount(),
+                order.getPaymentMethod(),
+                PaymentStatus.PAID.code(),
+                "SCENE" + order.getId(),
+                createdAt,
+                order.getPaidAt()
+        ));
     }
 
     private void ensureProgresses(Long orderId, List<OrderProgressEntity> progresses) {

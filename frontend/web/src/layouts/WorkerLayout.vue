@@ -6,7 +6,7 @@
         <el-aside width="232px" class="worker-aside">
           <div class="worker-brand">
             <strong>服务人员工作台</strong>
-            <span class="muted-line">先完善资质，再处理订单与消息</span>
+            <span class="muted-line">先完善资质，再处理订单与沟通</span>
           </div>
           <el-menu :default-active="route.path" class="worker-menu" router>
             <el-menu-item v-if="showMenu('WORKER_DASHBOARD_VIEW')" index="/worker/dashboard">工作台</el-menu-item>
@@ -26,6 +26,9 @@
               <span>消息中心</span>
               <el-badge v-if="unreadCount" :value="unreadCount" :max="99" class="layout-menu-badge" />
             </el-menu-item>
+            <el-menu-item v-if="showMenu('WORKER_MESSAGE_USE') && workerQualified" index="/worker/conversations">
+              订单沟通
+            </el-menu-item>
             <el-menu-item v-if="showMenu('WORKER_QUALIFICATION_SUBMIT')" index="/worker/qualification">
               <span>资质材料</span>
               <el-badge
@@ -42,15 +45,11 @@
             <div class="console-title-block">
               <div class="console-title">服务人员工作台</div>
               <div class="console-subtitle">
-                {{ workerQualified ? '处理接单、上门服务和客户沟通' : '请先提交资质材料，审核通过后才能接单' }}
+                {{ workerQualified ? '处理接单、履约记录与订单沟通' : '请先提交资质材料，审核通过后才能接单' }}
               </div>
             </div>
             <div class="console-header-actions">
-              <el-tag
-                effect="plain"
-                :type="qualificationTagType"
-                class="console-status-chip"
-              >
+              <el-tag effect="plain" :type="qualificationTagType" class="console-status-chip">
                 <span class="console-status-chip__label">资质状态</span>
                 <strong>{{ qualificationLabel }}</strong>
               </el-tag>
@@ -113,7 +112,7 @@ import {
 const route = useRoute()
 const router = useRouter()
 const unreadCount = computed(() => notificationStore.getUnreadCount('worker'))
-const userInitial = computed(() => (authStore.state.user?.realName || '服').slice(0, 1))
+const userInitial = computed(() => (authStore.state.user?.realName || '服务').slice(0, 1))
 const workerProfile = ref(null)
 const workerSummary = ref({
   total: 0,

@@ -30,9 +30,9 @@ public class AuthDataInitializer implements CommandLineRunner {
         authAccountService.ensureBaseRolesExist();
         rolePermissionService.ensureBasePermissionsExist();
 
-        SysUserEntity user = ensureUser("13800000011", "Demo User");
-        SysUserEntity worker = ensureUser("13800000022", "Demo Worker");
-        SysUserEntity admin = ensureUser("13800000033", "Demo Admin");
+        SysUserEntity user = ensureUser("13800000011", "demo_user", "Demo User");
+        SysUserEntity worker = ensureUser("13800000022", "demo_worker", "Demo Worker");
+        SysUserEntity admin = ensureUser("13800000033", "demo_admin", "Demo Admin");
 
         authAccountService.bindRole(user.getId(), RoleCodes.USER);
         authAccountService.bindRole(worker.getId(), RoleCodes.WORKER);
@@ -49,11 +49,12 @@ public class AuthDataInitializer implements CommandLineRunner {
         );
     }
 
-    private SysUserEntity ensureUser(String phone, String realName) {
+    private SysUserEntity ensureUser(String phone, String username, String realName) {
         SysUserEntity existed = authAccountService.findUserByPhone(phone);
         if (existed != null) {
+            authAccountService.updateUsernameIfBlank(existed.getId(), username);
             return existed;
         }
-        return authAccountService.createUser(phone, "123456", realName);
+        return authAccountService.createUser(phone, username, "123456", realName);
     }
 }

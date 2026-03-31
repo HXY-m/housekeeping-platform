@@ -1,118 +1,114 @@
 <template>
   <div class="page-stack">
-    <div class="console-overview console-overview--admin">
+    <div class="console-overview console-overview--admin compact-overview">
       <div>
         <el-tag type="danger" round>运营总览</el-tag>
-        <h1>平台运营控制台</h1>
-        <p>快速查看订单规模、服务供给和整体满意度，优先处理审核、售后和履约波动。</p>
+        <h1>平台数据中心</h1>
+        <p>订单、营业额和最近流水都集中展示，便于快速判断平台运行状态。</p>
       </div>
       <div class="hero-actions">
-        <el-button type="primary" @click="router.push('/admin/applications')">去资质审核</el-button>
-        <el-button plain @click="router.push('/admin/after-sales')">去售后处理</el-button>
+        <el-button type="primary" @click="router.push('/admin/orders')">查看订单监管</el-button>
+        <el-button plain @click="router.push('/admin/reports')">导出报表</el-button>
       </div>
     </div>
 
-    <div class="metric-strip">
+    <div class="metric-strip metric-strip--dense">
       <div class="metric-chip">
-        <span class="metric-chip__label">总订单量</span>
+        <span class="metric-chip__label">总订单</span>
         <strong>{{ dashboard.totalOrders }}</strong>
       </div>
       <div class="metric-chip">
-        <span class="metric-chip__label">已完成订单</span>
+        <span class="metric-chip__label">已完成</span>
         <strong>{{ dashboard.completedOrders }}</strong>
+      </div>
+      <div class="metric-chip">
+        <span class="metric-chip__label">已支付</span>
+        <strong>{{ dashboard.paidOrders }}</strong>
       </div>
       <div class="metric-chip">
         <span class="metric-chip__label">活跃服务人员</span>
         <strong>{{ dashboard.activeWorkers }}</strong>
       </div>
       <div class="metric-chip">
-        <span class="metric-chip__label">平均满意度</span>
+        <span class="metric-chip__label">累计营业额</span>
+        <strong>{{ formatCurrency(dashboard.totalRevenue) }}</strong>
+      </div>
+      <div class="metric-chip">
+        <span class="metric-chip__label">今日营业额</span>
+        <strong>{{ formatCurrency(dashboard.todayRevenue) }}</strong>
+      </div>
+      <div class="metric-chip">
+        <span class="metric-chip__label">本月营业额</span>
+        <strong>{{ formatCurrency(dashboard.monthRevenue) }}</strong>
+      </div>
+      <div class="metric-chip">
+        <span class="metric-chip__label">平均评分</span>
         <strong>{{ dashboard.averageRating.toFixed(2) }}</strong>
       </div>
     </div>
 
-    <div class="page-grid--sidebar admin-dashboard-grid">
-      <div class="page-stack">
-        <el-row :gutter="16">
-          <el-col :xs="24" :xl="16">
-            <el-card shadow="never" class="dashboard-card">
-              <template #header>
-                <div class="card-header-between">
-                  <strong>服务销量分布</strong>
-                  <span class="section-caption">识别当前主要成交服务类型</span>
-                </div>
-              </template>
-              <AppChart :option="salesChartOption" height="360px" />
-            </el-card>
-          </el-col>
-          <el-col :xs="24" :xl="8">
-            <el-card shadow="never" class="dashboard-card">
-              <template #header>
-                <div class="card-header-between">
-                  <strong>订单完成率</strong>
-                  <span class="section-caption">观察整体履约效率</span>
-                </div>
-              </template>
-              <AppChart :option="completionChartOption" height="360px" />
-            </el-card>
-          </el-col>
-        </el-row>
-
-        <el-card shadow="never" class="dashboard-card">
-          <template #header>
-            <div class="card-header-between">
-              <strong>服务销量排行</strong>
-              <span class="section-caption">用于运营排期和资源调度</span>
-            </div>
-          </template>
-          <el-table :data="pagedSalesRows" stripe>
-            <el-table-column type="index" label="#" width="60" />
-            <el-table-column prop="name" label="服务类型" min-width="180" />
-            <el-table-column prop="value" label="销量" width="120" />
-          </el-table>
-          <ListPagination
-            v-model:current-page="currentPage"
-            v-model:page-size="pageSize"
-            :page-sizes="pageSizes"
-            :total="total"
-            small
-          />
+    <el-row :gutter="16" v-loading="loading">
+      <el-col :xs="24" :xl="8">
+        <el-card shadow="never" class="dashboard-card dashboard-card--compact">
+          <template #header><strong>订单状态结构</strong></template>
+          <AppChart :option="statusChartOption" height="240px" />
         </el-card>
-      </div>
+      </el-col>
+      <el-col :xs="24" :xl="8">
+        <el-card shadow="never" class="dashboard-card dashboard-card--compact">
+          <template #header><strong>近 7 天营业额</strong></template>
+          <AppChart :option="revenueChartOption" height="240px" />
+        </el-card>
+      </el-col>
+      <el-col :xs="24" :xl="8">
+        <el-card shadow="never" class="dashboard-card dashboard-card--compact">
+          <template #header><strong>服务销量排行</strong></template>
+          <AppChart :option="salesChartOption" height="240px" />
+        </el-card>
+      </el-col>
+    </el-row>
 
-      <div class="page-stack">
-        <el-card shadow="never" class="dashboard-card dashboard-card--sticky">
-          <template #header>
-            <div class="card-header-between">
-              <strong>运营提示</strong>
-              <el-tag effect="plain" type="danger">实时概览</el-tag>
+    <el-row :gutter="16" v-loading="loading">
+      <el-col :xs="24" :xl="10">
+        <el-card shadow="never" class="dashboard-card dashboard-card--compact">
+          <template #header><strong>最近营业额流水</strong></template>
+          <div class="compact-flow-list">
+            <div v-if="dashboard.recentPayments.length" v-for="item in dashboard.recentPayments" :key="item.paymentId" class="compact-flow-item">
+              <div>
+                <strong>{{ item.serviceName }}</strong>
+                <div class="muted-line">{{ item.customerName }} · {{ item.workerName }}</div>
+                <div class="muted-line">{{ item.paidAt || '待支付' }}</div>
+              </div>
+              <div class="compact-flow-item__right">
+                <strong>{{ formatCurrency(item.amount) }}</strong>
+                <span>{{ getPaymentMethodLabel(item.paymentMethod) }}</span>
+              </div>
             </div>
-          </template>
-          <div class="info-stack">
+            <el-empty v-else description="暂无营业额流水" />
+          </div>
+        </el-card>
+      </el-col>
+
+      <el-col :xs="24" :xl="14">
+        <el-card shadow="never" class="dashboard-card dashboard-card--compact">
+          <template #header><strong>运营摘要</strong></template>
+          <div class="info-stack compact-info-stack">
             <div class="info-panel">
               <span class="info-panel__label">当前重点</span>
               <strong>{{ topServiceLabel }}</strong>
               <span class="muted-line">
-                {{ completionRate }}% 的订单已完成，{{ dashboard.activeWorkers }} 名服务人员处于活跃状态。
+                当前完成率 {{ completionRate }}%，本月累计营业额 {{ formatCurrency(dashboard.monthRevenue) }}。
               </span>
             </div>
-            <div class="info-panel">
-              <span class="info-panel__label">建议跟进</span>
-              <span class="muted-line">
-                若待审核申请或售后工单偏多，建议优先进入对应后台页面处理，避免服务供给或用户体验积压。
-              </span>
-            </div>
-            <div class="info-panel">
-              <span class="info-panel__label">运营动作</span>
-              <div class="hero-actions">
-                <el-button plain @click="router.push('/admin/orders')">查看订单监管</el-button>
-                <el-button plain @click="router.push('/admin/reports')">导出报表</el-button>
-              </div>
-            </div>
+            <el-table :data="statusRows" size="small" stripe>
+              <el-table-column prop="label" label="状态" min-width="140" />
+              <el-table-column prop="count" label="订单数" width="90" />
+              <el-table-column prop="hint" label="运营建议" min-width="220" show-overflow-tooltip />
+            </el-table>
           </div>
         </el-card>
-      </div>
-    </div>
+      </el-col>
+    </el-row>
   </div>
 </template>
 
@@ -120,22 +116,27 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppChart from '../../components/charts/AppChart.vue'
-import ListPagination from '../../components/common/ListPagination.vue'
-import { useClientPagination } from '../../composables/useClientPagination'
 import { fetchAdminDashboard } from '../../api'
-import { mapToSortedRows } from '../../utils/dashboard'
+import { formatCurrency } from '../../utils/format'
+import { getOrderStatusLabel } from '../../utils/order'
+import { getPaymentMethodLabel } from '../../utils/payment'
 
 const router = useRouter()
+const loading = ref(false)
 const dashboard = ref({
   totalOrders: 0,
   completedOrders: 0,
   activeWorkers: 0,
   averageRating: 0,
-  serviceSales: {}
+  paidOrders: 0,
+  totalRevenue: 0,
+  todayRevenue: 0,
+  monthRevenue: 0,
+  serviceSales: {},
+  statusDistribution: {},
+  revenueTrend: [],
+  recentPayments: []
 })
-
-const salesRows = computed(() => mapToSortedRows(dashboard.value.serviceSales || {}))
-const { currentPage, pageSize, pageSizes, total, pagedItems: pagedSalesRows } = useClientPagination(salesRows, 5)
 
 const completionRate = computed(() => {
   if (!dashboard.value.totalOrders) {
@@ -145,100 +146,171 @@ const completionRate = computed(() => {
 })
 
 const topServiceLabel = computed(() => {
-  if (!salesRows.value.length) {
+  const [name, value] = Object.entries(dashboard.value.serviceSales || {})[0] || []
+  if (!name) {
     return '暂无成交数据'
   }
-  return `${salesRows.value[0].name}（${salesRows.value[0].value} 单）`
+  return `${name}（${value} 单）`
 })
 
-const salesChartOption = computed(() => ({
+const statusRows = computed(() =>
+  Object.entries(dashboard.value.statusDistribution || {}).map(([key, value]) => ({
+    label: getOrderStatusLabel(key),
+    count: value,
+    hint: getStatusHint(key)
+  }))
+)
+
+const statusChartOption = computed(() => ({
+  tooltip: { trigger: 'item' },
+  legend: { bottom: 0, textStyle: { color: '#6e6e73' } },
+  color: ['#0071e3', '#5e9eff', '#8cc0ff', '#b6d8ff', '#d5e9ff', '#ebf3ff'],
+  series: [
+    {
+      type: 'pie',
+      radius: ['42%', '70%'],
+      itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 4 },
+      data: Object.entries(dashboard.value.statusDistribution || {}).map(([key, value]) => ({
+        name: getOrderStatusLabel(key),
+        value
+      })),
+      label: { formatter: '{b}\n{c} 单', color: '#1d1d1f' }
+    }
+  ]
+}))
+
+const revenueChartOption = computed(() => ({
   tooltip: { trigger: 'axis' },
-  grid: { left: 44, right: 20, top: 20, bottom: 50 },
+  grid: { left: 42, right: 14, top: 20, bottom: 28 },
   xAxis: {
     type: 'category',
-    data: salesRows.value.map((item) => item.name),
-    axisLabel: { interval: 0, rotate: 16 }
+    data: dashboard.value.revenueTrend.map((item) => item.label),
+    axisLabel: { color: '#6e6e73' }
   },
   yAxis: {
     type: 'value',
+    splitLine: { lineStyle: { color: 'rgba(110, 110, 115, 0.12)' } },
+    axisLabel: { color: '#6e6e73' }
+  },
+  series: [
+    {
+      type: 'line',
+      smooth: true,
+      data: dashboard.value.revenueTrend.map((item) => item.amount),
+      lineStyle: { width: 3, color: '#0071e3' },
+      itemStyle: { color: '#0071e3' },
+      areaStyle: { color: 'rgba(0, 113, 227, 0.14)' }
+    }
+  ]
+}))
+
+const salesChartOption = computed(() => ({
+  tooltip: { trigger: 'axis' },
+  grid: { left: 46, right: 12, top: 16, bottom: 16 },
+  xAxis: {
+    type: 'value',
     minInterval: 1,
-    splitLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.18)' } }
+    splitLine: { lineStyle: { color: 'rgba(110, 110, 115, 0.12)' } },
+    axisLabel: { color: '#6e6e73' }
+  },
+  yAxis: {
+    type: 'category',
+    data: Object.keys(dashboard.value.serviceSales || {}).slice(0, 6),
+    axisLabel: { color: '#6e6e73' }
   },
   series: [
     {
       type: 'bar',
-      data: salesRows.value.map((item) => item.value),
-      barWidth: 22,
+      barWidth: 14,
+      data: Object.values(dashboard.value.serviceSales || {}).slice(0, 6),
       itemStyle: {
-        borderRadius: [10, 10, 0, 0],
-        color: {
-          type: 'linear',
-          x: 0,
-          y: 0,
-          x2: 0,
-          y2: 1,
-          colorStops: [
-            { offset: 0, color: '#5ac8fa' },
-            { offset: 1, color: '#0071e3' }
-          ]
-        }
+        borderRadius: [0, 8, 8, 0],
+        color: '#5ac8fa'
       }
     }
   ]
 }))
 
-const completionChartOption = computed(() => ({
-  series: [
-    {
-      type: 'gauge',
-      startAngle: 210,
-      endAngle: -30,
-      progress: { show: true, width: 18, itemStyle: { color: '#0071e3' } },
-      axisLine: { lineStyle: { width: 18, color: [[1, '#e5e7eb']] } },
-      pointer: { show: false },
-      axisTick: { show: false },
-      splitLine: { show: false },
-      axisLabel: { show: false },
-      detail: {
-        valueAnimation: true,
-        formatter: '{value}%',
-        fontSize: 36,
-        color: '#111827',
-        offsetCenter: [0, '10%']
-      },
-      title: {
-        offsetCenter: [0, '52%'],
-        fontSize: 14,
-        color: '#6b7280'
-      },
-      data: [{ value: completionRate.value, name: '订单完成率' }]
-    }
-  ]
-}))
+function getStatusHint(status) {
+  if (status === 'PENDING') return '关注待接单订单，避免用户等待过长。'
+  if (status === 'ACCEPTED') return '提醒用户尽快确认预约安排。'
+  if (status === 'CONFIRMED') return '适合提前安排服务排期和人员调度。'
+  if (status === 'IN_SERVICE') return '关注现场履约质量和过程记录。'
+  if (status === 'WAITING_USER_CONFIRMATION') return '可提醒用户尽快确认完工。'
+  if (status === 'COMPLETED') return '可继续观察评价与复购情况。'
+  return '持续关注平台订单流转。'
+}
 
 onMounted(async () => {
-  dashboard.value = await fetchAdminDashboard()
+  loading.value = true
+  try {
+    dashboard.value = await fetchAdminDashboard()
+  } finally {
+    loading.value = false
+  }
 })
 </script>
 
 <style scoped>
-.admin-dashboard-grid {
-  align-items: start;
+.compact-overview {
+  padding-bottom: 18px;
 }
 
-.dashboard-card {
-  background: rgba(255, 255, 255, 0.58);
+.metric-strip--dense {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.dashboard-card--compact {
+  background: rgba(255, 255, 255, 0.62);
   backdrop-filter: blur(22px);
 }
 
-.dashboard-card--sticky {
-  position: sticky;
-  top: 16px;
+.compact-flow-list {
+  display: grid;
+  gap: 12px;
+}
+
+.compact-flow-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(29, 29, 31, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.compact-flow-item__right {
+  display: grid;
+  gap: 4px;
+  justify-items: end;
+  color: #6e6e73;
+  font-size: 12px;
+}
+
+.compact-info-stack {
+  gap: 12px;
 }
 
 @media (max-width: 1200px) {
-  .dashboard-card--sticky {
-    position: static;
+  .metric-strip--dense {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .metric-strip--dense {
+    grid-template-columns: 1fr;
+  }
+
+  .compact-flow-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .compact-flow-item__right {
+    justify-items: start;
   }
 }
 </style>

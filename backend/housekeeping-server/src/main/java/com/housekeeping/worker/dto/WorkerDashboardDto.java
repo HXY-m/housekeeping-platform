@@ -1,4 +1,4 @@
-package com.housekeeping.admin.dto;
+package com.housekeeping.worker.dto;
 
 import com.housekeeping.dashboard.dto.DashboardPaymentFlowDto;
 import com.housekeeping.dashboard.dto.DashboardRevenuePointDto;
@@ -6,12 +6,16 @@ import com.housekeeping.dashboard.dto.DashboardRevenuePointDto;
 import java.util.List;
 import java.util.Map;
 
-public record AdminDashboardDto(
+public record WorkerDashboardDto(
+        String qualificationStatus,
         long totalOrders,
+        long pendingOrders,
+        long confirmedOrders,
+        long inServiceOrders,
+        long waitingUserConfirmationOrders,
         long completedOrders,
-        long activeWorkers,
-        double averageRating,
-        long paidOrders,
+        long todoOrders,
+        long paidOrderCount,
         long totalRevenue,
         long todayRevenue,
         long monthRevenue,

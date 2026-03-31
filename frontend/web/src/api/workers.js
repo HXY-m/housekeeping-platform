@@ -12,3 +12,7 @@ export function fetchWorker(id) {
 export function fetchCurrentWorkerProfile() {
   return request('/api/worker/profile/me')
 }
+
+export function fetchWorkerDashboard() {
+  return request('/api/worker/dashboard')
+}

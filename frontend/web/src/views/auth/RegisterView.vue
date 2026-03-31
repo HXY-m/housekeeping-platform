@@ -3,7 +3,7 @@
     <div class="page-stack">
       <div class="auth-form-head">
         <div class="login-title">注册</div>
-        <div class="login-subtitle">先完成账号创建，再进入对应工作台。</div>
+        <div class="login-subtitle">先创建账号，再进入对应工作台。</div>
       </div>
 
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="handleRegister">
@@ -11,7 +11,7 @@
           <div class="register-step-card__head">
             <div>
               <strong>账号信息</strong>
-              <p class="muted-line">填写基础身份信息和登录密码。</p>
+              <p class="muted-line">填写基础身份信息和登录账号。</p>
             </div>
             <el-radio-group v-model="form.roleCode" class="identity-group">
               <el-radio-button label="USER">普通用户</el-radio-button>
@@ -26,13 +26,22 @@
               </el-form-item>
             </el-col>
             <el-col :xs="24" :md="12">
-              <el-form-item label="手机号" prop="phone">
-                <el-input v-model.trim="form.phone" size="large" placeholder="请输入 11 位手机号" />
+              <el-form-item label="用户名" prop="username">
+                <el-input
+                  v-model.trim="form.username"
+                  size="large"
+                  placeholder="4-20 位字母、数字或下划线"
+                />
               </el-form-item>
             </el-col>
           </el-row>
 
           <el-row :gutter="16">
+            <el-col :xs="24" :md="12">
+              <el-form-item label="手机号" prop="phone">
+                <el-input v-model.trim="form.phone" size="large" placeholder="请输入 11 位手机号" />
+              </el-form-item>
+            </el-col>
             <el-col :xs="24" :md="12">
               <el-form-item label="登录密码" prop="password">
                 <el-input
@@ -44,24 +53,23 @@
                 />
               </el-form-item>
             </el-col>
-            <el-col :xs="24" :md="12">
-              <el-form-item label="确认密码" prop="confirmPassword">
-                <el-input
-                  v-model="form.confirmPassword"
-                  size="large"
-                  type="password"
-                  show-password
-                  placeholder="请再次输入密码"
-                />
-              </el-form-item>
-            </el-col>
           </el-row>
+
+          <el-form-item label="确认密码" prop="confirmPassword">
+            <el-input
+              v-model="form.confirmPassword"
+              size="large"
+              type="password"
+              show-password
+              placeholder="请再次输入密码"
+            />
+          </el-form-item>
         </div>
 
         <el-alert
           v-if="form.roleCode === 'WORKER'"
           title="服务信息与资质文件将在注册成功后填写"
-          description="服务类型、服务区域、接单时段和资质附件都请在“资质材料”页提交。资质审核通过前，服务人员无法接单。"
+          description="服务类型、服务区域、接单时段和资质附件请在“资质材料”页提交。资质审核通过前，服务人员无法接单。"
           type="info"
           show-icon
           :closable="false"
@@ -92,6 +100,7 @@ const errorMessage = ref('')
 const form = reactive({
   roleCode: 'USER',
   realName: '',
+  username: '',
   phone: '',
   password: '',
   confirmPassword: ''
@@ -99,6 +108,15 @@ const form = reactive({
 
 const rules = {
   realName: [{ required: true, message: '请输入真实姓名', trigger: 'blur' }],
+  username: [
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 4, max: 20, message: '用户名长度需在 4 到 20 位之间', trigger: 'blur' },
+    {
+      pattern: /^[A-Za-z0-9_]+$/,
+      message: '用户名只能包含字母、数字和下划线',
+      trigger: 'blur'
+    }
+  ],
   phone: [
     { required: true, message: '请输入手机号', trigger: 'blur' },
     { pattern: /^1\d{10}$/, message: '请输入有效的 11 位手机号', trigger: 'blur' }
@@ -141,6 +159,7 @@ async function handleRegister() {
     const result = await register({
       roleCode: form.roleCode,
       realName: form.realName,
+      username: form.username,
       phone: form.phone,
       password: form.password
     })
@@ -160,7 +179,7 @@ async function handleRegister() {
 
 <style scoped>
 .register-card {
-  max-width: 640px;
+  max-width: 680px;
 }
 
 .auth-form-head {

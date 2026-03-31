@@ -4,7 +4,7 @@
       <div>
         <el-tag type="success" round>资料中心</el-tag>
         <h1>个人资料与地址簿</h1>
-        <p>维护预约联系人、头像和常用地址，下单时会优先带出默认地址。</p>
+        <p>维护联系人、头像和常用地址，下单时会优先带出默认地址。</p>
       </div>
       <div class="hero-actions">
         <el-button type="primary" :loading="savingProfile" @click="saveProfile">保存资料</el-button>
@@ -38,7 +38,7 @@
 
           <div class="profile-identity">
             <el-avatar :size="92" :src="profileForm.avatarUrl || undefined" class="profile-identity__avatar">
-              {{ profileForm.realName?.slice(0, 1) || '用' }}
+              {{ profileForm.realName?.slice(0, 1) || '安' }}
             </el-avatar>
             <div class="profile-identity__content">
               <div class="profile-identity__title">
@@ -46,7 +46,7 @@
                 <span>{{ profileForm.phone || '未绑定手机号' }}</span>
               </div>
               <div class="tag-group">
-                <el-tag effect="plain" type="success">{{ profileForm.city || '未设置城市' }}</el-tag>
+                <el-tag effect="plain" type="success">{{ profileForm.city || '未选择城市' }}</el-tag>
                 <el-tag effect="plain">{{ profileForm.gender || '未设置性别' }}</el-tag>
               </div>
               <div class="hero-actions">
@@ -74,7 +74,15 @@
               </el-col>
               <el-col :xs="24" :md="12">
                 <el-form-item label="所在城市">
-                  <el-input v-model="profileForm.city" maxlength="30" placeholder="例如：上海市" />
+                  <el-select
+                    v-model="profileForm.city"
+                    filterable
+                    clearable
+                    placeholder="请选择所在城市"
+                    style="width: 100%"
+                  >
+                    <el-option v-for="city in CITY_OPTIONS" :key="city" :label="city" :value="city" />
+                  </el-select>
                 </el-form-item>
               </el-col>
             </el-row>
@@ -123,7 +131,7 @@
               </div>
             </div>
           </div>
-          <el-empty v-else description="还没有常用地址，新增一个后下单会更快。" class="empty-surface" />
+          <el-empty v-else description="还没有常用地址，新建一个后下单会更快。" class="empty-surface" />
         </el-card>
       </el-col>
     </el-row>
@@ -157,7 +165,15 @@
         <el-row :gutter="16">
           <el-col :xs="24" :md="12">
             <el-form-item label="所在城市">
-              <el-input v-model="addressForm.city" maxlength="30" />
+              <el-select
+                v-model="addressForm.city"
+                filterable
+                clearable
+                placeholder="请选择城市"
+                style="width: 100%"
+              >
+                <el-option v-for="city in CITY_OPTIONS" :key="city" :label="city" :value="city" />
+              </el-select>
             </el-form-item>
           </el-col>
           <el-col :xs="24" :md="12">
@@ -195,6 +211,7 @@ import {
   uploadImage
 } from '../../api'
 import { authStore } from '../../stores/auth'
+import { CITY_OPTIONS } from '../../constants/cities'
 
 const loading = ref(false)
 const savingProfile = ref(false)
@@ -339,7 +356,12 @@ function openAddressDialog(address = null) {
 }
 
 async function submitAddress() {
-  if (!addressForm.contactName.trim() || !addressForm.contactPhone.trim() || !addressForm.city.trim() || !addressForm.detailAddress.trim()) {
+  if (
+    !addressForm.contactName.trim() ||
+    !addressForm.contactPhone.trim() ||
+    !addressForm.city.trim() ||
+    !addressForm.detailAddress.trim()
+  ) {
     ElMessage.warning('请完整填写地址信息')
     return
   }
@@ -373,9 +395,11 @@ async function submitAddress() {
 
 async function confirmDeleteAddress(address) {
   try {
-    await ElMessageBox.confirm(`确认删除地址“${address.city} ${address.detailAddress}”吗？`, '删除地址', {
-      type: 'warning'
-    })
+    await ElMessageBox.confirm(
+      `确认删除地址“${address.city} ${address.detailAddress}”吗？`,
+      '删除地址',
+      { type: 'warning' }
+    )
     await deleteUserAddress(address.id)
     ElMessage.success('地址已删除')
     await loadData()

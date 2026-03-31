@@ -25,8 +25,16 @@
         <strong>{{ summary.inService }}</strong>
       </div>
       <div class="metric-chip">
+        <span class="metric-chip__label">已支付</span>
+        <strong>{{ summary.paid }}</strong>
+      </div>
+      <div class="metric-chip">
         <span class="metric-chip__label">已完成</span>
         <strong>{{ summary.completed }}</strong>
+      </div>
+      <div class="metric-chip">
+        <span class="metric-chip__label">支付金额</span>
+        <strong>{{ formatCurrency(summary.paidAmount || 0) }}</strong>
       </div>
     </div>
 
@@ -98,6 +106,16 @@
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column label="支付信息" min-width="170">
+          <template #default="{ row }">
+            <div class="table-cell-primary">
+              <strong>{{ formatCurrency(row.payableAmount || 0) }}</strong>
+              <span class="table-cell-secondary">
+                {{ getPaymentStatusLabel(row.paymentStatus) }} · {{ getPaymentMethodLabel(row.paymentMethod) }}
+              </span>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column label="当前推进" min-width="220" show-overflow-tooltip>
           <template #default="{ row }">
             <div class="table-cell-primary">
@@ -133,8 +151,10 @@ import { ElMessage } from 'element-plus'
 import { fetchAdminOrders, fetchAdminOrderSummary } from '../../api'
 import ListPagination from '../../components/common/ListPagination.vue'
 import { useServerPagination } from '../../composables/useServerPagination'
+import { formatCurrency } from '../../utils/format'
 import { getUserOrderFlowMeta } from '../../utils/orderFlow'
 import { getOrderStatusLabel, getOrderStatusTagType } from '../../utils/order'
+import { getPaymentMethodLabel, getPaymentStatusLabel } from '../../utils/payment'
 
 const statusOptions = [
   { label: '待接单', value: 'PENDING' },
@@ -151,7 +171,9 @@ const summary = ref({
   total: 0,
   pending: 0,
   inService: 0,
-  completed: 0
+  completed: 0,
+  paid: 0,
+  paidAmount: 0
 })
 const filters = reactive({
   keyword: '',
@@ -183,7 +205,9 @@ async function loadOrders() {
       total: Number(summaryResult?.total || 0),
       pending: Number(summaryResult?.pending || 0),
       inService: Number(summaryResult?.inService || 0),
-      completed: Number(summaryResult?.completed || 0)
+      completed: Number(summaryResult?.completed || 0),
+      paid: Number(summaryResult?.paid || 0),
+      paidAmount: Number(summaryResult?.paidAmount || 0)
     }
   } catch (error) {
     ElMessage.error(error.message || '获取平台订单失败')

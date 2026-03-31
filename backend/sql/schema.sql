@@ -7,6 +7,7 @@ USE housekeeping_platform;
 CREATE TABLE IF NOT EXISTS sys_user (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   phone VARCHAR(20) NOT NULL UNIQUE,
+  username VARCHAR(50) NULL UNIQUE,
   password VARCHAR(255) NOT NULL,
   real_name VARCHAR(50) NOT NULL,
   status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE'
@@ -146,8 +147,30 @@ CREATE TABLE IF NOT EXISTS booking_order (
   status VARCHAR(30) NOT NULL,
   progress_note VARCHAR(255) NOT NULL,
   remark VARCHAR(500) NOT NULL,
+  payable_amount INT NOT NULL DEFAULT 0,
+  payment_status VARCHAR(30) NOT NULL DEFAULT 'UNPAID',
+  payment_method VARCHAR(30) NOT NULL DEFAULT '',
+  paid_at DATETIME NULL,
   CONSTRAINT fk_booking_order_worker FOREIGN KEY (worker_id) REFERENCES worker_profile(id)
 ) COMMENT='booking orders';
+
+CREATE TABLE IF NOT EXISTS booking_order_payment (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  order_id BIGINT NOT NULL,
+  user_id BIGINT NOT NULL,
+  amount INT NOT NULL DEFAULT 0,
+  payment_method VARCHAR(30) NOT NULL DEFAULT '',
+  payment_status VARCHAR(30) NOT NULL DEFAULT 'UNPAID',
+  payment_no VARCHAR(64) NOT NULL,
+  created_at DATETIME NOT NULL,
+  paid_at DATETIME NULL,
+  KEY idx_order_payment_order (order_id),
+  KEY idx_order_payment_user (user_id),
+  KEY idx_order_payment_status (payment_status),
+  UNIQUE KEY uk_order_payment_no (payment_no),
+  CONSTRAINT fk_order_payment_order FOREIGN KEY (order_id) REFERENCES booking_order(id),
+  CONSTRAINT fk_order_payment_user FOREIGN KEY (user_id) REFERENCES sys_user(id)
+) COMMENT='order payments';
 
 CREATE TABLE IF NOT EXISTS booking_order_progress (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,

@@ -5,6 +5,8 @@ import com.housekeeping.common.PageQuery;
 import com.housekeeping.common.PageResult;
 import com.housekeeping.order.dto.BookingAvailabilityDto;
 import com.housekeeping.order.dto.OrderDto;
+import com.housekeeping.order.dto.OrderPaymentDto;
+import com.housekeeping.order.dto.OrderPaymentRequest;
 import com.housekeeping.order.dto.OrderRequest;
 import com.housekeeping.order.dto.OrderReviewRequest;
 import com.housekeeping.order.service.OrderService;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -45,6 +48,12 @@ public class OrderController {
         ));
     }
 
+    @GetMapping("/{id}")
+    @Operation(summary = "鑾峰彇褰撳墠鐢ㄦ埛璁㈠崟璇︽儏")
+    public ApiResponse<OrderDto> order(@PathVariable Long id) {
+        return ApiResponse.ok(orderService.getCurrentUserOrder(id));
+    }
+
     @GetMapping("/summary")
     @Operation(summary = "获取当前用户订单摘要")
     public ApiResponse<Map<String, Long>> summary(@RequestParam(required = false) String status) {
@@ -62,6 +71,19 @@ public class OrderController {
     @Operation(summary = "创建预约订单")
     public ApiResponse<OrderDto> create(@Valid @RequestBody OrderRequest request) {
         return ApiResponse.ok(orderService.createOrder(request));
+    }
+
+    @GetMapping("/{id}/payments")
+    @Operation(summary = "获取订单支付记录")
+    public ApiResponse<List<OrderPaymentDto>> payments(@PathVariable Long id) {
+        return ApiResponse.ok(orderService.listCurrentUserOrderPayments(id));
+    }
+
+    @PostMapping("/{id}/payments")
+    @Operation(summary = "提交订单支付")
+    public ApiResponse<OrderDto> pay(@PathVariable Long id,
+                                     @Valid @RequestBody OrderPaymentRequest request) {
+        return ApiResponse.ok(orderService.payOrder(id, request));
     }
 
     @PostMapping("/{id}/confirm")
