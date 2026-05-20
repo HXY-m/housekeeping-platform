@@ -33,6 +33,8 @@ import com.housekeeping.order.mapper.OrderReviewMapper;
 import com.housekeeping.order.mapper.OrderServiceRecordAttachmentMapper;
 import com.housekeeping.order.mapper.OrderServiceRecordMapper;
 import com.housekeeping.user.service.UserProfileService;
+import com.housekeeping.user.entity.UserAddressEntity;
+import com.housekeeping.user.mapper.UserAddressMapper;
 import com.housekeeping.worker.WorkerQualificationStatus;
 import com.housekeeping.worker.application.entity.WorkerApplicationAttachmentEntity;
 import com.housekeeping.worker.application.entity.WorkerApplicationEntity;
@@ -77,6 +79,7 @@ public class CoreDemoScenarioInitializer implements CommandLineRunner {
     private final WorkerProfileService workerProfileService;
     private final WorkerMapper workerMapper;
     private final FavoriteWorkerMapper favoriteWorkerMapper;
+    private final UserAddressMapper userAddressMapper;
     private final WorkerApplicationMapper workerApplicationMapper;
     private final WorkerApplicationAttachmentMapper workerApplicationAttachmentMapper;
     private final OrderMapper orderMapper;
@@ -95,6 +98,7 @@ public class CoreDemoScenarioInitializer implements CommandLineRunner {
                                        WorkerProfileService workerProfileService,
                                        WorkerMapper workerMapper,
                                        FavoriteWorkerMapper favoriteWorkerMapper,
+                                       UserAddressMapper userAddressMapper,
                                        WorkerApplicationMapper workerApplicationMapper,
                                        WorkerApplicationAttachmentMapper workerApplicationAttachmentMapper,
                                        OrderMapper orderMapper,
@@ -112,6 +116,7 @@ public class CoreDemoScenarioInitializer implements CommandLineRunner {
         this.workerProfileService = workerProfileService;
         this.workerMapper = workerMapper;
         this.favoriteWorkerMapper = favoriteWorkerMapper;
+        this.userAddressMapper = userAddressMapper;
         this.workerApplicationMapper = workerApplicationMapper;
         this.workerApplicationAttachmentMapper = workerApplicationAttachmentMapper;
         this.orderMapper = orderMapper;
@@ -141,10 +146,12 @@ public class CoreDemoScenarioInitializer implements CommandLineRunner {
                 "上海市徐汇区衡山路 106 弄 5 号楼 901",
                 "常用"
         );
+        ensureSecondaryAddress(user.getId());
 
         WorkerEntity worker = ensureWorkerProfile(workerUser);
         ensureFavorite(user.getId(), worker.getId());
         ensureApprovedApplication(workerUser.getId());
+        ensureRejectedApplicationHistory(workerUser.getId());
 
         LocalDate today = LocalDate.now();
         OrderEntity pendingOrder = ensureOrder(
@@ -277,6 +284,86 @@ public class CoreDemoScenarioInitializer implements CommandLineRunner {
                 AFTER_SALE_URL
         );
 
+        OrderEntity acceptedOrder = ensureOrder(
+                "[CORE_DEMO_ACCEPTED]",
+                user.getId(),
+                worker.getId(),
+                USER_NAME,
+                USER_PHONE,
+                "上海市杨浦区国定路 88 弄 6 号楼 1203",
+                today.plusDays(3).toString(),
+                "18:00-20:00",
+                "深度清洁",
+                OrderStatus.ACCEPTED,
+                "服务人员已接单，等待用户确认预约安排",
+                "重点处理客厅地毯、沙发缝隙和厨房台面"
+        );
+        ensureProgresses(acceptedOrder.getId(), List.of(
+                progress(OrderStatus.PENDING, "用户已提交预约，等待服务人员接单"),
+                progress(OrderStatus.ACCEPTED, "服务人员已接单，等待用户确认预约安排")
+        ));
+        ensurePayment(acceptedOrder, 198, null, false, null);
+
+        OrderEntity extraCompletedOrder = ensureOrder(
+                "[CORE_DEMO_COMPLETED_EXTRA]",
+                user.getId(),
+                worker.getId(),
+                USER_NAME,
+                USER_PHONE,
+                "上海市浦东新区锦绣路 520 弄 8 号楼 703",
+                today.minusDays(3).toString(),
+                "14:00-16:00",
+                "母婴护理",
+                OrderStatus.COMPLETED,
+                "用户已确认完工，订单完成",
+                "协助完成新生儿基础护理与居家环境整理"
+        );
+        ensureProgresses(extraCompletedOrder.getId(), List.of(
+                progress(OrderStatus.PENDING, "用户已提交预约，等待服务人员接单"),
+                progress(OrderStatus.ACCEPTED, "服务人员已接单，等待用户确认预约安排"),
+                progress(OrderStatus.CONFIRMED, "用户已确认预约安排，等待服务人员上门"),
+                progress(OrderStatus.IN_SERVICE, "服务人员已上门，正在进行母婴护理协助"),
+                progress(OrderStatus.WAITING_USER_CONFIRMATION, "服务人员已提交完工，等待用户确认"),
+                progress(OrderStatus.COMPLETED, "用户已确认完工，订单完成")
+        ));
+        ensurePayment(extraCompletedOrder, 398, OrderPaymentMethod.ALIPAY, true, LocalDateTime.now().minusDays(3).minusHours(2));
+        ensureServiceRecords(extraCompletedOrder.getId(), worker.getId(), List.of(
+                serviceRecord(OrderServiceRecordStage.CHECK_IN, "已到达用户家中，确认护理和整理需求", SERVICE_CHECK_IN_URL),
+                serviceRecord(OrderServiceRecordStage.SERVICE_PROOF, "已完成婴儿用品整理、消毒和喂养辅助", SERVICE_PROGRESS_URL),
+                serviceRecord(OrderServiceRecordStage.FINISH_PROOF, "服务完成，已上传现场整理结果和完工凭证", SERVICE_FINISH_URL)
+        ));
+        ensureReview(extraCompletedOrder.getId(), user.getId(), worker.getId(), 4, "整体服务很稳妥，沟通及时，后续还会继续预约。");
+        ensureAfterSale(
+                extraCompletedOrder.getId(),
+                user.getId(),
+                worker.getId(),
+                "咨询回访",
+                "用户希望平台补充一次服务回访说明，确认后续预约周期。",
+                USER_PHONE,
+                AfterSaleStatus.RESOLVED.name(),
+                "平台已完成电话回访并确认后续长期预约计划。",
+                AFTER_SALE_URL
+        );
+
+        OrderEntity extraPendingOrder = ensureOrder(
+                "[CORE_DEMO_PENDING_EXTRA]",
+                user.getId(),
+                worker.getId(),
+                USER_NAME,
+                USER_PHONE,
+                "上海市虹口区欧阳路 178 弄 3 号楼 1605",
+                today.plusDays(5).toString(),
+                "09:00-11:00",
+                "老人陪护",
+                OrderStatus.PENDING,
+                "用户已提交预约，等待服务人员接单",
+                "计划周末陪同老人复诊并协助取药"
+        );
+        ensureProgresses(extraPendingOrder.getId(), List.of(
+                progress(OrderStatus.PENDING, "用户已提交预约，等待服务人员接单")
+        ));
+        ensurePayment(extraPendingOrder, 258, null, false, null);
+
         ensureOrderMessage(
                 inServiceOrder.getId(),
                 workerUser.getId(),
@@ -290,6 +377,20 @@ public class CoreDemoScenarioInitializer implements CommandLineRunner {
                 RoleCodes.USER,
                 USER_NAME,
                 "我已经看到完工图片了，晚一点回家后会确认完工。"
+        );
+        ensureOrderMessage(
+                acceptedOrder.getId(),
+                workerUser.getId(),
+                RoleCodes.WORKER,
+                WORKER_NAME,
+                "我已经预留了下周三晚间的时间段，您确认后我会提前半小时联系您。"
+        );
+        ensureOrderMessage(
+                extraCompletedOrder.getId(),
+                user.getId(),
+                RoleCodes.USER,
+                USER_NAME,
+                "这次服务整体满意，后续如果有长期档期希望优先通知我。"
         );
 
         ensureNotification(
@@ -321,6 +422,36 @@ public class CoreDemoScenarioInitializer implements CommandLineRunner {
                 "AFTER_SALE",
                 completedOrder.getId(),
                 "/admin/after-sales"
+        );
+        ensureNotification(
+                user.getId(),
+                RoleCodes.USER,
+                NotificationType.ORDER_STATUS,
+                "你有一笔新的待确认预约订单",
+                "订单 #" + acceptedOrder.getId() + " 已由服务人员接单，请尽快确认预约安排。",
+                "ORDER",
+                acceptedOrder.getId(),
+                "/user/orders"
+        );
+        ensureNotification(
+                workerUser.getId(),
+                RoleCodes.WORKER,
+                NotificationType.ORDER_STATUS,
+                "有新的待接单订单进入工作台",
+                "订单 #" + extraPendingOrder.getId() + " 已进入待接单列表，可前往工作台查看。",
+                "ORDER",
+                extraPendingOrder.getId(),
+                "/worker/orders"
+        );
+        ensureNotification(
+                admin.getId(),
+                RoleCodes.ADMIN,
+                NotificationType.ORDER_STATUS,
+                "本周新增多笔演示订单",
+                "默认演示数据已补充更多订单、支付和售后记录，可直接用于后台展示。",
+                "ORDER",
+                extraCompletedOrder.getId(),
+                "/admin/orders"
         );
     }
 
@@ -373,6 +504,31 @@ public class CoreDemoScenarioInitializer implements CommandLineRunner {
         favoriteWorkerMapper.insert(new FavoriteWorkerEntity(userId, workerId, LocalDateTime.now().minusDays(2)));
     }
 
+    private void ensureSecondaryAddress(Long userId) {
+        Long count = userAddressMapper.selectCount(
+                new LambdaQueryWrapper<UserAddressEntity>()
+                        .eq(UserAddressEntity::getUserId, userId)
+        );
+        if (count != null && count >= 2) {
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now().minusDays(1);
+        userAddressMapper.insert(new UserAddressEntity(
+                userId,
+                USER_NAME,
+                USER_PHONE,
+                "上海",
+                "上海市浦东新区锦绣路 520 弄 8 号楼 703",
+                "父母家",
+                false,
+                31.2200,
+                121.5440,
+                now,
+                now
+        ));
+    }
+
     private void ensureApprovedApplication(Long userId) {
         WorkerApplicationEntity existed = workerApplicationMapper.selectOne(
                 new LambdaQueryWrapper<WorkerApplicationEntity>()
@@ -420,6 +576,42 @@ public class CoreDemoScenarioInitializer implements CommandLineRunner {
                 "qualification-training.svg",
                 QUALIFICATION_TRAINING_URL,
                 1760L,
+                createdAt
+        ));
+    }
+
+    private void ensureRejectedApplicationHistory(Long userId) {
+        Long count = workerApplicationMapper.selectCount(
+                new LambdaQueryWrapper<WorkerApplicationEntity>()
+                        .eq(WorkerApplicationEntity::getUserId, userId)
+                        .eq(WorkerApplicationEntity::getStatus, "REJECTED")
+        );
+        if (count != null && count > 0) {
+            return;
+        }
+
+        LocalDateTime createdAt = LocalDateTime.now().minusDays(15);
+        WorkerApplicationEntity entity = new WorkerApplicationEntity();
+        entity.setUserId(userId);
+        entity.setRealName(WORKER_NAME);
+        entity.setPhone(WORKER_PHONE);
+        entity.setServiceTypes("日常保洁,收纳整理");
+        entity.setYearsOfExperience(3);
+        entity.setCertificates("健康证");
+        entity.setServiceAreas("浦东新区,虹口区");
+        entity.setAvailableSchedule("工作日白天");
+        entity.setIntro("早期提交的历史申请记录，用于展示审核驳回后的再次提交场景。");
+        entity.setStatus("REJECTED");
+        entity.setAdminRemark("首次提交资料较少，已建议补充培训证明和服务案例后再次申请。");
+        entity.setCreatedAt(createdAt);
+        entity.setUpdatedAt(createdAt.plusHours(8));
+        workerApplicationMapper.insert(entity);
+
+        workerApplicationAttachmentMapper.insert(new WorkerApplicationAttachmentEntity(
+                entity.getId(),
+                "qualification-id.svg",
+                QUALIFICATION_ID_URL,
+                1680L,
                 createdAt
         ));
     }

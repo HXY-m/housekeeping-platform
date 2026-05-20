@@ -145,7 +145,7 @@ CREATE TABLE IF NOT EXISTS booking_order (
   contact_phone VARCHAR(20) NOT NULL,
   service_address VARCHAR(255) NOT NULL,
   booking_date VARCHAR(20) NOT NULL,
-  booking_slot VARCHAR(50) NOT NULL,
+  booking_slot VARCHAR(255) NOT NULL,
   status VARCHAR(30) NOT NULL,
   progress_note VARCHAR(255) NOT NULL,
   remark VARCHAR(500) NOT NULL,

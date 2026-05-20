@@ -61,6 +61,7 @@
                   <el-select v-model="form.serviceName" placeholder="请选择服务项目" style="width: 100%">
                     <el-option v-for="item in serviceOptions" :key="item" :label="item" :value="item" />
                   </el-select>
+                  <p class="muted-line booking-duration-hint">{{ selectedDurationLabel }}</p>
                 </el-form-item>
               </el-col>
 
@@ -225,11 +226,18 @@ import AddressMapPickerDialog from '../../components/common/AddressMapPickerDial
 import {
   createOrder,
   fetchBookingAvailability,
+  fetchServiceCategories,
   fetchUserAddresses,
   fetchUserProfile,
   fetchWorker
 } from '../../api'
-import { BOOKING_SLOT_ORDER, getBookingSlotMeta } from '../../utils/bookingSlots'
+import {
+  BOOKING_SLOT_ORDER,
+  buildContinuousSlotGroups,
+  formatBookingSlot,
+  getBookingSlotMeta,
+  resolveRequiredSlotCount
+} from '../../utils/bookingSlots'
 import { formatCurrency } from '../../utils/format'
 import { getWorkerImage } from '../../utils/displayAssets'
 
@@ -242,6 +250,7 @@ const successMessage = ref('')
 const selectedAddressId = ref(null)
 const addresses = ref([])
 const worker = ref(null)
+const categories = ref([])
 const slotLoading = ref(false)
 const availableSlots = ref(BOOKING_SLOT_ORDER)
 const occupiedSlots = ref([])
@@ -260,6 +269,14 @@ const form = reactive({
 })
 
 const serviceOptions = computed(() => (worker.value?.tags?.length ? worker.value.tags : defaultServiceOptions))
+const selectedCategory = computed(() => categories.value.find((item) => item.name === form.serviceName))
+const requiredSlotCount = computed(() => resolveRequiredSlotCount(selectedCategory.value?.serviceDuration))
+const selectedDurationLabel = computed(() => {
+  const duration = selectedCategory.value?.serviceDuration
+  return duration
+    ? `预计服务时长：${duration}，系统将自动占用 ${requiredSlotCount.value} 个连续时段。`
+    : `系统将按 ${requiredSlotCount.value * 2} 小时占用连续时段。`
+})
 const mapPickerCity = computed(() => {
   if (selectedAddressId.value) {
     return addresses.value.find((item) => item.id === selectedAddressId.value)?.city || profileCity.value || ''
@@ -278,14 +295,14 @@ const activeStep = computed(() => {
 })
 
 const slotOptions = computed(() =>
-  BOOKING_SLOT_ORDER.map((value) => {
-    const meta = getBookingSlotMeta(value)
+  buildContinuousSlotGroups(availableSlots.value, requiredSlotCount.value).map((group) => {
+    const meta = getBookingSlotMeta(group.startSlot)
     return {
-      value,
+      value: group.value,
       label: meta.label,
-      period: meta.period,
-      desc: occupiedSlots.value.includes(value) ? '该时段已被预约' : meta.desc,
-      disabled: !availableSlots.value.includes(value)
+      period: formatBookingSlot(group.value),
+      desc: group.available ? `连续占用 ${group.slots.length} 个时段` : '连续时段不足或已被预约',
+      disabled: !group.available
     }
   })
 )
@@ -300,7 +317,8 @@ const availabilityHint = computed(() => {
   if (!availableSlots.value.length) {
     return '该日期暂无可预约时段，请更换其他日期。'
   }
-  return `当前日期还有 ${availableSlots.value.length} 个可预约时段。`
+  const groups = slotOptions.value.filter((item) => !item.disabled)
+  return `当前服务需要连续 ${requiredSlotCount.value} 个时段，可选起始时间 ${groups.length} 个。`
 })
 
 function buildAddressLabel(address) {
@@ -331,6 +349,13 @@ function getTodayString() {
   return new Date().toISOString().slice(0, 10)
 }
 
+function syncSelectedSlot() {
+  const availableGroups = slotOptions.value.filter((item) => !item.disabled)
+  if (!availableGroups.some((item) => item.value === form.bookingSlot)) {
+    form.bookingSlot = availableGroups[0]?.value || ''
+  }
+}
+
 async function loadAvailability() {
   if (!form.workerId || !form.bookingDate) {
     availableSlots.value = BOOKING_SLOT_ORDER
@@ -344,12 +369,10 @@ async function loadAvailability() {
     const result = await fetchBookingAvailability(form.workerId, form.bookingDate)
     availableSlots.value = result.availableSlots || []
     occupiedSlots.value = result.occupiedSlots || []
-    if (!availableSlots.value.includes(form.bookingSlot)) {
-      form.bookingSlot = availableSlots.value[0] || ''
-    }
+    syncSelectedSlot()
   } catch (error) {
     availableSlots.value = []
-    occupiedSlots.value = DEFAULT_SLOT_ORDER
+    occupiedSlots.value = BOOKING_SLOT_ORDER
     form.bookingSlot = ''
     ElMessage.error(error.message || '查询可预约时段失败')
   } finally {
@@ -394,16 +417,19 @@ async function submitOrder() {
 }
 
 watch(() => form.bookingDate, loadAvailability)
+watch(() => form.serviceName, syncSelectedSlot)
 
 onMounted(async () => {
   try {
-    const [workerDetail, profile, addressRows] = await Promise.all([
+    const [workerDetail, profile, addressRows, categoryRows] = await Promise.all([
       fetchWorker(route.params.workerId),
       fetchUserProfile(),
-      fetchUserAddresses()
+      fetchUserAddresses(),
+      fetchServiceCategories()
     ])
     worker.value = workerDetail
     addresses.value = addressRows
+    categories.value = categoryRows || []
     form.serviceName = workerDetail.tags?.[0] || defaultServiceOptions[0]
     form.bookingDate = getTodayString()
     profileCity.value = profile?.city || ''
@@ -429,6 +455,10 @@ onMounted(async () => {
 <style scoped>
 .booking-steps {
   margin-top: 18px;
+}
+
+.booking-duration-hint {
+  margin: 8px 0 0;
 }
 
 .booking-worker-preview--trust {

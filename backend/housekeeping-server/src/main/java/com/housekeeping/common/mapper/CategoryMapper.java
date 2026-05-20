@@ -14,7 +14,8 @@ public class CategoryMapper {
                 category.getDescription(),
                 category.getPriceLabel(),
                 category.getSlug(),
-                category.getImageUrl()
+                category.getImageUrl(),
+                category.getServiceDuration()
         );
     }
 }

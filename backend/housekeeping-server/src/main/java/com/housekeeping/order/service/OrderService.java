@@ -9,6 +9,8 @@ import com.housekeeping.audit.service.OperationLogService;
 import com.housekeeping.auth.support.CurrentUserContext;
 import com.housekeeping.auth.support.RoleCodes;
 import com.housekeeping.auth.support.SessionUser;
+import com.housekeeping.category.entity.ServiceCategoryEntity;
+import com.housekeeping.category.mapper.ServiceCategoryMapper;
 import com.housekeeping.common.PageResult;
 import com.housekeeping.common.mapper.OrderDtoMapper;
 import com.housekeeping.common.mapper.WorkerDtoMapper;
@@ -45,11 +47,15 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -68,6 +74,7 @@ public class OrderService {
     );
 
     private final OrderMapper orderMapper;
+    private final ServiceCategoryMapper serviceCategoryMapper;
     private final OrderPaymentMapper orderPaymentMapper;
     private final OrderProgressMapper orderProgressMapper;
     private final OrderReviewMapper orderReviewMapper;
@@ -82,6 +89,7 @@ public class OrderService {
     private final NotificationService notificationService;
 
     public OrderService(OrderMapper orderMapper,
+                        ServiceCategoryMapper serviceCategoryMapper,
                         OrderPaymentMapper orderPaymentMapper,
                         OrderProgressMapper orderProgressMapper,
                         OrderReviewMapper orderReviewMapper,
@@ -95,6 +103,7 @@ public class OrderService {
                         OrderAccessService orderAccessService,
                         NotificationService notificationService) {
         this.orderMapper = orderMapper;
+        this.serviceCategoryMapper = serviceCategoryMapper;
         this.orderPaymentMapper = orderPaymentMapper;
         this.orderProgressMapper = orderProgressMapper;
         this.orderReviewMapper = orderReviewMapper;
@@ -241,6 +250,7 @@ public class OrderService {
                 .stream()
                 .map(OrderEntity::getBookingSlot)
                 .filter(Objects::nonNull)
+                .flatMap(slot -> expandBookingSlots(slot).stream())
                 .distinct()
                 .toList();
 
@@ -271,8 +281,10 @@ public class OrderService {
         }
 
         String normalizedDate = parseBookingDate(request.bookingDate()).toString();
-        String normalizedSlot = normalizeBookingSlot(request.bookingSlot());
-        ensureSlotAvailable(worker.getId(), normalizedDate, normalizedSlot);
+        int requiredSlotCount = resolveRequiredSlotCount(request.serviceName());
+        List<String> normalizedSlots = normalizeBookingSlots(request.bookingSlot(), requiredSlotCount);
+        ensureSlotsAvailable(worker.getId(), normalizedDate, normalizedSlots);
+        String normalizedSlot = serializeBookingSlots(normalizedSlots);
 
         OrderEntity order = new OrderEntity(
                 currentUser.userId(),
@@ -513,19 +525,85 @@ public class OrderService {
         return buildSingleOrderDto(order);
     }
 
-    private void ensureSlotAvailable(Long workerId, String bookingDate, String bookingSlot) {
+    private void ensureSlotsAvailable(Long workerId, String bookingDate, List<String> bookingSlots) {
         BookingAvailabilityDto availability = getBookingAvailability(workerId, bookingDate);
-        if (!availability.availableSlots().contains(bookingSlot)) {
+        if (!availability.availableSlots().containsAll(bookingSlots)) {
             throw new BusinessException("所选时段已被预约，请更换其他时段");
         }
     }
 
-    private String normalizeBookingSlot(String bookingSlot) {
-        String normalized = bookingSlot == null ? "" : bookingSlot.trim();
-        if (!BOOKING_SLOTS.contains(normalized)) {
-            throw new BusinessException("请选择平台提供的预约时段");
+    private List<String> normalizeBookingSlots(String bookingSlot, int requiredSlotCount) {
+        List<String> slots = expandBookingSlots(bookingSlot);
+        if (slots.size() != requiredSlotCount) {
+            throw new BusinessException("所选时段长度与服务时长不匹配");
         }
-        return normalized;
+        for (String slot : slots) {
+            if (!BOOKING_SLOTS.contains(slot)) {
+                throw new BusinessException("请选择平台提供的预约时段");
+            }
+        }
+        List<Integer> indexes = slots.stream()
+                .map(BOOKING_SLOTS::indexOf)
+                .sorted()
+                .toList();
+        for (int index = 1; index < indexes.size(); index++) {
+            if (indexes.get(index) != indexes.get(index - 1) + 1) {
+                throw new BusinessException("请选择连续的预约时段");
+            }
+        }
+        return indexes.stream().map(BOOKING_SLOTS::get).toList();
+    }
+
+    private List<String> expandBookingSlots(String bookingSlot) {
+        if (bookingSlot == null || bookingSlot.isBlank()) {
+            return List.of();
+        }
+        Set<String> slots = new LinkedHashSet<>();
+        for (String rawSlot : bookingSlot.split(",")) {
+            String slot = rawSlot.trim();
+            if (!slot.isEmpty()) {
+                slots.add(slot);
+            }
+        }
+        return slots.stream()
+                .sorted(Comparator.comparingInt(slot -> {
+                    int index = BOOKING_SLOTS.indexOf(slot);
+                    return index < 0 ? Integer.MAX_VALUE : index;
+                }))
+                .toList();
+    }
+
+    private String serializeBookingSlots(List<String> bookingSlots) {
+        return String.join(",", bookingSlots);
+    }
+
+    private int resolveRequiredSlotCount(String serviceName) {
+        ServiceCategoryEntity category = serviceCategoryMapper.selectOne(
+                new LambdaQueryWrapper<ServiceCategoryEntity>()
+                        .eq(ServiceCategoryEntity::getName, serviceName)
+                        .last("limit 1")
+        );
+        return resolveRequiredSlotCountFromDuration(category == null ? "" : category.getServiceDuration());
+    }
+
+    private int resolveRequiredSlotCountFromDuration(String serviceDuration) {
+        String duration = serviceDuration == null ? "" : serviceDuration;
+        List<Integer> hours = new ArrayList<>();
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(\\d+)").matcher(duration);
+        while (matcher.find()) {
+            hours.add(Integer.parseInt(matcher.group(1)));
+        }
+        if (!hours.isEmpty()) {
+            int maxHours = hours.stream().mapToInt(Integer::intValue).max().orElse(2);
+            return Math.max(1, (int) Math.ceil(maxHours / 2.0));
+        }
+        if (duration.contains("全天")) {
+            return 4;
+        }
+        if (duration.contains("半天")) {
+            return 2;
+        }
+        return 1;
     }
 
     private LocalDate parseBookingDate(String bookingDate) {

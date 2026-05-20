@@ -36,12 +36,85 @@ export function getBookingSlotMeta(slot) {
   }
 }
 
-export function formatBookingSlot(slot) {
-  const meta = getBookingSlotMeta(slot)
+export function splitBookingSlots(slot) {
   if (!slot) {
+    return []
+  }
+  return String(slot)
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .sort((a, b) => BOOKING_SLOT_ORDER.indexOf(a) - BOOKING_SLOT_ORDER.indexOf(b))
+}
+
+export function resolveRequiredSlotCount(serviceDuration = '') {
+  const text = String(serviceDuration || '')
+  const hours = Array.from(text.matchAll(/(\d+)/g)).map((match) => Number(match[1]))
+  if (hours.length) {
+    return Math.max(1, Math.ceil(Math.max(...hours) / 2))
+  }
+  if (text.includes('全天')) {
+    return 4
+  }
+  if (text.includes('半天')) {
+    return 2
+  }
+  return 1
+}
+
+export function buildContinuousSlotGroups(availableSlots = [], requiredCount = 1) {
+  const availableSet = new Set(availableSlots)
+  return BOOKING_SLOT_ORDER.map((startSlot, startIndex) => {
+    const slots = BOOKING_SLOT_ORDER.slice(startIndex, startIndex + requiredCount)
+    const complete = slots.length === requiredCount
+    const available = complete && slots.every((slot) => availableSet.has(slot))
+    return {
+      startSlot,
+      value: slots.join(','),
+      slots,
+      available
+    }
+  }).filter((group) => group.slots.length === requiredCount)
+}
+
+function mergeSlotPeriods(slots) {
+  if (!slots.length) {
     return '--'
   }
-  return `${meta.label} ${meta.period}`
+  const ranges = []
+  let currentStart = ''
+  let currentEnd = ''
+
+  slots.forEach((slot) => {
+    const [start, end] = slot.split('-')
+    if (!currentStart) {
+      currentStart = start
+      currentEnd = end
+      return
+    }
+    if (start === currentEnd) {
+      currentEnd = end
+      return
+    }
+    ranges.push(`${currentStart} - ${currentEnd}`)
+    currentStart = start
+    currentEnd = end
+  })
+
+  ranges.push(`${currentStart} - ${currentEnd}`)
+  return ranges.join('、')
+}
+
+export function formatBookingSlot(slot) {
+  const slots = splitBookingSlots(slot)
+  if (!slots.length) {
+    return '--'
+  }
+  if (slots.length === 1) {
+    const meta = getBookingSlotMeta(slots[0])
+    return `${meta.label} ${meta.period}`
+  }
+  return `${slots.length * 2}小时 ${mergeSlotPeriods(slots)}`
 }
 
 export function formatBookingDateTime(date, slot) {
